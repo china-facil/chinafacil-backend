@@ -9,9 +9,9 @@
   ```bash
   nest new chinafacil-backend-nest
   ```
-- [ ] Configurar estrutura de pastas conforme documento
-- [ ] Setup Git e .gitignore
-- [ ] Configurar variáveis de ambiente (.env.example)
+- [ X ] Configurar estrutura de pastas conforme documento
+- [ X ] Setup Git e .gitignore
+- [ X ] Configurar variáveis de ambiente (.env.example)
 - [ ] Instalar dependências base:
   - [ ] @nestjs/config
   - [ ] @nestjs/typeorm ou @prisma/client

@@ -40,6 +40,7 @@ lerna-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
 
 # Temp
 *.tmp
@@ -67,4 +68,7 @@ build/
 # Markdown files
 *.md
 md/
+
+# Setup scripts with sensitive data
+setup-env.sh
 
