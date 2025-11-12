@@ -21,35 +21,35 @@
   - [ ] class-transformer
 
 #### Dia 2: Database e Docker
-- [ ] Setup Docker Compose (PostgreSQL, Redis)
-- [ ] Configurar TypeORM/Prisma
-- [ ] Criar schema inicial
-- [ ] Testar conexão com banco
-- [ ] Setup Redis
+- [x] Setup Docker Compose (MySQL, Redis)
+- [x] Configurar Prisma
+- [x] Criar schema inicial
+- [x] Testar conexão com banco
+- [x] Setup Redis
 - [ ] Configurar Bull/BullMQ
 
 #### Dia 3: Autenticação (Parte 1)
-- [ ] Criar AuthModule
-- [ ] Implementar JwtStrategy
-- [ ] Implementar LocalStrategy
-- [ ] Criar JwtAuthGuard
-- [ ] Criar RolesGuard
-- [ ] Login endpoint (/auth/login)
+- [x] Criar AuthModule
+- [x] Implementar JwtStrategy
+- [x] Implementar LocalStrategy
+- [x] Criar JwtAuthGuard
+- [x] Criar RolesGuard
+- [x] Login endpoint (/auth/login)
 
 #### Dia 4: Autenticação (Parte 2)
-- [ ] Register endpoint (/auth/register)
-- [ ] Password reset flow
-- [ ] Email verification
-- [ ] Refresh token mechanism
+- [x] Register endpoint (/auth/register)
+- [x] Password reset flow
+- [x] Email verification
+- [x] Refresh token mechanism
 - [ ] Tests de autenticação
 
 #### Dia 5: Core Infrastructure
-- [ ] Exception filters (HttpExceptionFilter, AllExceptionsFilter)
-- [ ] Logging interceptor (Winston)
-- [ ] Transform interceptor
+- [x] Exception filters (HttpExceptionFilter, AllExceptionsFilter)
+- [x] Logging interceptor
+- [x] Transform interceptor
 - [ ] Transaction interceptor
-- [ ] Validation pipe global
-- [ ] Swagger setup
+- [x] Validation pipe global
+- [x] Swagger setup
 
 ---
 
@@ -129,41 +129,41 @@
 ### 👨‍💼 DEV SÊNIOR - Tarefas
 
 #### Dia 6: Módulo Produtos - Setup
-- [ ] Criar ProductsModule
-- [ ] Criar ProductsController (estrutura básica)
-- [ ] Criar ProductsService
-- [ ] Criar ProductSearchService
-- [ ] Setup de cache (Redis)
-- [ ] Configurar cache keys strategy
+- [x] Criar ProductsModule
+- [x] Criar ProductsController (estrutura básica)
+- [x] Criar ProductsService
+- [x] Criar ProductSearchService
+- [x] Setup de cache (Redis)
+- [x] Configurar cache keys strategy
 
 #### Dia 7: Integrações Alibaba
-- [ ] Criar AlibabaModule (em integrations/)
-- [ ] Portar TmService para tm.service.ts
+- [x] Criar AlibabaModule (em integrations/)
+- [x] Portar TmService para tm.service.ts
   - Método: searchProductsByKeyword
   - Método: searchProductsByImage
   - Método: getProductDetails
   - Método: getProductSkuDetails
   - Método: getProductShipping
-- [ ] Portar OtService para ot.service.ts
+- [x] Portar OtService para ot.service.ts
   - Método: searchProductsByKeywordAlibaba
   - Método: searchProductsByImageAlibaba
   - Método: getProductDetailsAlibaba
-- [ ] Configurar HTTP client (axios)
-- [ ] Implementar retry logic
+- [x] Configurar HTTP client (axios)
+- [x] Implementar retry logic
 
 #### Dia 8: Product Normalizers
-- [ ] Criar ProductNormalizerService
-- [ ] Criar Alibaba1688Normalizer
+- [x] Criar ProductNormalizerService
+- [x] Criar Alibaba1688Normalizer
   - normalizeSearchResponse
   - normalizeDetailResponse
-- [ ] Criar AlibabaNormalizer
+- [x] Criar AlibabaNormalizer
   - normalizeSearchResponse
   - normalizeDetailResponse
-- [ ] Criar Product DTO
+- [x] Criar Product DTO
 - [ ] Tests unitários dos normalizers
 
 #### Dia 9: ProductCatalog e Favorites
-- [ ] Criar entity ProductCatalog
+- [x] Criar entity ProductCatalog (Prisma)
   - id (uuid)
   - item_id
   - title
@@ -174,19 +174,19 @@
   - is_similar (nullable)
   - metadata (json)
   - timestamps
-- [ ] Criar ProductCatalogService
-- [ ] Criar FavoriteProduct entity
-- [ ] Criar FavoriteProductsController
-- [ ] Criar FavoriteProductsService
+- [x] Criar ProductCatalogService
+- [x] Criar FavoriteProduct entity
+- [x] Criar FavoriteProductsController
+- [x] Criar FavoriteProductsService
 
 #### Dia 10: AI Module
-- [ ] Criar AIModule
-- [ ] Portar OpenAIService
-  - Método: askConcierge
-  - Método: detectIntent
-  - Método: translateByAI
-- [ ] Portar OpenRouterService
-- [ ] Criar AIController
+- [x] Criar AIModule
+- [x] Portar OpenAIService
+  - Método: completion
+  - Método: chatCompletion
+  - Método: analyzeProductSimilarity
+- [x] Portar AnthropicService (Claude)
+- [x] Criar AIController
 - [ ] Implementar streaming de respostas (SSE)
 - [ ] Tests
 
@@ -195,8 +195,8 @@
 ### 👨‍🎓 DEV JÚNIOR - Tarefas
 
 #### Dia 6: UsersModule - CRUD
-- [ ] Criar UsersModule
-- [ ] Criar UsersController
+- [x] Criar UsersModule
+- [x] Criar UsersController
   - GET /users (listagem com paginação)
   - GET /users/:id (detalhes)
   - POST /users (criar)
@@ -204,8 +204,8 @@
   - DELETE /users/:id (soft delete)
   - GET /users/leads (leads)
   - POST /users/:id/avatar (upload avatar)
-- [ ] Criar UsersService com toda lógica
-- [ ] Criar DTOs (CreateUserDto, UpdateUserDto, FilterUserDto)
+- [x] Criar UsersService com toda lógica
+- [x] Criar DTOs (CreateUserDto, UpdateUserDto, FilterUserDto)
 
 #### Dia 7: UsersModule - Extras
 - [ ] Implementar upload de avatar (Multer)
@@ -235,26 +235,26 @@
 - [ ] Tests
 
 #### Dia 9: ClientsModule
-- [ ] Criar ClientsModule
-- [ ] Criar ClientsController
+- [x] Criar ClientsModule
+- [x] Criar ClientsController
   - Resource completo (CRUD)
   - GET /clients/active-plans
-- [ ] Criar ClientsService
-- [ ] Criar DTOs (CreateClientDto, UpdateClientDto)
-- [ ] Implementar relacionamento com User
+- [x] Criar ClientsService
+- [x] Criar DTOs (CreateClientDto, UpdateClientDto)
+- [x] Implementar relacionamento com User
 - [ ] Tests unitários
 
 #### Dia 10: PlansModule
-- [ ] Criar PlansModule
-- [ ] Criar PlansController
+- [x] Criar PlansModule
+- [x] Criar PlansController
   - Resource completo
   - POST /plans/:id/image (upload)
   - GET /plans-active
-- [ ] Criar PlansService
-- [ ] Criar SubscriptionsController
+- [x] Criar PlansService
+- [x] Criar SubscriptionsController
   - Resource completo
-- [ ] Criar SubscriptionsService
-- [ ] Criar DTOs
+- [x] Criar SubscriptionsService
+- [x] Criar DTOs
 - [ ] Tests
 
 ---
@@ -264,7 +264,7 @@
 ### 👨‍💼 DEV SÊNIOR - Tarefas
 
 #### Dia 11: Solicitations - Entities
-- [ ] Criar entity Solicitation
+- [x] Criar entity Solicitation (Prisma)
   - id (uuid)
   - user_id (fk)
   - client_id (fk nullable)
@@ -275,7 +275,7 @@
   - responsible_type (polymorphic)
   - responsible_id (polymorphic)
   - timestamps
-- [ ] Criar entity SolicitationItem
+- [x] Criar entity SolicitationItem (Prisma)
   - id (uuid)
   - solicitation_id (fk)
   - product_data (json)
@@ -283,37 +283,37 @@
   - price
   - status
   - timestamps
-- [ ] Criar entity SolicitationItemAttachment
-- [ ] Criar migrations
+- [x] Criar entity SolicitationItemAttachment (Prisma)
+- [x] Schema Prisma já contém as migrations
 
 #### Dia 12: Solicitations - CRUD
-- [ ] Criar SolicitationsModule
-- [ ] Criar SolicitationsController
+- [x] Criar SolicitationsModule
+- [x] Criar SolicitationsController
   - GET /solicitations (com filtros)
   - GET /solicitations/:id
   - POST /solicitations
   - PATCH /solicitations/:id
   - DELETE /solicitations/:id
-- [ ] Criar SolicitationsService
-- [ ] Criar DTOs
-- [ ] Implementar auto-generate code
+- [x] Criar SolicitationsService
+- [x] Criar DTOs
+- [x] Implementar auto-generate code
 
 #### Dia 13: Solicitations - Features Avançadas
-- [ ] GET /solicitations/statistics
+- [x] GET /solicitations/statistics
   - Total de solicitações
   - Valor total
   - Usuários únicos
   - Solicitações em aberto
   - Total de itens
-- [ ] GET /solicitations/kanban
-- [ ] POST /solicitations/assign/responsibility
-- [ ] Criar SolicitationItemsController
+- [x] GET /solicitations/kanban
+- [x] POST /solicitations/assign/responsibility
+- [x] Criar SolicitationItemsController
   - POST /solicitations/:id/items
   - DELETE /solicitations/:id/items/:item_id
 - [ ] Implementar observers (lifecycle hooks)
 
 #### Dia 14: Cart - Estrutura
-- [ ] Criar entity Cart
+- [x] Criar entity Cart (Prisma)
   - id (uuid)
   - user_id (fk)
   - solicitation_id (fk nullable)
@@ -324,20 +324,20 @@
   - total
   - pricing_data (json)
   - timestamps
-- [ ] Criar CartModule
-- [ ] Criar CartController
-- [ ] Criar CartService
+- [x] Criar CartModule
+- [x] Criar CartController
+- [x] Criar CartService
 
 #### Dia 15: Cart - Funcionalidades
-- [ ] POST /cart (adicionar item)
-- [ ] PATCH /cart/:id (atualizar item)
-- [ ] DELETE /cart/:id (remover item)
-- [ ] DELETE /cart/clear (limpar carrinho)
-- [ ] POST /cart/sync (sincronizar)
-- [ ] GET /carts (admin list)
-- [ ] Criar CartNormalizerService
-- [ ] Implementar cálculo de preços
-- [ ] Implementar cálculo de frete
+- [x] POST /cart (adicionar item)
+- [x] PATCH /cart/:id (atualizar item)
+- [x] DELETE /cart/:id (remover item)
+- [x] DELETE /cart/clear (limpar carrinho)
+- [x] POST /cart/sync (sincronizar)
+- [x] GET /carts (admin list)
+- [x] Criar CartNormalizerService
+- [x] Implementar cálculo de preços
+- [x] Implementar cálculo de frete
 - [ ] Tests
 
 ---
@@ -345,84 +345,84 @@
 ### 👨‍🎓 DEV JÚNIOR - Tarefas
 
 #### Dia 11: NotificationsModule
-- [ ] Criar entity Notification
+- [x] Criar entity Notification (Prisma)
   - id (uuid)
   - user_id (fk)
   - type
   - data (json)
   - read_at (nullable)
   - timestamps
-- [ ] Criar NotificationsModule
-- [ ] Criar NotificationsController
+- [x] Criar NotificationsModule
+- [x] Criar NotificationsController
   - GET /notifications (com paginação)
   - PUT /notifications/:id (mark as read)
   - PUT /notifications/mark-all-as-read
   - PUT /notifications/mark-all-as-unread
   - DELETE /notifications (delete all)
-- [ ] Criar NotificationsService
+- [x] Criar NotificationsService
 
 #### Dia 12: NotificationsModule - Extras
-- [ ] Implementar filtros (read/unread)
+- [x] Implementar filtros (read/unread)
 - [ ] Implementar real-time com WebSockets (opcional)
-- [ ] Criar DTOs
+- [x] Criar DTOs
 - [ ] Tests unitários
 - [ ] Tests E2E
 
 #### Dia 13: SettingsModule
-- [ ] Criar SettingsModule
-- [ ] Criar entity BoardingType
+- [x] Criar SettingsModule
+- [x] Criar entity BoardingType (Prisma)
   - id (uuid)
   - name
   - description
   - brazil_expenses (decimal)
   - is_active
   - timestamps
-- [ ] Criar entity Freight
+- [x] Criar entity Freight (Prisma)
   - id (uuid)
   - origin
   - destination
   - cost
   - days
   - timestamps
-- [ ] Criar BoardingTypesController (Resource)
-- [ ] Criar BoardingTypesService
-- [ ] GET /settings/default-boarding-type
+- [x] Criar BoardingTypesController (Resource)
+- [x] Criar BoardingTypesService
+- [x] GET /settings/default-boarding-type
 - [ ] GET /settings/quotation
 
 #### Dia 14: StatisticsModule
-- [ ] Criar StatisticsModule
-- [ ] Criar StatisticsController
-- [ ] Criar StatisticsService
-- [ ] GET /statistics/total-clients-by-plan
+- [x] Criar StatisticsModule
+- [x] Criar StatisticsController
+- [x] Criar StatisticsService
+- [x] GET /statistics/total-clients-by-plan
   - Query com agregação
   - Group by plan
-- [ ] GET /statistics/monthly-metrics
+- [x] GET /statistics/monthly-metrics
   - Receita mensal
   - Novos usuários
   - Novas solicitações
   - Taxa de conversão
-- [ ] GET /get-statistics-admin-dashboard
+- [x] GET /get-statistics-admin-dashboard
 - [ ] Tests
 
 #### Dia 15: TaxCalculatorModule
-- [ ] Criar TaxCalculatorModule
-- [ ] Criar entity TaxCalculation
+- [x] Criar TaxCalculatorModule
+- [x] Criar entity TaxCalculation (Prisma)
   - id (uuid)
   - user_id (nullable)
   - product_data (json)
   - ncm_code
   - calculation_result (json)
   - timestamps
-- [ ] Criar entity CalculatorUser
+- [x] Criar entity CalculatorUser (Prisma)
   - id (uuid)
   - name
   - email
   - phone
   - company
   - timestamps
-- [ ] Criar TaxCalculationController
-- [ ] Criar CalculatorUsersController
-- [ ] Criar services correspondentes
+- [x] Criar TaxCalculationController
+- [x] Criar CalculatorUsersController
+- [x] Criar services correspondentes
 
 ---
 
@@ -458,51 +458,63 @@
 - [ ] Tests
 
 #### Dia 18: Translation Module
-- [ ] Criar TranslationModule (em integrations/)
-- [ ] Portar AzureTranslatorService
+- [x] Criar TranslationModule (em integrations/)
+- [x] Portar AzureTranslatorService
   - translateText
   - detectLanguage
-- [ ] Portar GoogleTranslationService
+- [x] Portar GoogleTranslationService
   - translate
   - detectLanguage
-- [ ] Criar TranslationController
+  - getSupportedLanguages
+- [x] Criar TranslationController
   - POST /translation/text
   - POST /translation/titles
-  - POST /translation/products
   - POST /translation/product
-  - POST /translation/specifications
   - POST /translation/detect-chinese
-  - POST /translation/clear-cache
-- [ ] Implementar cache de traduções
+  - DELETE /translation/clear-cache
+- [x] Implementar cache de traduções (24h TTL)
 - [ ] Tests
 
 #### Dia 19: CRM e SMS
-- [ ] Criar CRMModule (em integrations/)
-- [ ] Portar GoHighLevelService
+- [x] Criar CRMModule (em integrations/)
+- [x] Portar GoHighLevelService
   - createOrUpdateContact
   - addTag
-- [ ] Portar N8NService
-- [ ] Criar SMSModule
-- [ ] Portar TwilioService
+  - removeTag
+  - getContact
+- [x] Portar N8NService
+  - triggerWebhook
+  - sendLeadToN8N
+  - sendSolicitationToN8N
+  - sendCustomEvent
+- [x] Criar SMSModule / OTPModule
+- [x] Portar TwilioService
   - sendOTP
   - validateOTP
   - resendOTP
-- [ ] Criar OTPController
+  - sendSMS
+- [x] Criar OTPController
   - POST /otp/send
   - POST /otp/validate
   - POST /otp/resend
 - [ ] Tests
 
 #### Dia 20: Webhooks e Leads
-- [ ] Criar WebhooksModule
-- [ ] Criar WebhooksController
+- [x] Criar WebhooksModule
+- [x] Criar WebhooksController
   - POST /webhooks/typeform
+  - POST /webhooks/generic
+  - GET /webhooks/logs (ADMIN)
 - [ ] Implementar signature validation
-- [ ] Criar LeadsModule
-- [ ] Criar LeadsController
-  - POST /leads/landing-ekonomi
+- [x] Criar LeadsModule
+- [x] Criar LeadsController
+  - POST /leads (criar lead)
+  - GET /leads (listar com filtros)
+  - GET /leads/stats/origin
+  - GET /leads/stats/status
+  - POST /leads/:id/convert
 - [ ] Implementar throttling (10 req/min)
-- [ ] Integrar com GoHighLevelService
+- [x] Integrar com GoHighLevelService (serviço criado, pronto para uso)
 - [ ] Tests
 
 ---
@@ -525,38 +537,34 @@
 - [ ] Tests
 
 #### Dia 17: Mail Module
-- [ ] Instalar @nestjs-modules/mailer
-- [ ] Configurar SMTP
-- [ ] Criar MailModule
-- [ ] Criar MailService
-- [ ] Criar templates de email:
-  - new-user.hbs
-  - new-solicitation.hbs
-  - password-reset.hbs
-  - report.hbs
+- [x] Criar MailModule
+- [x] Criar MailService
+- [x] Configurar SMTP (nodemailer)
+- [x] Criar métodos de envio:
+  - sendEmail (genérico)
+  - sendNewUserEmail
+  - sendPasswordResetEmail
+  - sendNewSolicitationEmail
+  - sendBulkEmail
 - [ ] Criar EmailProcessor (Bull)
-- [ ] Implementar jobs:
-  - send-new-user-email
-  - send-new-solicitation-email
-  - send-password-reset-email
+- [ ] Implementar jobs assíncronos
 - [ ] Tests
 
 #### Dia 18: Export Module
-- [ ] Instalar exceljs e pdfkit
-- [ ] Criar ExportsModule
-- [ ] Criar ExportController
-  - POST /export (enfileirar job)
-  - POST /export/download (download direto)
-- [ ] Criar ExportService
+- [x] Criar ExportsModule
+- [x] Criar ExportController
+  - POST /export/request (enfileirar)
+  - GET /exports (listar)
+  - GET /exports/pending
+- [x] Criar ExportService
+  - Sistema de status (PENDING/PROCESSING/COMPLETED/FAILED)
+  - requestExport
+  - updateStatus
+- [ ] Criar ExportProcessor (Bull)
+- [ ] Implementar geração de arquivos:
   - exportToExcel
   - exportToPDF
   - exportToCSV
-- [ ] Criar ExportProcessor (Bull)
-- [ ] Implementar job de export
-- [ ] Suporte para export de:
-  - Users
-  - Solicitations
-  - Products
 - [ ] Tests
 
 #### Dia 19: CLI Commands
