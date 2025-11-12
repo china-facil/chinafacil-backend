@@ -1,0 +1,41 @@
+# Regras do Projeto - ChinaFacil NestJS
+
+## Contexto do Projeto
+Este é um projeto backend construído com NestJS (Node.js framework). A estrutura segue o padrão modular do NestJS onde cada feature possui seu próprio módulo, controller, service e DTOs. Utilizamos TypeScript para type safety e Prisma como ORM para gerenciamento do banco de dados.
+
+## Regras de Código
+
+### Estilo e Qualidade
+- NUNCA crie comentários no código. O código deve ser autoexplicativo através de nomes semânticos.
+- Use nomes de variáveis, funções, classes e métodos SEMÂNTICOS e descritivos que expressem claramente sua intenção.
+- EVITE nomes genéricos como `data`, `item`, `temp`, `handler`, `process`, `manager`. Seja específico: `userData`, `productItem`, `userSession`, `createUserHandler`, `processPayment`, `emailManager`.
+- Prefira funções e métodos pequenos com responsabilidade única (Single Responsibility Principle).
+
+### NestJS - Boas Práticas
+- Siga a arquitetura modular do NestJS: cada feature em seu próprio módulo.
+- Controllers devem apenas orquestrar requisições e respostas, delegando lógica para Services.
+- Services contêm a lógica de negócio.
+- Use DTOs (Data Transfer Objects) para validação de entrada com class-validator.
+- Use decorators do NestJS adequadamente (@Injectable, @Controller, @Get, @Post, etc).
+- Implemente tratamento de exceções usando HttpException ou exceções personalizadas do NestJS.
+- Use Dependency Injection corretamente através do constructor.
+
+### TypeScript
+- Sempre use tipagem explícita. Evite `any`.
+- Use interfaces ou types para estruturas de dados complexas.
+- Aproveite recursos avançados do TypeScript quando apropriado (generics, utility types, etc).
+
+### Testes
+- NÃO crie testes unitários por padrão. Somente se for EXPLICITAMENTE solicitado teste unitário.
+- O padrão é criar testes de INTEGRAÇÃO simples.
+- Testes de integração devem fazer requisições HTTP e validar status code + análise simples da resposta.
+- EVITE métodos de teste com mais de 10 linhas. Mantenha testes concisos e diretos.
+- Use Jest e Supertest para testes de integração.
+
+### Banco de Dados (Prisma)
+- Nomes de tabelas em snake_case (exemplo: `user_profiles`, `order_items`).
+- Nomes de campos no Prisma em camelCase (exemplo: `userId`, `createdAt`).
+- Use `@map` para mapear campos camelCase para snake_case no banco quando necessário.
+- Sempre defina relacionamentos bidirecionais quando aplicável.
+- Use tipos apropriados e constraints (unique, default, etc).
+
