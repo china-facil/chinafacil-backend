@@ -1,0 +1,336 @@
+// Prisma Schema para ChinaFácil Backend
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ===== ENUMS =====
+
+enum UserRole {
+  ADMIN
+  USER
+  SELLER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum SolicitationStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PENDING
+}
+
+// ===== MODELS =====
+
+model User {
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  password        String
+  phone           String?
+  avatar          String?
+  role            UserRole  @default(USER)
+  status          UserStatus @default(ACTIVE)
+  phoneVerified   Boolean   @default(false) @map("phone_verified")
+  employees       Int?
+  monthlyBilling  Decimal?  @map("monthly_billing")
+  cnpj            String?
+  companyData     Json?     @map("company_data")
+  emailVerifiedAt DateTime? @map("email_verified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  solicitations   Solicitation[]
+  addresses       UserAddress[]
+  favorites       FavoriteProduct[]
+  clientUsers     ClientUser[]
+  subscription    Subscription?
+  sellerLeads     UserSellerLead[] @relation("Seller")
+  leads           UserSellerLead[] @relation("Lead")
+
+  @@map("users")
+}
+
+model Client {
+  id          String    @id @default(uuid())
+  name        String
+  email       String?
+  status      String    @default("active")
+  cfCode      String?   @map("cf_code")
+  planStatus  String?   @map("plan_status")
+  companyData Json?     @map("company_data")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  users         ClientUser[]
+  solicitations Solicitation[]
+
+  @@map("clients")
+}
+
+model ClientUser {
+  userId    String   @map("user_id")
+  clientId  String   @map("client_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@id([userId, clientId])
+  @@map("client_user")
+}
+
+model Solicitation {
+  id              String              @id @default(uuid())
+  userId          String              @map("user_id")
+  clientId        String?             @map("client_id")
+  type            String?
+  status          SolicitationStatus  @default(OPEN)
+  quantity        Int?
+  code            String?             @unique
+  responsibleType String?             @map("responsible_type")
+  responsibleId   String?             @map("responsible_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  user  User    @relation(fields: [userId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
+
+  items        SolicitationItem[]
+  cart         Cart?
+  trackingItems SolicitationTrack[]
+
+  @@map("solicitations")
+}
+
+model SolicitationItem {
+  id             String   @id @default(uuid())
+  solicitationId String   @map("solicitation_id")
+  productData    Json     @map("product_data")
+  quantity       Int
+  price          Decimal?
+  status         String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  solicitation Solicitation               @relation(fields: [solicitationId], references: [id], onDelete: Cascade)
+  attachments  SolicitationItemAttachment[]
+
+  @@map("solicitation_items")
+}
+
+model SolicitationItemAttachment {
+  id      String @id @default(uuid())
+  itemId  String @map("item_id")
+  fileUrl String @map("file_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  item SolicitationItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("solicitation_item_attachments")
+}
+
+model SolicitationTrack {
+  id             String   @id @default(uuid())
+  solicitationId String   @map("solicitation_id")
+  status         String
+  description    String?
+  date           DateTime
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  solicitation Solicitation @relation(fields: [solicitationId], references: [id], onDelete: Cascade)
+
+  @@map("solicitation_tracks")
+}
+
+model Cart {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  solicitationId String?  @unique @map("solicitation_id")
+  items          Json
+  subtotal       Decimal
+  shippingCost   Decimal  @map("shipping_cost")
+  tax            Decimal
+  total          Decimal
+  pricingData    Json?    @map("pricing_data")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  solicitation Solicitation? @relation(fields: [solicitationId], references: [id])
+
+  @@map("carts")
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal
+  features    Json?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id        String             @id @default(uuid())
+  userId    String             @unique @map("user_id")
+  planId    String             @map("plan_id")
+  status    SubscriptionStatus @default(PENDING)
+  startedAt DateTime?          @map("started_at")
+  expiresAt DateTime?          @map("expires_at")
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@map("subscriptions")
+}
+
+model ProductCatalog {
+  id            String   @id @default(uuid())
+  itemId        String   @map("item_id")
+  title         String
+  price         Decimal
+  imageUrl      String   @map("image_url")
+  categoryIds   Json?    @map("category_ids")
+  salesQuantity Int      @default(0) @map("sales_quantity")
+  isSimilar     Boolean? @map("is_similar")
+  metadata      Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([itemId])
+  @@map("product_catalog")
+}
+
+model FavoriteProduct {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  productId   String   @map("product_id")
+  productData Json     @map("product_data")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("favorite_products")
+}
+
+model UserAddress {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  zipCode      String   @map("zip_code")
+  country      String   @default("Brasil")
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_addresses")
+}
+
+model BoardingType {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  brazilExpenses Decimal? @map("brazil_expenses")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("boarding_types")
+}
+
+model Freight {
+  id          String   @id @default(uuid())
+  origin      String
+  destination String
+  cost        Decimal
+  days        Int
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("freights")
+}
+
+model Ncm {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  description String
+  taxRate     Decimal? @map("tax_rate")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("ncms")
+}
+
+model TaxCalculation {
+  id                String   @id @default(uuid())
+  userId            String?  @map("user_id")
+  productData       Json     @map("product_data")
+  ncmCode           String?  @map("ncm_code")
+  calculationResult Json     @map("calculation_result")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("tax_calculations")
+}
+
+model CalculatorUser {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  company   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("calculator_users")
+}
+
+model UserSellerLead {
+  sellerId  String   @map("seller_id")
+  leadId    String   @map("lead_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  seller User @relation("Seller", fields: [sellerId], references: [id], onDelete: Cascade)
+  lead   User @relation("Lead", fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@id([sellerId, leadId])
+  @@map("user_seller_leads")
+}
+

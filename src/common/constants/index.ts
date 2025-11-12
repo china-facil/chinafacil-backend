@@ -1,0 +1,26 @@
+export const USER_ROLES = {
+  ADMIN: 'ADMIN',
+  USER: 'USER',
+  SELLER: 'SELLER',
+} as const
+
+export const USER_STATUS = {
+  ACTIVE: 'ACTIVE',
+  INACTIVE: 'INACTIVE',
+  SUSPENDED: 'SUSPENDED',
+} as const
+
+export const SOLICITATION_STATUS = {
+  OPEN: 'OPEN',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+} as const
+
+export const SUBSCRIPTION_STATUS = {
+  ACTIVE: 'ACTIVE',
+  CANCELLED: 'CANCELLED',
+  EXPIRED: 'EXPIRED',
+  PENDING: 'PENDING',
+} as const
+
