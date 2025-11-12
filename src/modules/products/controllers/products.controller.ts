@@ -1,0 +1,133 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common'
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger'
+import { CurrentUser } from '../../../common/decorators/current-user.decorator'
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
+import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
+import { ProductsService } from '../services/products.service'
+
+@ApiTags('products')
+@Controller('products')
+export class ProductsController {
+  constructor(private readonly productsService: ProductsService) {}
+
+  @Get('search/1688')
+  @ApiOperation({ summary: 'Buscar produtos no Alibaba 1688 por keyword' })
+  @ApiResponse({ status: 200, description: 'Resultados da busca' })
+  async search1688(@Query() searchDto: SearchProductsDto) {
+    return this.productsService.search1688(searchDto)
+  }
+
+  @Get('search/alibaba')
+  @ApiOperation({ summary: 'Buscar produtos no Alibaba Internacional por keyword' })
+  @ApiResponse({ status: 200, description: 'Resultados da busca' })
+  async searchAlibaba(@Query() searchDto: SearchProductsDto) {
+    return this.productsService.searchAlibabaIntl(searchDto)
+  }
+
+  @Get('search/mixed')
+  @ApiOperation({ summary: 'Buscar produtos em ambas as plataformas (1688 + Alibaba)' })
+  @ApiResponse({ status: 200, description: 'Resultados mesclados' })
+  async searchMixed(@Query() searchDto: SearchProductsDto) {
+    return this.productsService.searchMixed(searchDto)
+  }
+
+  @Post('search/image/1688')
+  @ApiOperation({ summary: 'Buscar produtos no Alibaba 1688 por imagem' })
+  @ApiResponse({ status: 200, description: 'Resultados da busca' })
+  async searchByImage1688(@Body() searchDto: SearchByImageDto) {
+    return this.productsService.searchByImage1688(searchDto)
+  }
+
+  @Post('search/image/alibaba')
+  @ApiOperation({ summary: 'Buscar produtos no Alibaba Internacional por imagem' })
+  @ApiResponse({ status: 200, description: 'Resultados da busca' })
+  async searchByImageAlibaba(@Body() searchDto: SearchByImageDto) {
+    return this.productsService.searchByImageAlibabaIntl(searchDto)
+  }
+
+  @Get('details/1688/:itemId')
+  @ApiOperation({ summary: 'Obter detalhes de produto do Alibaba 1688' })
+  @ApiResponse({ status: 200, description: 'Detalhes do produto' })
+  async getDetails1688(@Param('itemId') itemId: string) {
+    return this.productsService.getDetails1688(itemId)
+  }
+
+  @Get('details/alibaba/:productId')
+  @ApiOperation({ summary: 'Obter detalhes de produto do Alibaba Internacional' })
+  @ApiResponse({ status: 200, description: 'Detalhes do produto' })
+  async getDetailsAlibaba(@Param('productId') productId: string) {
+    return this.productsService.getDetailsAlibabaIntl(productId)
+  }
+
+  @Get('sku/1688/:itemId')
+  @ApiOperation({ summary: 'Obter SKUs/variações de produto do Alibaba 1688' })
+  @ApiResponse({ status: 200, description: 'SKUs do produto' })
+  async getSku1688(@Param('itemId') itemId: string) {
+    return this.productsService.getSku1688(itemId)
+  }
+
+  @Get('shipping/1688/:itemId')
+  @ApiOperation({ summary: 'Obter informações de frete do Alibaba 1688' })
+  @ApiResponse({ status: 200, description: 'Informações de frete' })
+  async getShipping1688(
+    @Param('itemId') itemId: string,
+    @Query('quantity') quantity: string,
+    @Query('province') province?: string,
+    @Query('city') city?: string,
+  ) {
+    return this.productsService.getShipping1688({
+      itemId,
+      quantity: parseInt(quantity, 10) || 1,
+      province,
+      city,
+    })
+  }
+
+  @Post('favorites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Adicionar produto aos favoritos' })
+  @ApiResponse({ status: 201, description: 'Produto adicionado aos favoritos' })
+  async addToFavorites(
+    @CurrentUser() user: any,
+    @Body() addFavoriteDto: AddFavoriteDto,
+  ) {
+    return this.productsService.addToFavorites(user.id, addFavoriteDto)
+  }
+
+  @Delete('favorites/:productId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Remover produto dos favoritos' })
+  @ApiResponse({ status: 200, description: 'Produto removido dos favoritos' })
+  async removeFromFavorites(
+    @CurrentUser() user: any,
+    @Param('productId') productId: string,
+  ) {
+    return this.productsService.removeFromFavorites(user.id, productId)
+  }
+
+  @Get('favorites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Listar produtos favoritos do usuário' })
+  @ApiResponse({ status: 200, description: 'Lista de favoritos' })
+  async getFavorites(@CurrentUser() user: any) {
+    return this.productsService.getFavorites(user.id)
+  }
+}
+
