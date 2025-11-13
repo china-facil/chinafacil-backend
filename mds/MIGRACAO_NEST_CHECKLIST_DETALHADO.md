@@ -47,7 +47,7 @@
 - [x] Exception filters (HttpExceptionFilter, AllExceptionsFilter)
 - [x] Logging interceptor
 - [x] Transform interceptor
-- [ ] Transaction interceptor
+- [x] Transaction interceptor
 - [x] Validation pipe global
 - [x] Swagger setup
 
@@ -216,7 +216,7 @@
 - [ ] Tests unitários do UsersService
 
 #### Dia 8: UserAddress
-- [ ] Criar entity UserAddress
+- [x] Criar entity UserAddress
   - id (uuid)
   - user_id (fk)
   - street
@@ -229,9 +229,9 @@
   - country
   - is_default
   - timestamps
-- [ ] Criar UserAddressController
-- [ ] Criar UserAddressService
-- [ ] PATCH /user-address-default/:id
+- [x] Criar UserAddressController
+- [x] Criar UserAddressService
+- [x] PATCH /user-address-default/:id
 - [ ] Tests
 
 #### Dia 9: ClientsModule
@@ -387,7 +387,7 @@
 - [x] Criar BoardingTypesController (Resource)
 - [x] Criar BoardingTypesService
 - [x] GET /settings/default-boarding-type
-- [ ] GET /settings/quotation
+- [x] GET /settings/quotation
 
 #### Dia 14: StatisticsModule
 - [x] Criar StatisticsModule
