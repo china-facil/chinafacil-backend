@@ -11,3 +11,4 @@ import { N8NService } from '../../integrations/crm/n8n/n8n.service'
 })
 export class CRMModule {}
 
+

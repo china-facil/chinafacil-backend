@@ -36,3 +36,4 @@ export class CreateBoardingTypeDto {
   isActive?: boolean
 }
 
+

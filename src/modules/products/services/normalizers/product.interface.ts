@@ -23,3 +23,4 @@ export interface NormalizedProduct {
   [key: string]: any
 }
 
+

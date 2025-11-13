@@ -37,6 +37,48 @@ enum SubscriptionStatus {
   PENDING
 }
 
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CONVERTED
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum LeadOrigin {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  EMAIL
+  PHONE
+  TYPEFORM
+  OTHER
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ExportType {
+  CSV
+  EXCEL
+  PDF
+  JSON
+}
+
 // ===== MODELS =====
 
 model User {
@@ -332,5 +374,69 @@ model UserSellerLead {
 
   @@id([sellerId, leadId])
   @@map("user_seller_leads")
+}
+
+model Lead {
+  id          String      @id @default(uuid())
+  name        String
+  email       String      @unique
+  phone       String?
+  company     String?
+  status      LeadStatus  @default(NEW)
+  origin      LeadOrigin  @default(OTHER)
+  notes       String?     @db.Text
+  metadata    Json?
+  assignedTo  String?     @map("assigned_to")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@map("leads")
+}
+
+model Notification {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  title     String
+  message   String            @db.Text
+  type      NotificationType  @default(INFO)
+  isRead    Boolean           @default(false) @map("is_read")
+  readAt    DateTime?         @map("read_at")
+  data      Json?
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  @@map("notifications")
+}
+
+model WebhookLog {
+  id          String    @id @default(uuid())
+  event       String
+  source      String
+  payload     Json
+  response    Json?
+  status      String
+  error       String?   @db.Text
+  processedAt DateTime? @map("processed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("webhook_logs")
+}
+
+model Export {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  type        ExportType
+  status      ExportStatus  @default(PENDING)
+  fileName    String?       @map("file_name")
+  fileUrl     String?       @map("file_url")
+  filters     Json?
+  totalRows   Int?          @map("total_rows")
+  error       String?       @db.Text
+  startedAt   DateTime?     @map("started_at")
+  completedAt DateTime?     @map("completed_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@map("exports")
 }
 

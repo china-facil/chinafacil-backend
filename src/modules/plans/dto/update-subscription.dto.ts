@@ -5,3 +5,4 @@ export class UpdateSubscriptionDto extends PartialType(
   OmitType(CreateSubscriptionDto, ['userId'] as const),
 ) {}
 
+

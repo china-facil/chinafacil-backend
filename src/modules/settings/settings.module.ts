@@ -13,3 +13,4 @@ import { FreightsService } from './services/freights.service'
 })
 export class SettingsModule {}
 
+

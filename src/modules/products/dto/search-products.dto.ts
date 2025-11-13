@@ -67,3 +67,4 @@ export class SearchProductsDto {
   priceEnd?: number
 }
 
+
