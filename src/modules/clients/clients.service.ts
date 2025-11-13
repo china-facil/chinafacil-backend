@@ -23,7 +23,7 @@ export class ClientsService {
   }
 
   async findAll(filterDto: FilterClientDto) {
-    const { search, status, page, limit } = filterDto
+    const { search, status, page = 1, limit = 10 } = filterDto
 
     const skip = (page - 1) * limit
     const take = limit

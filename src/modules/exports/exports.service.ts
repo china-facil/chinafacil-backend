@@ -55,14 +55,14 @@ export class ExportsService {
     return exportRecord
   }
 
-  async updateStatus(id: string, status: ExportStatus, filePath?: string) {
+  async updateStatus(id: string, status: ExportStatus, fileUrl?: string) {
     const exportRecord = await this.findOne(id)
 
     const updatedExport = await this.prisma.export.update({
       where: { id },
       data: {
         status,
-        filePath,
+        fileUrl,
         completedAt: status === ExportStatus.COMPLETED ? new Date() : null,
       },
     })
@@ -74,8 +74,8 @@ export class ExportsService {
     return this.updateStatus(id, ExportStatus.PROCESSING)
   }
 
-  async markAsCompleted(id: string, filePath: string) {
-    return this.updateStatus(id, ExportStatus.COMPLETED, filePath)
+  async markAsCompleted(id: string, fileUrl: string) {
+    return this.updateStatus(id, ExportStatus.COMPLETED, fileUrl)
   }
 
   async markAsFailed(id: string) {

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Patch,
   Post,
   UseGuards,
@@ -60,6 +61,9 @@ export class CartController {
     @Body() updateCartDto: UpdateCartDto,
   ) {
     const cart = await this.cartService.findByUser(user.id)
+    if (!cart) {
+      throw new NotFoundException('Carrinho não encontrado')
+    }
     return this.cartService.update(cart.id, updateCartDto)
   }
 

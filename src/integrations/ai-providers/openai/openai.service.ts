@@ -112,6 +112,15 @@ Responda APENAS com um JSON no seguinte formato:
       })
 
       const content = response.message.content
+      if (!content) {
+        return {
+          similarity_score: 0,
+          is_similar: false,
+          confidence: 0,
+          reasons: [],
+          differences: ['Resposta da IA vazia'],
+        }
+      }
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       
       if (jsonMatch) {

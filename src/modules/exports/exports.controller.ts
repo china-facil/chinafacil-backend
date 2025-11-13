@@ -9,6 +9,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common'
+import { Request as ExpressRequest } from 'express'
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -33,7 +34,7 @@ export class ExportsController {
   @ApiOperation({ summary: 'Solicitar exportação' })
   @ApiResponse({ status: 201, description: 'Exportação solicitada' })
   async requestExport(
-    @Request() req,
+    @Request() req: ExpressRequest & { user: { id: string } },
     @Body() requestExportDto: RequestExportDto,
   ) {
     return this.exportsService.requestExport(req.user.id, requestExportDto)

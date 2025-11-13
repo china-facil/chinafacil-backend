@@ -57,7 +57,7 @@ export class UsersService {
   }
 
   async findAll(filterDto: FilterUserDto) {
-    const { search, role, status, page, limit, sortBy, sortOrder } = filterDto
+    const { search, role, status, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = filterDto
 
     const skip = (page - 1) * limit
     const take = limit
@@ -85,7 +85,7 @@ export class UsersService {
         skip,
         take,
         orderBy: {
-          [sortBy]: sortOrder,
+          [sortBy as string]: sortOrder,
         },
         select: {
           id: true,

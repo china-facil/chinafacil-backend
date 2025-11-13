@@ -8,14 +8,20 @@ export class NotificationsService {
 
   async create(createNotificationDto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
-      data: createNotificationDto,
+      data: {
+        userId: createNotificationDto.userId,
+        title: createNotificationDto.type,
+        message: JSON.stringify(createNotificationDto.data),
+        type: createNotificationDto.type as any,
+        data: createNotificationDto.data,
+      },
     })
 
     return notification
   }
 
   async findByUser(userId: string, filterDto: FilterNotificationDto) {
-    const { read, page, limit } = filterDto
+    const { read, page = 1, limit = 20 } = filterDto
 
     const skip = (page - 1) * limit
     const take = limit

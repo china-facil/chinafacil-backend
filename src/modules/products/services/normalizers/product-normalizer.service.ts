@@ -15,7 +15,7 @@ export class ProductNormalizerService {
       return response
     }
 
-    const normalizedItems = response.data.items.map(item =>
+    const normalizedItems = response.data.items.map((item: any) =>
       this.alibaba1688Normalizer.normalizeSearchItem(item),
     )
 
@@ -52,7 +52,7 @@ export class ProductNormalizerService {
       }
     }
 
-    const normalizedItems = response.Result.Items.map(item =>
+    const normalizedItems = response.Result.Items.map((item: any) =>
       this.alibabaIntlNormalizer.normalizeSearchItem(item),
     )
 

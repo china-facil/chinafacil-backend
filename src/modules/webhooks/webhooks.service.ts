@@ -67,8 +67,10 @@ export class WebhooksService {
     try {
       const webhookLog = await this.prisma.webhookLog.create({
         data: {
+          event: genericWebhookDto.source || 'generic',
           source: genericWebhookDto.source,
           payload: genericWebhookDto.payload,
+          status: 'processed',
           processedAt: new Date(),
         },
       })

@@ -5,13 +5,13 @@ import { Translate } from '@google-cloud/translate/build/src/v2'
 @Injectable()
 export class GoogleTranslationService {
   private readonly logger = new Logger(GoogleTranslationService.name)
-  private translate: Translate
+  private translateClient: Translate
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get('GOOGLE_TRANSLATE_API_KEY')
     
     if (apiKey) {
-      this.translate = new Translate({
+      this.translateClient = new Translate({
         key: apiKey,
       })
     }
@@ -28,7 +28,8 @@ export class GoogleTranslationService {
         options.from = sourceLanguage
       }
 
-      const [translations] = await this.translate.translate(text, options)
+      const textArray = Array.isArray(text) ? text : [text]
+      const [translations] = await this.translateClient.translate(textArray, options)
       
       return Array.isArray(translations) ? translations : [translations]
     } catch (error) {
@@ -39,7 +40,7 @@ export class GoogleTranslationService {
 
   async detectLanguage(text: string): Promise<any> {
     try {
-      const [detection] = await this.translate.detect(text)
+      const [detection] = await this.translateClient.detect(text)
       return detection
     } catch (error) {
       this.logger.error(`Google detect language error: ${error.message}`)
@@ -49,7 +50,7 @@ export class GoogleTranslationService {
 
   async getSupportedLanguages(): Promise<any> {
     try {
-      const [languages] = await this.translate.getLanguages()
+      const [languages] = await this.translateClient.getLanguages()
       return languages
     } catch (error) {
       this.logger.error(`Google get languages error: ${error.message}`)

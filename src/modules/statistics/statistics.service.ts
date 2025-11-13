@@ -51,7 +51,7 @@ export class StatisticsService {
       newSolicitations,
       activeSolicitations,
       completedSolicitations,
-      totalRevenue,
+      totalRevenueSubscriptions,
     ] = await Promise.all([
       this.prisma.user.count({
         where: {
@@ -89,7 +89,7 @@ export class StatisticsService {
           status: SolicitationStatus.COMPLETED,
         },
       }),
-      this.prisma.subscription.aggregate({
+      this.prisma.subscription.findMany({
         where: {
           startedAt: {
             gte: startDate,
@@ -97,7 +97,7 @@ export class StatisticsService {
           },
           status: SubscriptionStatus.ACTIVE,
         },
-        _sum: {
+        include: {
           plan: {
             select: {
               price: true,
@@ -112,6 +112,10 @@ export class StatisticsService {
         ? (completedSolicitations / newSolicitations) * 100
         : 0
 
+    const totalRevenue = totalRevenueSubscriptions.reduce((sum, sub) => {
+      return sum + (sub.plan?.price ? Number(sub.plan.price) : 0)
+    }, 0)
+
     return {
       period: {
         year: targetYear,
@@ -122,7 +126,7 @@ export class StatisticsService {
       activeSolicitations,
       completedSolicitations,
       conversionRate: parseFloat(conversionRate.toFixed(2)),
-      totalRevenue: 0,
+      totalRevenue,
     }
   }
 

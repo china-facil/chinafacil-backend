@@ -43,7 +43,7 @@ export class SolicitationsService {
   }
 
   async findAll(filterDto: FilterSolicitationDto) {
-    const { search, status, userId, clientId, page, limit } = filterDto
+    const { search, status, userId, clientId, page = 1, limit = 10 } = filterDto
 
     const skip = (page - 1) * limit
     const take = limit
@@ -267,7 +267,8 @@ export class SolicitationsService {
       },
     })
 
-    const kanban = {
+    type SolicitationWithRelations = typeof solicitations[0]
+    const kanban: Record<SolicitationStatus, SolicitationWithRelations[]> = {
       [SolicitationStatus.OPEN]: [],
       [SolicitationStatus.IN_PROGRESS]: [],
       [SolicitationStatus.COMPLETED]: [],
