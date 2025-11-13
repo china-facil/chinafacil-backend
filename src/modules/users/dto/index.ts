@@ -1,6 +1,6 @@
 export * from './create-user.dto'
-export * from './update-user.dto'
+export * from './create-user-address.dto'
 export * from './filter-user.dto'
 export * from './update-phone.dto'
-
-
+export * from './update-user.dto'
+export * from './update-user-address.dto'
