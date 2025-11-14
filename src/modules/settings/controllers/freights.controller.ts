@@ -21,13 +21,13 @@ import { CreateFreightDto, UpdateFreightDto } from '../dto'
 import { FreightsService } from '../services/freights.service'
 
 @ApiTags('settings')
-@Controller('freights')
+@Controller('settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class FreightsController {
   constructor(private readonly freightsService: FreightsService) {}
 
-  @Post()
+  @Post('freights')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Criar frete' })
   @ApiResponse({ status: 201, description: 'Frete criado' })
@@ -35,21 +35,21 @@ export class FreightsController {
     return this.freightsService.create(createFreightDto)
   }
 
-  @Get()
+  @Get('freights')
   @ApiOperation({ summary: 'Listar fretes' })
   @ApiResponse({ status: 200, description: 'Lista de fretes' })
   async findAll() {
     return this.freightsService.findAll()
   }
 
-  @Get(':id')
+  @Get('freights/:id')
   @ApiOperation({ summary: 'Obter frete específico' })
   @ApiResponse({ status: 200, description: 'Frete encontrado' })
   async findOne(@Param('id') id: string) {
     return this.freightsService.findOne(id)
   }
 
-  @Patch(':id')
+  @Patch('freights/:id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Atualizar frete' })
   @ApiResponse({ status: 200, description: 'Frete atualizado' })
@@ -60,7 +60,7 @@ export class FreightsController {
     return this.freightsService.update(id, updateFreightDto)
   }
 
-  @Delete(':id')
+  @Delete('freights/:id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Remover frete' })
   @ApiResponse({ status: 200, description: 'Frete removido' })

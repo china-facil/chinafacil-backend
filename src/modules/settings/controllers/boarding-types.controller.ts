@@ -21,13 +21,13 @@ import { CreateBoardingTypeDto, UpdateBoardingTypeDto } from '../dto'
 import { BoardingTypesService } from '../services/boarding-types.service'
 
 @ApiTags('settings')
-@Controller('boarding-types')
+@Controller('settings')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class BoardingTypesController {
   constructor(private readonly boardingTypesService: BoardingTypesService) {}
 
-  @Post()
+  @Post('boarding-types')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Criar tipo de embarque' })
   @ApiResponse({ status: 201, description: 'Tipo criado' })
@@ -35,35 +35,35 @@ export class BoardingTypesController {
     return this.boardingTypesService.create(createBoardingTypeDto)
   }
 
-  @Get()
+  @Get('boarding-types')
   @ApiOperation({ summary: 'Listar tipos de embarque' })
   @ApiResponse({ status: 200, description: 'Lista de tipos' })
   async findAll() {
     return this.boardingTypesService.findAll()
   }
 
-  @Get('active')
+  @Get('boarding-types/active')
   @ApiOperation({ summary: 'Listar tipos ativos' })
   @ApiResponse({ status: 200, description: 'Tipos ativos' })
   async findActive() {
     return this.boardingTypesService.findActive()
   }
 
-  @Get('default')
-  @ApiOperation({ summary: 'Obter tipo padrão' })
+  @Get('default-boarding-type')
+  @ApiOperation({ summary: 'Obter tipo padrão (público)' })
   @ApiResponse({ status: 200, description: 'Tipo padrão' })
   async findDefault() {
     return this.boardingTypesService.findDefault()
   }
 
-  @Get(':id')
+  @Get('boarding-types/:id')
   @ApiOperation({ summary: 'Obter tipo específico' })
   @ApiResponse({ status: 200, description: 'Tipo encontrado' })
   async findOne(@Param('id') id: string) {
     return this.boardingTypesService.findOne(id)
   }
 
-  @Patch(':id')
+  @Patch('boarding-types/:id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Atualizar tipo' })
   @ApiResponse({ status: 200, description: 'Tipo atualizado' })
@@ -74,7 +74,7 @@ export class BoardingTypesController {
     return this.boardingTypesService.update(id, updateBoardingTypeDto)
   }
 
-  @Delete(':id')
+  @Delete('boarding-types/:id')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Remover tipo' })
   @ApiResponse({ status: 200, description: 'Tipo removido' })
