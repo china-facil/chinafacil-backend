@@ -4,8 +4,11 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LogsModule } from './common/logs/logs.module';
 import { DatabaseModule } from './database/database.module';
+import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { MailModule } from './modules/mail/mail.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -47,6 +50,7 @@ import { UsersModule } from './modules/users/users.module';
     // Módulos de domínio
     AuthModule,
     UsersModule,
+    SettingsModule,
 
     // Adicionar outros módulos conforme for implementando:
     // ClientsModule,
@@ -56,7 +60,6 @@ import { UsersModule } from './modules/users/users.module';
     // PlansModule,
     // NotificationsModule,
     // StatisticsModule,
-    // SettingsModule,
     // WebhooksModule,
     // LeadsModule,
     // AiModule,
@@ -71,10 +74,10 @@ import { UsersModule } from './modules/users/users.module';
     // MarketplaceModule,
 
     // Jobs
-    // JobsModule,
+    JobsModule,
 
     // Mail
-    // MailModule,
+    MailModule,
 
     // CLI
     // CliModule,
