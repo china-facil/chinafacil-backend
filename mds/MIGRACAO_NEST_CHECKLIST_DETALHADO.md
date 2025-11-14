@@ -546,8 +546,8 @@
   - sendPasswordResetEmail
   - sendNewSolicitationEmail
   - sendBulkEmail
-- [ ] Criar EmailProcessor (Bull)
-- [ ] Implementar jobs assíncronos
+- [x] Criar EmailProcessor (Bull)
+- [x] Implementar jobs assíncronos
 - [ ] Tests
 
 #### Dia 18: Export Module
@@ -560,11 +560,12 @@
   - Sistema de status (PENDING/PROCESSING/COMPLETED/FAILED)
   - requestExport
   - updateStatus
-- [ ] Criar ExportProcessor (Bull)
-- [ ] Implementar geração de arquivos:
-  - exportToExcel
-  - exportToPDF
+- [x] Criar ExportProcessor (Bull)
+- [x] Implementar geração de arquivos:
+  - exportToExcel (fallback para CSV)
+  - exportToPDF (fallback para JSON)
   - exportToCSV
+  - exportToJSON
 - [ ] Tests
 
 #### Dia 19: CLI Commands
