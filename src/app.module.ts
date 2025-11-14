@@ -8,6 +8,7 @@ import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { MailModule } from './modules/mail/mail.module';
+import { ProxyModule } from './modules/proxy/proxy.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -78,6 +79,9 @@ import { UsersModule } from './modules/users/users.module';
 
     // Mail
     MailModule,
+
+    // Proxy
+    ProxyModule,
 
     // CLI
     // CliModule,
