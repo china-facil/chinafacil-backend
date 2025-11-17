@@ -4,11 +4,10 @@ import { IsArray, IsEmail, IsNotEmpty, IsObject, IsOptional, IsString } from 'cl
 export class SendEmailDto {
   @ApiProperty({
     example: 'user@example.com',
-    description: 'Email do destinatário',
+    description: 'Email do destinatário ou array de emails',
   })
-  @IsEmail()
   @IsNotEmpty()
-  to: string
+  to: string | string[]
 
   @ApiProperty({
     example: 'Assunto do Email',

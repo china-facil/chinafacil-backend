@@ -208,7 +208,6 @@ export class ExportProcessor {
                 id: true,
                 cfCode: true,
                 name: true,
-                cnpj: true,
               },
             },
           },

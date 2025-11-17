@@ -16,6 +16,15 @@ import { ExportProcessor } from './processors/export.processor'
       {
         name: 'export-queue',
       },
+      {
+        name: 'catalog-queue',
+      },
+      {
+        name: 'lead-queue',
+      },
+      {
+        name: 'product-similarity-queue',
+      },
     ),
     MailModule,
     ExportsModule,

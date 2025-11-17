@@ -40,6 +40,9 @@ export class MercadoLivreService {
       )
 
       this.accessToken = response.data.access_token
+      if (!this.accessToken) {
+        throw new Error('Access token não retornado pela API')
+      }
       return this.accessToken
     } catch (error: any) {
       this.logger.error(`Erro ao autenticar no Mercado Livre: ${error.message}`)
