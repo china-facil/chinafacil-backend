@@ -15,7 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
-import { CurrentUser } from '../../common/decorators/current-user.decorator'
+import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import {
   CreateUserAddressDto,
   UpdateUserAddressDto,
@@ -96,4 +96,5 @@ export class UserAddressController {
     return this.userAddressService.setDefault(id, userId)
   }
 }
+
 

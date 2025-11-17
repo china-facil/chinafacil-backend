@@ -11,6 +11,20 @@ import { MailModule } from './modules/mail/mail.module';
 import { ProxyModule } from './modules/proxy/proxy.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
+import { ClientsModule } from './modules/clients/clients.module';
+import { SolicitationsModule } from './modules/solicitations/solicitations.module';
+import { ProductsModule } from './modules/products/products.module';
+import { CartModule } from './modules/cart/cart.module';
+import { PlansModule } from './modules/plans/plans.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { LeadsModule } from './modules/leads/leads.module';
+import { AIModule } from './modules/ai/ai.module';
+import { ExportsModule } from './modules/exports/exports.module';
+import { TranslationModule } from './modules/translation/translation.module';
+import { OTPModule } from './modules/otp/otp.module';
+import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.module';
 
 @Module({
   imports: [
@@ -51,28 +65,21 @@ import { UsersModule } from './modules/users/users.module';
     // Módulos de domínio
     AuthModule,
     UsersModule,
+    ClientsModule,
+    PlansModule,
     SettingsModule,
-
-    // Adicionar outros módulos conforme for implementando:
-    // ClientsModule,
-    // SolicitationsModule,
-    // ProductsModule,
-    // CartModule,
-    // PlansModule,
-    // NotificationsModule,
-    // StatisticsModule,
-    // WebhooksModule,
-    // LeadsModule,
-    // AiModule,
-    // ExportsModule,
-
-    // Integrações
-    // AlibabaModule,
-    // TranslationModule,
-    // AiProvidersModule,
-    // CrmModule,
-    // SmsModule,
-    // MarketplaceModule,
+    SolicitationsModule,
+    ProductsModule,
+    CartModule,
+    NotificationsModule,
+    StatisticsModule,
+    WebhooksModule,
+    LeadsModule,
+     AIModule,
+     ExportsModule,
+     TranslationModule,
+     OTPModule,
+     TaxCalculatorModule,
 
     // Jobs
     JobsModule,
