@@ -1,15 +1,29 @@
+import { CacheModule } from '@nestjs/cache-manager'
 import { Module } from '@nestjs/common'
+import { AIModule } from '../ai/ai.module'
 import { DatabaseModule } from '../../database/database.module'
 import { CalculatorUsersController } from './controllers/calculator-users.controller'
+import { NcmController } from './controllers/ncm.controller'
 import { TaxCalculationController } from './controllers/tax-calculation.controller'
 import { CalculatorUsersService } from './services/calculator-users.service'
+import { NcmService } from './services/ncm.service'
 import { TaxCalculationService } from './services/tax-calculation.service'
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [TaxCalculationController, CalculatorUsersController],
-  providers: [TaxCalculationService, CalculatorUsersService],
-  exports: [TaxCalculationService, CalculatorUsersService],
+  imports: [
+    DatabaseModule,
+    AIModule,
+    CacheModule.register({
+      ttl: 604800000,
+    }),
+  ],
+  controllers: [
+    TaxCalculationController,
+    CalculatorUsersController,
+    NcmController,
+  ],
+  providers: [TaxCalculationService, CalculatorUsersService, NcmService],
+  exports: [TaxCalculationService, CalculatorUsersService, NcmService],
 })
 export class TaxCalculatorModule {}
 
