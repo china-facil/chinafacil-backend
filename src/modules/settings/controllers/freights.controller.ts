@@ -17,7 +17,11 @@ import {
 import { Roles } from '../../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
-import { CreateFreightDto, UpdateFreightDto } from '../dto'
+import {
+  CalculateFreightDto,
+  CreateFreightDto,
+  UpdateFreightDto,
+} from '../dto'
 import { FreightsService } from '../services/freights.service'
 
 @ApiTags('settings')
@@ -66,6 +70,14 @@ export class FreightsController {
   @ApiResponse({ status: 200, description: 'Frete removido' })
   async remove(@Param('id') id: string) {
     return this.freightsService.remove(id)
+  }
+
+  @Post('frete/calcular')
+  @ApiOperation({ summary: 'Calcular frete nacional' })
+  @ApiResponse({ status: 200, description: 'Cálculo de frete realizado' })
+  @ApiResponse({ status: 404, description: 'Frete não encontrado' })
+  async calculateFreight(@Body() calculateFreightDto: CalculateFreightDto) {
+    return this.freightsService.calculateFreight(calculateFreightDto)
   }
 }
 
