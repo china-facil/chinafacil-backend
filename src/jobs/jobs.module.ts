@@ -3,8 +3,10 @@ import { Module } from '@nestjs/common'
 import { DatabaseModule } from '../database/database.module'
 import { MailModule } from '../modules/mail/mail.module'
 import { ExportsModule } from '../modules/exports/exports.module'
+import { MarketplaceModule } from '../integrations/marketplace/marketplace.module'
 import { EmailProcessor } from './processors/email.processor'
 import { ExportProcessor } from './processors/export.processor'
+import { CatalogProcessor } from './processors/catalog.processor'
 
 @Module({
   imports: [
@@ -28,9 +30,10 @@ import { ExportProcessor } from './processors/export.processor'
     ),
     MailModule,
     ExportsModule,
+    MarketplaceModule,
   ],
-  providers: [EmailProcessor, ExportProcessor],
-  exports: [EmailProcessor, ExportProcessor],
+  providers: [EmailProcessor, ExportProcessor, CatalogProcessor],
+  exports: [EmailProcessor, ExportProcessor, CatalogProcessor],
 })
 export class JobsModule {}
 
