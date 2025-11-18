@@ -25,6 +25,7 @@ import { ExportsModule } from './modules/exports/exports.module';
 import { TranslationModule } from './modules/translation/translation.module';
 import { OTPModule } from './modules/otp/otp.module';
 import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.module';
+import { BullBoardModuleConfig } from './modules/bull-board/bull-board.module';
 
 @Module({
   imports: [
@@ -89,6 +90,9 @@ import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.mod
 
     // Proxy
     ProxyModule,
+
+    // Bull Board Dashboard
+    BullBoardModuleConfig,
 
     // CLI
     // CliModule,

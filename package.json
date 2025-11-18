@@ -28,6 +28,9 @@
     },
     "dependencies": {
         "@anthropic-ai/sdk": "^0.68.0",
+        "@bull-board/api": "^6.14.2",
+        "@bull-board/express": "^6.14.2",
+        "@bull-board/nestjs": "^6.14.2",
         "@google-cloud/translate": "^9.3.0",
         "@nestjs/axios": "^3.0.1",
         "@nestjs/bull": "^10.0.1",
