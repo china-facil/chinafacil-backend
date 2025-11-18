@@ -21,7 +21,10 @@ export class CatalogProcessor {
     @InjectQueue('catalog-queue') private readonly catalogQueue: Queue,
   ) {}
 
-  @Process('process-catalog')
+  @Process({
+    name: 'process-catalog',
+    concurrency: 1,
+  })
   async handleProcessCatalog(job: Job<ProcessCatalogJobDto>) {
     this.logger.log(`Processing catalog job ${job.id}`)
 
@@ -33,9 +36,21 @@ export class CatalogProcessor {
       }
 
       for (const category of categories) {
-        await this.catalogQueue.add('process-category', {
-          categoryId: category.id,
-        } as ProcessCategoryJobDto)
+        await this.catalogQueue.add(
+          'process-category',
+          {
+            categoryId: category.id,
+          } as ProcessCategoryJobDto,
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        )
       }
 
       this.logger.log(`Dispatched ${categories.length} category jobs`)
@@ -45,14 +60,22 @@ export class CatalogProcessor {
         `Failed to process catalog: ${error.message}`,
         error.stack,
       )
+      if (job.attemptsMade < (job.opts.attempts || 3) - 1) {
+        this.logger.warn(
+          `Retrying catalog job ${job.id} (attempt ${job.attemptsMade + 1})`,
+        )
+      }
       throw error
     }
   }
 
-  @Process('process-category')
+  @Process({
+    name: 'process-category',
+    concurrency: 5,
+  })
   async handleProcessCategory(job: Job<ProcessCategoryJobDto>) {
     this.logger.log(
-      `Processing category ${job.data.categoryId} job ${job.id}`,
+      `Processing category ${job.data.categoryId} job ${job.id} (attempt ${job.attemptsMade + 1}/${job.opts.attempts})`,
     )
 
     try {
@@ -69,19 +92,31 @@ export class CatalogProcessor {
       }
 
       for (const mlProduct of products.results) {
-        await this.catalogQueue.add('add-product-to-catalog', {
-          categoryId,
-          mlProductId: mlProduct.id,
-          mlProductData: {
-            id: mlProduct.id,
-            title: mlProduct.title,
-            price: mlProduct.price,
-            thumbnail: mlProduct.thumbnail,
-            permalink: mlProduct.permalink,
-            sold_quantity: mlProduct.sold_quantity,
-            sold_value: mlProduct.sold_value,
+        await this.catalogQueue.add(
+          'add-product-to-catalog',
+          {
+            categoryId,
+            mlProductId: mlProduct.id,
+            mlProductData: {
+              id: mlProduct.id,
+              title: mlProduct.title,
+              price: mlProduct.price,
+              thumbnail: mlProduct.thumbnail,
+              permalink: mlProduct.permalink,
+              sold_quantity: mlProduct.sold_quantity,
+              sold_value: mlProduct.sold_value,
+            },
+          } as AddProductToCatalogJobDto,
+          {
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 1000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
           },
-        } as AddProductToCatalogJobDto)
+        )
       }
 
       this.logger.log(
@@ -96,23 +131,42 @@ export class CatalogProcessor {
             offset: offset + limit,
             limit,
           } as ProcessCategoryJobDto,
-          { delay: 1000 },
+          {
+            delay: 1000,
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 2000,
+            },
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
         )
       }
 
       return { processed: products.results.length }
     } catch (error: any) {
       this.logger.error(
-        `Failed to process category: ${error.message}`,
+        `Failed to process category ${job.data.categoryId}: ${error.message}`,
         error.stack,
       )
+      if (job.attemptsMade < (job.opts.attempts || 3) - 1) {
+        this.logger.warn(
+          `Retrying category job ${job.id} (attempt ${job.attemptsMade + 1})`,
+        )
+      }
       throw error
     }
   }
 
-  @Process('add-product-to-catalog')
+  @Process({
+    name: 'add-product-to-catalog',
+    concurrency: 10,
+  })
   async handleAddProductToCatalog(job: Job<AddProductToCatalogJobDto>) {
-    this.logger.log(`Adding product ${job.data.mlProductId} to catalog`)
+    this.logger.log(
+      `Adding product ${job.data.mlProductId} to catalog (attempt ${job.attemptsMade + 1}/${job.opts.attempts})`,
+    )
 
     try {
       const { categoryId, mlProductData, product1688Data } = job.data
@@ -162,9 +216,14 @@ export class CatalogProcessor {
       return { success: true, productId: mlProductData.id }
     } catch (error: any) {
       this.logger.error(
-        `Failed to add product to catalog: ${error.message}`,
+        `Failed to add product ${job.data.mlProductId} to catalog: ${error.message}`,
         error.stack,
       )
+      if (job.attemptsMade < (job.opts.attempts || 3) - 1) {
+        this.logger.warn(
+          `Retrying add-product job ${job.id} (attempt ${job.attemptsMade + 1})`,
+        )
+      }
       throw error
     }
   }
