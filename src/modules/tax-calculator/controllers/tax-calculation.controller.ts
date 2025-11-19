@@ -4,18 +4,23 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
 import { Roles } from '../../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
-import { CreateTaxCalculationDto } from '../dto'
+import {
+  CreateTaxCalculationDto,
+  FilterTaxCalculationDto,
+} from '../dto'
 import { TaxCalculationService } from '../services/tax-calculation.service'
 
 @ApiTags('tax-calculator')
@@ -36,10 +41,16 @@ export class TaxCalculationController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Listar cálculos (admin)' })
+  @ApiOperation({ summary: 'Listar cálculos com filtros e paginação (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de cálculos' })
-  async findAll() {
-    return this.taxCalculationService.findAll()
+  @ApiQuery({ name: 'userId', required: false, type: String })
+  @ApiQuery({ name: 'ncmCode', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: String })
+  @ApiQuery({ name: 'endDate', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async findAll(@Query() filterDto: FilterTaxCalculationDto) {
+    return this.taxCalculationService.findAll(filterDto)
   }
 
   @Get('user/:userId')

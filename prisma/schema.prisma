@@ -106,6 +106,7 @@ model User {
   subscription    Subscription?
   sellerLeads     UserSellerLead[] @relation("Seller")
   leads           UserSellerLead[] @relation("Lead")
+  taxCalculations TaxCalculation[]
 
   @@map("users")
 }
@@ -347,6 +348,8 @@ model TaxCalculation {
   calculationResult Json     @map("calculation_result")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("tax_calculations")
 }

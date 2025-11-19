@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../../database/prisma.service'
-import { CreateTaxCalculationDto } from '../dto'
+import { CreateTaxCalculationDto, FilterTaxCalculationDto } from '../dto'
 
 @Injectable()
 export class TaxCalculationService {
@@ -14,15 +14,69 @@ export class TaxCalculationService {
     return calculation
   }
 
-  async findAll() {
-    const calculations = await this.prisma.taxCalculation.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 100,
-    })
+  async findAll(filterDto?: FilterTaxCalculationDto) {
+    const {
+      userId,
+      ncmCode,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 20,
+    } = filterDto || {}
 
-    return calculations
+    const skip = (page - 1) * limit
+    const take = limit
+
+    const where: any = {}
+
+    if (userId) {
+      where.userId = userId
+    }
+
+    if (ncmCode) {
+      where.ncmCode = ncmCode
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {}
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate)
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate)
+      }
+    }
+
+    const [calculations, total] = await Promise.all([
+      this.prisma.taxCalculation.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      }),
+      this.prisma.taxCalculation.count({ where }),
+    ])
+
+    return {
+      data: calculations,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    }
   }
 
   async findByUser(userId: string) {
