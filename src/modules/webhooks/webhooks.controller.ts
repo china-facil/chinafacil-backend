@@ -7,6 +7,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger'
 import { Roles } from '../../common/decorators/roles.decorator'
+import { WebhookSignatureGuard } from '../../common/guards/webhook-signature.guard'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { GenericWebhookDto, TypeformWebhookDto } from './dto'
@@ -18,8 +19,10 @@ export class WebhooksController {
   constructor(private readonly webhooksService: WebhooksService) {}
 
   @Post('typeform')
+  @UseGuards(WebhookSignatureGuard)
   @ApiOperation({ summary: 'Receber webhook do Typeform' })
   @ApiResponse({ status: 201, description: 'Webhook processado' })
+  @ApiResponse({ status: 401, description: 'Assinatura inválida' })
   async handleTypeform(@Body() typeformWebhookDto: TypeformWebhookDto) {
     return this.webhooksService.handleTypeformWebhook(typeformWebhookDto)
   }
