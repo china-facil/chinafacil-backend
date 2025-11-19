@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common'
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler'
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -27,8 +28,11 @@ export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Post()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Criar lead' })
   @ApiResponse({ status: 201, description: 'Lead criado' })
+  @ApiResponse({ status: 429, description: 'Muitas requisições. Limite: 10 por minuto' })
   async create(@Body() createLeadDto: CreateLeadDto) {
     return this.leadsService.create(createLeadDto)
   }
