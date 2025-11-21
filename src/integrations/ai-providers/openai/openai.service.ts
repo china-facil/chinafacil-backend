@@ -56,6 +56,23 @@ export class OpenAIService {
     }
   }
 
+  async chatCompletionStream(chatCompletionDto: ChatCompletionDto) {
+    try {
+      const stream = await this.openai.chat.completions.create({
+        model: chatCompletionDto.model || 'gpt-4',
+        messages: chatCompletionDto.messages as any,
+        temperature: chatCompletionDto.temperature || 0.7,
+        max_tokens: chatCompletionDto.maxTokens || 1000,
+        stream: true,
+      })
+
+      return stream
+    } catch (error) {
+      this.logger.error(`OpenAI chat completion stream error: ${error.message}`)
+      throw error
+    }
+  }
+
   async generateEmbedding(text: string) {
     try {
       const response = await this.openai.embeddings.create({

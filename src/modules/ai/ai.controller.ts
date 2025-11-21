@@ -1,4 +1,11 @@
-import { Body, Controller, Post, Query, UseGuards } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common'
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -6,6 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Response } from 'express'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
@@ -41,6 +49,51 @@ export class AIController {
     @Query('provider') provider?: 'openai' | 'anthropic',
   ) {
     return this.aiService.chatCompletion(chatCompletionDto, provider)
+  }
+
+  @Post('chat/stream')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Chat completion com streaming (SSE)' })
+  @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
+  @ApiResponse({ status: 200, description: 'Stream de respostas' })
+  async chatCompletionStream(
+    @Body() chatCompletionDto: ChatCompletionDto,
+    @Query('provider') provider: 'openai' | 'anthropic' = 'openai',
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+
+    try {
+      if (provider === 'openai') {
+        const stream = await this.aiService.chatCompletionStream(
+          chatCompletionDto,
+        )
+
+        for await (const chunk of stream) {
+          const data = chunk.choices?.[0]?.delta?.content || ''
+          if (data) {
+            res.write(`data: ${JSON.stringify({ content: data })}\n\n`)
+          }
+        }
+      } else {
+        const result = await this.aiService.chatCompletion(
+          chatCompletionDto,
+          provider,
+        )
+        const content = result.message?.content || ''
+        res.write(`data: ${JSON.stringify({ content })}\n\n`)
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`)
+      res.end()
+    } catch (error) {
+      res.write(
+        `data: ${JSON.stringify({ error: error.message })}\n\n`,
+      )
+      res.end()
+    }
   }
 
   @Post('embedding')

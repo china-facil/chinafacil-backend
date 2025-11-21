@@ -16,7 +16,15 @@ export class NcmService {
   ) {}
 
   async findByCode(ncmCode: string) {
-    const cleanCode = ncmCode.trim()
+    if (!ncmCode || !ncmCode.trim()) {
+      throw new NotFoundException('Código NCM não fornecido')
+    }
+
+    const cleanCode = this.normalizeNcmCode(ncmCode.trim())
+
+    if (!this.isValidNcmCode(cleanCode)) {
+      throw new NotFoundException(`Código NCM inválido: ${ncmCode}`)
+    }
 
     const cacheKey = `ncm:code:${cleanCode}`
     const cached = await this.cacheManager.get(cacheKey)
@@ -34,6 +42,41 @@ export class NcmService {
     }
 
     await this.cacheManager.set(cacheKey, ncm, 604800000)
+
+    return ncm
+  }
+
+  private normalizeNcmCode(code: string): string {
+    return code.replace(/[^0-9]/g, '').replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')
+  }
+
+  private isValidNcmCode(code: string): boolean {
+    const cleanCode = code.replace(/[^0-9]/g, '')
+    return cleanCode.length === 8 && /^\d{8}$/.test(cleanCode)
+  }
+
+  async createOrUpdate(ncmData: { code: string; description: string; taxRate?: number }) {
+    const cleanCode = this.normalizeNcmCode(ncmData.code)
+
+    if (!this.isValidNcmCode(cleanCode)) {
+      throw new Error(`Código NCM inválido: ${ncmData.code}`)
+    }
+
+    const ncm = await this.prisma.ncm.upsert({
+      where: { code: cleanCode },
+      update: {
+        description: ncmData.description,
+        taxRate: ncmData.taxRate,
+      },
+      create: {
+        code: cleanCode,
+        description: ncmData.description,
+        taxRate: ncmData.taxRate,
+      },
+    })
+
+    const cacheKey = `ncm:code:${cleanCode}`
+    await this.cacheManager.del(cacheKey)
 
     return ncm
   }

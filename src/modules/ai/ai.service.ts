@@ -28,6 +28,10 @@ export class AIService {
     return this.openaiService.chatCompletion(chatCompletionDto)
   }
 
+  async chatCompletionStream(chatCompletionDto: ChatCompletionDto) {
+    return this.openaiService.chatCompletionStream(chatCompletionDto)
+  }
+
   async generateEmbedding(text: string) {
     return this.openaiService.generateEmbedding(text)
   }
