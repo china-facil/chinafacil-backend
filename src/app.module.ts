@@ -26,6 +26,7 @@ import { TranslationModule } from './modules/translation/translation.module';
 import { OTPModule } from './modules/otp/otp.module';
 import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.module';
 import { BullBoardModuleConfig } from './modules/bull-board/bull-board.module';
+import { CliModule } from './cli/cli.module';
 
 @Module({
   imports: [
@@ -95,7 +96,7 @@ import { BullBoardModuleConfig } from './modules/bull-board/bull-board.module';
     BullBoardModuleConfig,
 
     // CLI
-    // CliModule,
+    CliModule,
   ],
 })
 export class AppModule {}
