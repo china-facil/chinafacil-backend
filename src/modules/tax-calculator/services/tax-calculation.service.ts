@@ -55,21 +55,29 @@ export class TaxCalculationService {
         orderBy: {
           createdAt: 'desc',
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
       }),
       this.prisma.taxCalculation.count({ where }),
     ])
 
+    const calculationsWithUsers = await Promise.all(
+      calculations.map(async (calc) => {
+        if (!calc.userId) {
+          return { ...calc, user: null }
+        }
+        const user = await this.prisma.user.findUnique({
+          where: { id: calc.userId },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        })
+        return { ...calc, user }
+      }),
+    )
+
     return {
-      data: calculations,
+      data: calculationsWithUsers,
       meta: {
         total,
         page,

@@ -33,7 +33,7 @@ export class PopulateCnpjDataCommand extends CommandRunner {
       where: {
         cnpj: { not: null },
         companyData: null,
-      },
+      } as any,
       select: {
         id: true,
         name: true,

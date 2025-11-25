@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common'
+import { Module, forwardRef } from '@nestjs/common'
 import { HttpModule } from '@nestjs/axios'
 import { DatabaseModule } from '../../database/database.module'
 import { AlibabaModule } from '../../integrations/alibaba/alibaba.module'
@@ -9,7 +9,7 @@ import { AlibabaIntlNormalizer } from './services/normalizers/alibaba-intl.norma
 import { ProductNormalizerService } from './services/normalizers/product-normalizer.service'
 
 @Module({
-  imports: [DatabaseModule, HttpModule, AlibabaModule],
+  imports: [DatabaseModule, HttpModule, forwardRef(() => AlibabaModule)],
   controllers: [ProductsController],
   providers: [
     ProductsService,
