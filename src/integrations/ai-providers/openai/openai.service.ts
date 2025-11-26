@@ -7,6 +7,7 @@ import { ChatCompletionDto, CompletionDto } from '../../../modules/ai/dto'
 export class OpenAIService {
   private readonly logger = new Logger(OpenAIService.name)
   private openai: OpenAI
+  private readonly maxAttempts = 3
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get('OPENAI_API_KEY')
@@ -18,8 +19,57 @@ export class OpenAIService {
     }
   }
 
+  private async sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxAttempts: number = this.maxAttempts,
+  ): Promise<T> {
+    let attempts = 0
+
+    while (attempts < maxAttempts) {
+      try {
+        return await operation()
+      } catch (error: any) {
+        attempts++
+        const statusCode = error?.status || error?.response?.status
+
+        const hasChoices = error?.response?.data?.choices && error.response.data.choices.length > 0
+        if (hasChoices) {
+          return error.response.data as T
+        }
+
+        const isDefinitiveError = statusCode >= 400 && statusCode < 500 && statusCode !== 429
+        if (isDefinitiveError || attempts >= maxAttempts) {
+          this.logger.error(
+            `${operationName} error after ${attempts} attempts: ${error.message}`,
+          )
+          throw error
+        }
+
+        const isRateLimit = statusCode === 429
+        const isServerError = statusCode >= 500
+
+        if (isRateLimit || isServerError) {
+          const delay = isRateLimit ? 2000 : 1000
+          this.logger.warn(
+            `${operationName} attempt ${attempts}/${maxAttempts} failed (${statusCode}). Retrying in ${delay}ms...`,
+          )
+          await this.sleep(delay)
+        } else {
+          await this.sleep(1000)
+        }
+      }
+    }
+
+    throw new Error(`${operationName} failed after ${maxAttempts} attempts`)
+  }
+
   async completion(completionDto: CompletionDto) {
-    try {
+    return this.retryWithBackoff(async () => {
       const response = await this.openai.completions.create({
         model: completionDto.model || 'gpt-3.5-turbo-instruct',
         prompt: completionDto.prompt,
@@ -31,14 +81,11 @@ export class OpenAIService {
         text: response.choices[0].text,
         usage: response.usage,
       }
-    } catch (error) {
-      this.logger.error(`OpenAI completion error: ${error.message}`)
-      throw error
-    }
+    }, 'OpenAI completion')
   }
 
   async chatCompletion(chatCompletionDto: ChatCompletionDto) {
-    try {
+    return this.retryWithBackoff(async () => {
       const response = await this.openai.chat.completions.create({
         model: chatCompletionDto.model || 'gpt-4',
         messages: chatCompletionDto.messages as any,
@@ -50,10 +97,34 @@ export class OpenAIService {
         message: response.choices[0].message,
         usage: response.usage,
       }
-    } catch (error) {
-      this.logger.error(`OpenAI chat completion error: ${error.message}`)
-      throw error
-    }
+    }, 'OpenAI chat completion')
+  }
+
+  async completionsImage(body: any) {
+    let response: any = null
+
+    do {
+      try {
+        response = await this.openai.chat.completions.create({
+          model: body.model || 'gpt-4',
+          messages: body.messages || [],
+          temperature: body.temperature || 0.7,
+          max_tokens: body.max_tokens || 1000,
+        })
+
+        if (response.choices && response.choices.length > 0) {
+          break
+        }
+
+        this.logger.warn('OpenAI completions image: No choices in response, retrying...')
+        await this.sleep(10000)
+      } catch (error: any) {
+        this.logger.error(`OpenAI completions image error: ${error.message}`)
+        await this.sleep(10000)
+      }
+    } while (!response?.choices || response.choices.length === 0)
+
+    return response
   }
 
   async chatCompletionStream(chatCompletionDto: ChatCompletionDto) {
@@ -74,17 +145,14 @@ export class OpenAIService {
   }
 
   async generateEmbedding(text: string) {
-    try {
+    return this.retryWithBackoff(async () => {
       const response = await this.openai.embeddings.create({
         model: 'text-embedding-ada-002',
         input: text,
       })
 
       return response.data[0].embedding
-    } catch (error) {
-      this.logger.error(`OpenAI embedding error: ${error.message}`)
-      throw error
-    }
+    }, 'OpenAI embedding')
   }
 
   async analyzeProductSimilarity(

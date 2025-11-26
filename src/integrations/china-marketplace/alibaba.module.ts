@@ -10,6 +10,6 @@ import { OtService } from './services/ot.service'
   providers: [TmService, OtService],
   exports: [TmService, OtService],
 })
-export class AlibabaModule {}
+export class ChinaMarketplaceModule {}
 
 

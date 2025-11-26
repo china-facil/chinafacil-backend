@@ -36,6 +36,10 @@ export class AIService {
     return this.openaiService.generateEmbedding(text)
   }
 
+  async completionsImage(body: any) {
+    return this.openaiService.completionsImage(body)
+  }
+
   async analyzeProductSimilarity(
     productSimilarityDto: ProductSimilarityDto,
     provider: 'openai' | 'anthropic' = 'openai',

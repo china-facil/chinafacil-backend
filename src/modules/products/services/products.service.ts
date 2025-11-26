@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../../database/prisma.service'
-import { TmService } from '../../../integrations/alibaba/services/tm.service'
-import { OtService } from '../../../integrations/alibaba/services/ot.service'
+import { TmService } from '../../../integrations/china-marketplace/services/tm.service'
+import { OtService } from '../../../integrations/china-marketplace/services/ot.service'
 import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
 import { ProductNormalizerService } from './normalizers/product-normalizer.service'
 
