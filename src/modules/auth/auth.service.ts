@@ -26,65 +26,98 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        subscription: {
-          include: {
-            plan: true,
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+        include: {
+          subscription: {
+            include: {
+              plan: true,
+            },
           },
         },
-      },
-    })
+      })
 
-    if (!user) {
-      return null
+      if (!user) {
+        return null
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, user.password)
+
+      if (!isPasswordValid) {
+        return null
+      }
+
+      if (user.status === UserStatus.SUSPENDED) {
+        throw new UnauthorizedException('Usuário suspenso')
+      }
+
+      if (user.status === UserStatus.INACTIVE) {
+        throw new UnauthorizedException('Usuário inativo')
+      }
+
+      const { password: _, ...result } = user
+      return result
+    } catch (error: any) {
+      // Log do erro para debug
+      console.error('Erro ao validar usuário:', error)
+      
+      // Se for erro de conexão com banco, relançar com mensagem mais clara
+      if (error.code === 'ECONNREFUSED' || error.message?.includes('connect')) {
+        throw new BadRequestException(
+          'Erro de conexão com o banco de dados. Verifique se o banco está rodando.',
+        )
+      }
+      
+      throw error
     }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password)
-
-    if (!isPasswordValid) {
-      return null
-    }
-
-    if (user.status === UserStatus.SUSPENDED) {
-      throw new UnauthorizedException('Usuário suspenso')
-    }
-
-    if (user.status === UserStatus.INACTIVE) {
-      throw new UnauthorizedException('Usuário inativo')
-    }
-
-    const { password: _, ...result } = user
-    return result
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.validateUser(loginDto.email, loginDto.password)
+    try {
+      const user = await this.validateUser(loginDto.email, loginDto.password)
 
-    if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas')
-    }
+      if (!user) {
+        throw new UnauthorizedException('Credenciais inválidas')
+      }
 
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    }
+      const payload = {
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+      }
 
-    const accessToken = this.jwtService.sign(payload)
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: this.configService.get('JWT_REFRESH_SECRET'),
-      expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION') || '30d',
-    })
+      const accessToken = this.jwtService.sign(payload)
+      const refreshToken = this.jwtService.sign(payload, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+        expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION') || '30d',
+      })
 
-    return {
-      user,
-      accessToken,
-      refreshToken,
-      tokenType: 'Bearer',
-      expiresIn: this.configService.get('JWT_EXPIRATION') || '7d',
+      return {
+        user,
+        accessToken,
+        refreshToken,
+        tokenType: 'Bearer',
+        expiresIn: this.configService.get('JWT_EXPIRATION') || '7d',
+      }
+    } catch (error: any) {
+      // Se já for uma exceção HTTP, relançar
+      if (error instanceof UnauthorizedException || error instanceof BadRequestException) {
+        throw error
+      }
+      
+      // Log do erro para debug
+      console.error('Erro no login:', error)
+      
+      // Se for erro de conexão com banco
+      if (error.code === 'ECONNREFUSED' || error.message?.includes('connect')) {
+        throw new BadRequestException(
+          'Erro de conexão com o banco de dados. Verifique se o banco está rodando.',
+        )
+      }
+      
+      throw new BadRequestException('Erro ao realizar login. Tente novamente.')
     }
   }
 
