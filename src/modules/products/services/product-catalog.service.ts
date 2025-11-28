@@ -267,7 +267,7 @@ export class ProductCatalogService {
 
       // Transformar produtos para o formato esperado pelo frontend (mesmo formato do PHP)
       const transformedProducts = paginatedProducts.map((product) =>
-        this.transformProductCatalogToResponse(product),
+        this.transformProductCatalogToResponse(product, getCNY),
       )
 
       const result = {
