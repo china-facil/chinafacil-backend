@@ -175,6 +175,29 @@ export class ProductsController {
       refresh === 'true',
     )
   }
+
+  @Get('category/:categoryId')
+  @ApiOperation({ summary: 'Listar produtos por categoria do Mercado Livre' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'order_by', required: false, type: String })
+  @ApiQuery({ name: 'price_min', required: false, type: Number })
+  @ApiQuery({ name: 'price_max', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista de produtos da categoria' })
+  async getProductsByCategory(
+    @Param('categoryId') categoryId: string,
+    @Query('page') page?: number,
+    @Query('order_by') orderBy?: string,
+    @Query('price_min') priceMin?: number,
+    @Query('price_max') priceMax?: number,
+  ) {
+    return this.productsService.getProductsByCategory({
+      categoryId,
+      page: page ? Number(page) : 1,
+      orderBy,
+      priceMin: priceMin ? Number(priceMin) : undefined,
+      priceMax: priceMax ? Number(priceMax) : undefined,
+    })
+  }
 }
 
 

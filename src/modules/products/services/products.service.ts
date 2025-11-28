@@ -425,6 +425,16 @@ Exemplo de saída:
   }) {
     return this.productCatalogService.getPopularProducts(options)
   }
+
+  async getProductsByCategory(options: {
+    categoryId: string
+    orderBy?: string
+    priceMin?: number
+    priceMax?: number
+    page?: number
+  }) {
+    return this.productCatalogService.getProductsByCategory(options)
+  }
 }
 
 
