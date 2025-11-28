@@ -120,9 +120,14 @@ export class ProductCatalogService {
       const endIndex = startIndex + perPage
       const paginatedProducts = shuffled.slice(startIndex, endIndex)
 
+      // Transformar produtos para o formato esperado pelo frontend (mesmo formato do PHP)
+      const transformedProducts = paginatedProducts.map((product) =>
+        this.transformProductCatalogToResponse(product),
+      )
+
       const result = {
         status: 'success',
-        data: paginatedProducts,
+        data: transformedProducts,
         meta: {
           total,
           perPage,
@@ -260,9 +265,14 @@ export class ProductCatalogService {
       const endIndex = startIndex + perPage
       const paginatedProducts = randomProducts.slice(startIndex, endIndex)
 
+      // Transformar produtos para o formato esperado pelo frontend (mesmo formato do PHP)
+      const transformedProducts = paginatedProducts.map((product) =>
+        this.transformProductCatalogToResponse(product),
+      )
+
       const result = {
         status: 'success',
-        data: paginatedProducts,
+        data: transformedProducts,
         meta: {
           total,
           perPage,
@@ -282,5 +292,116 @@ export class ProductCatalogService {
       })
       throw error
     }
+  }
+
+  /**
+   * Transforma um produto do catálogo para o formato esperado pelo frontend
+   * Replica a lógica do ProductCatalogResource do PHP
+   */
+  private transformProductCatalogToResponse(product: any, getCNY: number = 0.7) {
+
+    // Substituir I.jpg por O.webp na thumbnail (mesma lógica do PHP)
+    const productMlbThumbnail = product.mlbThumbnail
+      ? product.mlbThumbnail.replace('I.jpg', 'O.webp')
+      : ''
+
+    const product1688Price = product.product1688Price
+      ? Number(product.product1688Price)
+      : 0
+    const mlbPrice = product.mlbPrice ? Number(product.mlbPrice) : 0
+
+    // Calcular preço com margem (mesma lógica do PHP)
+    const product1688PriceFormatted =
+      (product1688Price * getCNY) * 2.4
+
+    // Calcular ROI
+    const roi =
+      product1688PriceFormatted > 0
+        ? ((mlbPrice - product1688PriceFormatted) / product1688PriceFormatted) *
+          100
+        : 0
+
+    // Calcular gross_profit
+    const totalCost = product1688Price * (product.mlbSoldQuantity || 0)
+    const grossProfit = Math.abs(
+      totalCost - (product.mlbSoldValue ? Number(product.mlbSoldValue) : 0),
+    )
+
+    return {
+      id: product.id,
+      item_id: product.product1688Id || null,
+      img: productMlbThumbnail,
+      title: product.mlbTitle || '',
+      price: product.product1688Price ? Number(product.product1688Price) : 0,
+      sold_quantity: product.mlbSoldQuantity ? Number(product.mlbSoldQuantity) : 0,
+      goods_score: product.product1688GoodsScore
+        ? Number(product.product1688GoodsScore)
+        : 0,
+      quantity_begin: product.product1688QuantityBegin
+        ? Number(product.product1688QuantityBegin)
+        : 1,
+      permalink: product.mlbPermalink || '',
+      is_similar: product.isSimilar ?? false,
+      category_id: product.categoryId || null,
+      product_mlb_id: product.productMlbId || null,
+      product_mbl_thumbnail: productMlbThumbnail,
+      product_mlb_price: product.mlbPrice
+        ? `R$ ${Number(product.mlbPrice).toFixed(2).replace('.', ',')}`
+        : 'R$ 0,00',
+      product_mlb_sold_quantity: this.formatSoldQuantity(
+        product.mlbSoldQuantity || 0,
+      ),
+      product_mlb_sold_value: this.formatSoldValue(product.mlbSoldValue || 0),
+      product_mlb: {
+        thumbnail: product.mlbThumbnail || '',
+        title: product.mlbTitle || '',
+        price: product.mlbPrice ? Number(product.mlbPrice) : 0,
+        sold_quantity: product.mlbSoldQuantity ? Number(product.mlbSoldQuantity) : 0,
+        sold_value: product.mlbSoldValue ? Number(product.mlbSoldValue) : 0,
+        permalink: product.mlbPermalink || '',
+      },
+      product_1688_id: product.product1688Id || null,
+      product_1688_price: `R$ ${product1688PriceFormatted
+        .toFixed(2)
+        .replace('.', ',')}`,
+      product_1688: {
+        price: product1688Price,
+        goods_score: product.product1688GoodsScore
+          ? Number(product.product1688GoodsScore)
+          : 0,
+        title: product.product1688Title || '',
+        translated_title: product.product1688TranslatedTitle || '',
+        quantity_begin: product.product1688QuantityBegin
+          ? Number(product.product1688QuantityBegin)
+          : 1,
+      },
+      roi: `${roi.toFixed(0).replace('.', ',')}%`,
+      gross_profit: this.formatSoldValue(grossProfit),
+      translated_title: product.product1688TranslatedTitle || '',
+    }
+  }
+
+  /**
+   * Formata quantidade vendida no formato do PHP (ex: "+1 M", "+1 mil", "+100")
+   */
+  private formatSoldQuantity(quantity: number): string {
+    if (quantity >= 1000000) {
+      return `+${(quantity / 1000000).toFixed(0).replace('.', ',')} M`
+    } else if (quantity >= 1000) {
+      return `+${(quantity / 1000).toFixed(0).replace('.', ',')} mil`
+    }
+    return `+${quantity.toFixed(0)}`
+  }
+
+  /**
+   * Formata valor vendido no formato do PHP (ex: "R$ 1,0 M", "R$ 1 mil", "R$ 100,00")
+   */
+  private formatSoldValue(value: number): string {
+    if (value >= 1000000) {
+      return `R$ ${(value / 1000000).toFixed(1).replace('.', ',')} M`
+    } else if (value >= 1000) {
+      return `R$ ${(value / 1000).toFixed(0).replace('.', ',')} mil`
+    }
+    return `R$ ${value.toFixed(2).replace('.', ',')}`
   }
 }
