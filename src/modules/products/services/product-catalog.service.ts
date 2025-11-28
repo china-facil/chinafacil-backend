@@ -42,12 +42,14 @@ export class ProductCatalogService {
         itemId: { not: 'MLB1965269525' },
         isSimilar: true,
         salesQuantity: { gt: 0 },
-        ...(priceMin && {
-          price: { gte: priceMin },
-        }),
-        ...(priceMax && {
-          price: { lte: priceMax },
-        }),
+        ...(priceMin || priceMax
+          ? {
+              price: {
+                ...(priceMin && { gte: priceMin }),
+                ...(priceMax && { lte: priceMax }),
+              },
+            }
+          : {}),
       }
 
       let orderByClause: Prisma.ProductCatalogOrderByWithRelationInput = {
@@ -85,11 +87,26 @@ export class ProductCatalogService {
         return true
       }).slice(0, 300)
 
+      // Filtrar por margem de lucro (MLB price > 1688 price * 2 * cotação)
       const filteredByQuotation = top300.filter((product) => {
-        const product1688Price =
-          (product.metadata as any)?.product1688?.price || 0
-        const mlbPrice = Number(product.price)
-        return mlbPrice > product1688Price * 2 * getCNY
+        try {
+          const product1688Price =
+            (product.metadata as any)?.product1688?.price || 0
+          const mlbPrice = Number(product.price)
+          
+          // Se não tiver preço do 1688 ou MLB, pular
+          if (!product1688Price || !mlbPrice || isNaN(mlbPrice)) {
+            return false
+          }
+          
+          return mlbPrice > product1688Price * 2 * getCNY
+        } catch (error) {
+          this.logger.warn('Erro ao filtrar produto por cotação', {
+            itemId: product.itemId,
+            error: error.message,
+          })
+          return false
+        }
       })
 
       const shuffled = filteredByQuotation.sort(() => Math.random() - 0.5)
@@ -120,8 +137,18 @@ export class ProductCatalogService {
       this.logger.error('Erro ao buscar produtos populares', {
         error: error.message,
         stack: error.stack,
+        code: error.code,
+        meta: error.meta,
+        name: error.name,
       })
-      throw error
+      
+      // Se for erro do Prisma, relançar para ser capturado pelo filtro de exceções
+      if (error.code && error.meta) {
+        throw error
+      }
+      
+      // Para outros erros, lançar uma exceção genérica
+      throw new Error(`Erro ao buscar produtos populares: ${error.message}`)
     }
   }
 
