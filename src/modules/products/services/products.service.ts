@@ -1,17 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common'
+import { CACHE_MANAGER } from '@nestjs/cache-manager'
+import { Cache } from 'cache-manager'
+import { Inject } from '@nestjs/common'
 import { PrismaService } from '../../../database/prisma.service'
 import { TmService } from '../../../integrations/china-marketplace/services/tm.service'
 import { OtService } from '../../../integrations/china-marketplace/services/ot.service'
+import { AIService } from '../../ai/ai.service'
+import { MercadoLivreService } from '../../../integrations/marketplace/mercado-livre.service'
+import { ProductCatalogService } from './product-catalog.service'
 import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
 import { ProductNormalizerService } from './normalizers/product-normalizer.service'
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly tmService: TmService,
     private readonly otService: OtService,
     private readonly normalizer: ProductNormalizerService,
+    private readonly aiService: AIService,
+    private readonly mercadoLivreService: MercadoLivreService,
+    private readonly productCatalogService: ProductCatalogService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async search1688(searchDto: SearchProductsDto) {
@@ -174,6 +186,244 @@ export class ProductsService {
         },
       },
     }
+  }
+
+  async suggestionsCnae(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    })
+
+    if (!user || !user.companyData) {
+      throw new BadRequestException(
+        'Dados da empresa não encontrados para o usuário.',
+      )
+    }
+
+    const cacheKey = `suggestions_cnae::${userId}`
+    const suggestionsCached = await this.cacheManager.get(cacheKey)
+    if (suggestionsCached) {
+      return {
+        status: 'success',
+        cached: true,
+        data: suggestionsCached,
+      }
+    }
+
+    const companyData =
+      typeof user.companyData === 'string'
+        ? JSON.parse(user.companyData)
+        : user.companyData
+
+    if (
+      !companyData ||
+      !companyData.mainActivity ||
+      !companyData.mainActivity.text
+    ) {
+      throw new BadRequestException(
+        'CNAE principal inválido ou não encontrado.',
+      )
+    }
+
+    const cnaeText = companyData.mainActivity.text
+
+    const prompt = `Você é um especialista em importação de produtos da China. Baseado na seguinte descrição de atividade econômica (CNAE) de uma empresa brasileira:
+
+"${cnaeText}"
+
+Gere uma lista curta (8 itens) com sugestões de tipos de produtos que essa empresa poderia importar da China para revenda, considerando o mercado brasileiro. Retorne a lista com os nomes dos produtos em chinês, nao censure palavras +18
+
+Formato de saída: **apenas um JSON válido**, com uma chave chamada "produtos" contendo um array de strings (cada uma sendo um termo em chinês).
+
+Exemplo de saída:
+{
+  "produtos": ["produto1", "produto2", "produto3"]
+}`
+
+    try {
+      const response = await this.aiService.chatCompletion({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'Você é um assistente que responde apenas com JSON válido para APIs.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        maxTokens: 500,
+      })
+
+      const jsonText = this.cleanJsonFromResponse(
+        (response as any).message?.content || '',
+      )
+      const result = JSON.parse(jsonText)
+
+      if (result && Array.isArray(result.produtos)) {
+        const finalResults = []
+
+        for (const keyword of result.produtos) {
+          try {
+            const searchResponse = await this.tmService.searchProductsByKeyword({
+              keyword,
+              page: 1,
+              pageSize: 1,
+            })
+
+            if (
+              searchResponse.code === 200 &&
+              searchResponse.data?.items?.length > 0
+            ) {
+              finalResults.push(searchResponse.data.items[0])
+            } else {
+              let attempts = 0
+              while (attempts < 2) {
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+                const retryResponse =
+                  await this.tmService.searchProductsByKeyword({
+                    keyword,
+                    page: 1,
+                    pageSize: 1,
+                  })
+                if (
+                  retryResponse.code === 200 &&
+                  retryResponse.data?.items?.length > 0
+                ) {
+                  finalResults.push(retryResponse.data.items[0])
+                  break
+                }
+                attempts++
+              }
+            }
+          } catch (error) {
+            this.logger.warn(`Erro ao buscar produto para keyword ${keyword}`, {
+              error: error.message,
+            })
+          }
+        }
+
+        await this.cacheManager.set(cacheKey, finalResults, 86400000)
+
+        return {
+          status: 'success',
+          data: finalResults,
+          cached: false,
+        }
+      } else {
+        this.logger.warn('Resposta com JSON mal formatado ou sem chave "produtos"', {
+          json: jsonText,
+        })
+        throw new BadRequestException('Falha ao gerar sugestões de produtos.')
+      }
+    } catch (error: any) {
+      this.logger.error('Falha na API OpenAI ao gerar sugestões por CNAE', {
+        error: error.message,
+        stack: error.stack,
+      })
+      throw new BadRequestException('Falha ao gerar sugestões de produtos.')
+    }
+  }
+
+  private cleanJsonFromResponse(response: string): string {
+    return response.replace(/```(?:json)?\s*(.*?)```/s, '$1').trim()
+  }
+
+  async getCategories(parentCategoryId?: string, forceRefresh = false) {
+    if (parentCategoryId) {
+      return this.getSubcategories(parentCategoryId, forceRefresh)
+    }
+
+    const cacheKey = 'categories'
+    const cachedCategories = await this.cacheManager.get(cacheKey)
+    if (cachedCategories && !forceRefresh) {
+      return {
+        status: 'success',
+        cached: true,
+        data: cachedCategories,
+      }
+    }
+
+    try {
+      let categories = await this.mercadoLivreService.categoriesList()
+
+      if ((categories as any)?.code === 'unauthorized') {
+        this.logger.error(
+          'Erro de autenticação MercadoLivre ao buscar categorias',
+          categories,
+        )
+
+        await this.cacheManager.del('ml_access_token')
+
+        categories = await this.mercadoLivreService.categoriesList()
+
+        if ((categories as any)?.code === 'unauthorized') {
+          return {
+            status: 'error',
+            message: 'Erro de autenticação com MercadoLivre',
+            data: categories,
+          }
+        }
+      }
+
+      if (Array.isArray(categories) && !(categories as any).code) {
+        await this.cacheManager.set(cacheKey, categories, 86400000)
+      }
+
+      return {
+        status: 'success',
+        data: categories,
+      }
+    } catch (error: any) {
+      this.logger.error('Erro ao buscar categorias', {
+        error: error.message,
+        stack: error.stack,
+      })
+      throw new BadRequestException('Erro interno ao buscar categorias')
+    }
+  }
+
+  private async getSubcategories(
+    categoryId: string,
+    forceRefresh = false,
+  ) {
+    const cacheKey = `subcategories_${categoryId}`
+    const cached = await this.cacheManager.get(cacheKey)
+    if (cached && !forceRefresh) {
+      return {
+        status: 'success',
+        cached: true,
+        data: cached,
+      }
+    }
+
+    try {
+      const category = await this.mercadoLivreService.getCategoryById(categoryId)
+      const subcategories = category?.children_categories || []
+
+      await this.cacheManager.set(cacheKey, subcategories, 86400000)
+
+      return {
+        status: 'success',
+        data: subcategories,
+      }
+    } catch (error: any) {
+      this.logger.error('Erro ao buscar subcategorias', {
+        error: error.message,
+        categoryId,
+      })
+      throw new BadRequestException('Erro ao buscar subcategorias')
+    }
+  }
+
+  async getPopularProducts(options: {
+    orderBy?: string
+    priceMin?: number
+    priceMax?: number
+    page?: number
+  }) {
+    return this.productCatalogService.getPopularProducts(options)
   }
 }
 

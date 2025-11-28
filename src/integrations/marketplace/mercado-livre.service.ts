@@ -104,5 +104,27 @@ export class MercadoLivreService {
       throw error
     }
   }
+
+  async getCategoryById(categoryId: string) {
+    try {
+      const token = await this.auth()
+
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.baseUrl}/categories/${categoryId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      )
+
+      return response.data
+    } catch (error: any) {
+      this.logger.error(
+        `Erro ao buscar categoria por ID: ${error.message}`,
+      )
+      throw error
+    }
+  }
 }
 

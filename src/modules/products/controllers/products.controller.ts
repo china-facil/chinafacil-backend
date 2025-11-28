@@ -11,6 +11,7 @@ import {
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
@@ -128,6 +129,51 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Lista de favoritos' })
   async getFavorites(@CurrentUser() user: any) {
     return this.productsService.getFavorites(user.id)
+  }
+
+  @Get('search/suggestions-cnae')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Sugerir produtos baseado no CNAE do usuário' })
+  @ApiResponse({ status: 200, description: 'Sugestões de produtos' })
+  async suggestionsCnae(@CurrentUser() user: any) {
+    return this.productsService.suggestionsCnae(user.id)
+  }
+
+  @Get('popular')
+  @ApiOperation({ summary: 'Listar produtos populares' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'order_by', required: false, type: String })
+  @ApiQuery({ name: 'price_min', required: false, type: Number })
+  @ApiQuery({ name: 'price_max', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Lista de produtos populares' })
+  async getPopularProducts(
+    @Query('page') page?: number,
+    @Query('order_by') orderBy?: string,
+    @Query('price_min') priceMin?: number,
+    @Query('price_max') priceMax?: number,
+  ) {
+    return this.productsService.getPopularProducts({
+      page: page ? Number(page) : 1,
+      orderBy,
+      priceMin: priceMin ? Number(priceMin) : undefined,
+      priceMax: priceMax ? Number(priceMax) : undefined,
+    })
+  }
+
+  @Get('categories')
+  @ApiOperation({ summary: 'Listar categorias do Mercado Livre' })
+  @ApiQuery({ name: 'parent_category_id', required: false, type: String })
+  @ApiQuery({ name: 'refresh', required: false, type: Boolean })
+  @ApiResponse({ status: 200, description: 'Lista de categorias' })
+  async getCategories(
+    @Query('parent_category_id') parentCategoryId?: string,
+    @Query('refresh') refresh?: string,
+  ) {
+    return this.productsService.getCategories(
+      parentCategoryId,
+      refresh === 'true',
+    )
   }
 }
 

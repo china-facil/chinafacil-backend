@@ -16,7 +16,7 @@ import {
 import { ProxyService } from './proxy.service'
 
 @ApiTags('proxy')
-@Controller('proxy')
+@Controller()
 export class ProxyController {
   constructor(private readonly proxyService: ProxyService) {}
 
@@ -61,7 +61,7 @@ export class ProxyController {
     }
   }
 
-  @Get('paises')
+  @Get('proxy-paises')
   @ApiOperation({ summary: 'Obter lista de países via proxy' })
   @ApiResponse({
     status: 200,
