@@ -38,8 +38,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else if (exception instanceof Prisma.PrismaClientValidationError) {
       status = HttpStatus.BAD_REQUEST;
       message = 'Dados inválidos fornecidos';
+    } else if (exception instanceof Prisma.PrismaClientInitializationError) {
+      status = HttpStatus.SERVICE_UNAVAILABLE;
+      message = 'Erro de conexão com o banco de dados. Verifique se o banco está rodando.';
+      this.logger.error(
+        `Database connection error: ${exception.message}`,
+        exception.stack,
+      );
     } else if (exception instanceof Error) {
-      message = exception.message;
+      // Verificar se é erro de conexão
+      if (
+        exception.message?.includes('ECONNREFUSED') ||
+        exception.message?.includes('connect') ||
+        exception.message?.includes('Connection refused')
+      ) {
+        status = HttpStatus.SERVICE_UNAVAILABLE;
+        message = 'Erro de conexão com o banco de dados. Verifique se o banco está rodando.';
+      } else {
+        message = exception.message;
+      }
       this.logger.error(
         `Unhandled error: ${exception.message}`,
         exception.stack,
