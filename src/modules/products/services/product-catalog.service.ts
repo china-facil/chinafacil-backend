@@ -39,12 +39,12 @@ export class ProductCatalogService {
       )
 
       const where: Prisma.ProductCatalogWhereInput = {
-        itemId: { not: 'MLB1965269525' },
+        productMlbId: { not: 'MLB1965269525' },
         isSimilar: true,
-        salesQuantity: { gt: 0 },
+        mlbSoldQuantity: { gt: 0 },
         ...(priceMin || priceMax
           ? {
-              price: {
+              product1688Price: {
                 ...(priceMin && { gte: priceMin }),
                 ...(priceMax && { lte: priceMax }),
               },
@@ -53,7 +53,7 @@ export class ProductCatalogService {
       }
 
       let orderByClause: Prisma.ProductCatalogOrderByWithRelationInput = {
-        salesQuantity: 'desc',
+        mlbSoldQuantity: 'desc',
       }
 
       if (orderBy) {
@@ -61,9 +61,9 @@ export class ProductCatalogService {
           string,
           Prisma.ProductCatalogOrderByWithRelationInput
         > = {
-          price_up: { price: 'asc' },
-          price_down: { price: 'desc' },
-          default: { createdAt: 'desc' },
+          price_up: { product1688Price: 'asc' },
+          price_down: { product1688Price: 'desc' },
+          default: { product1688GoodsScore: 'desc' },
         }
 
         if (orderByOptions[orderBy]) {
@@ -77,32 +77,33 @@ export class ProductCatalogService {
         take: 500,
       })
 
-      // Remove duplicatas por itemId manualmente
+      // Remove duplicatas por productMlbId manualmente
       const seenItemIds = new Set<string>()
       const top300 = top300Raw.filter((product) => {
-        if (seenItemIds.has(product.itemId)) {
+        if (seenItemIds.has(product.productMlbId)) {
           return false
         }
-        seenItemIds.add(product.itemId)
+        seenItemIds.add(product.productMlbId)
         return true
       }).slice(0, 300)
 
       // Filtrar por margem de lucro (MLB price > 1688 price * 2 * cotação)
       const filteredByQuotation = top300.filter((product) => {
         try {
-          const product1688Price =
-            (product.metadata as any)?.product1688?.price || 0
-          const mlbPrice = Number(product.price)
-          
+          const product1688Price = product.product1688Price
+            ? Number(product.product1688Price)
+            : 0
+          const mlbPrice = product.mlbPrice ? Number(product.mlbPrice) : 0
+
           // Se não tiver preço do 1688 ou MLB, pular
           if (!product1688Price || !mlbPrice || isNaN(mlbPrice)) {
             return false
           }
-          
+
           return mlbPrice > product1688Price * 2 * getCNY
         } catch (error) {
           this.logger.warn('Erro ao filtrar produto por cotação', {
-            itemId: product.itemId,
+            productMlbId: product.productMlbId,
             error: error.message,
           })
           return false
@@ -178,20 +179,20 @@ export class ProductCatalogService {
       // Buscar produtos onde categoryId está em categoryIds (JSON)
       // Como Prisma não suporta bem JSON_CONTAINS, vamos buscar todos e filtrar depois
       const where: Prisma.ProductCatalogWhereInput = {
-        itemId: { not: 'MLB1965269525' },
-        salesQuantity: { gt: 0 },
+        productMlbId: { not: 'MLB1965269525' },
+        mlbSoldQuantity: { gt: 0 },
         categoryIds: { not: Prisma.JsonNull },
         ...(priceMin && priceMax
-          ? { price: { gte: priceMin, lte: priceMax } }
+          ? { product1688Price: { gte: priceMin, lte: priceMax } }
           : priceMin
-            ? { price: { gte: priceMin } }
+            ? { product1688Price: { gte: priceMin } }
             : priceMax
-              ? { price: { lte: priceMax } }
+              ? { product1688Price: { lte: priceMax } }
               : {}),
       }
 
       let orderByClause: Prisma.ProductCatalogOrderByWithRelationInput = {
-        salesQuantity: 'desc',
+        mlbSoldQuantity: 'desc',
       }
 
       if (orderBy) {
@@ -199,9 +200,9 @@ export class ProductCatalogService {
           string,
           Prisma.ProductCatalogOrderByWithRelationInput
         > = {
-          price_up: { price: 'asc' },
-          price_down: { price: 'desc' },
-          default: { createdAt: 'desc' },
+          price_up: { product1688Price: 'asc' },
+          price_down: { product1688Price: 'desc' },
+          default: { product1688GoodsScore: 'desc' },
         }
 
         if (orderByOptions[orderBy]) {
@@ -215,13 +216,13 @@ export class ProductCatalogService {
         take: 500,
       })
 
-      // Remove duplicatas por itemId manualmente
+      // Remove duplicatas por productMlbId manualmente
       const seenItemIds = new Set<string>()
       const top300 = top300Raw.filter((product) => {
-        if (seenItemIds.has(product.itemId)) {
+        if (seenItemIds.has(product.productMlbId)) {
           return false
         }
-        seenItemIds.add(product.itemId)
+        seenItemIds.add(product.productMlbId)
         return true
       }).slice(0, 300)
 
@@ -236,9 +237,15 @@ export class ProductCatalogService {
 
       // Filtrar por margem de lucro
       const filteredByQuotation = filteredByCategory.filter((product) => {
-        const product1688Price =
-          (product.metadata as any)?.product1688?.price || 0
-        const mlbPrice = Number(product.price)
+        const product1688Price = product.product1688Price
+          ? Number(product.product1688Price)
+          : 0
+        const mlbPrice = product.mlbPrice ? Number(product.mlbPrice) : 0
+
+        if (!product1688Price || !mlbPrice || isNaN(mlbPrice)) {
+          return false
+        }
+
         return mlbPrice > product1688Price * 2 * getCNY
       })
 

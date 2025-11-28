@@ -172,23 +172,24 @@ export class CatalogProcessor {
       const { categoryId, mlProductData, product1688Data } = job.data
 
       const existingProduct = await this.prisma.productCatalog.findFirst({
-        where: { itemId: mlProductData.id },
+        where: { productMlbId: mlProductData.id },
       })
 
       const productData = {
-        itemId: mlProductData.id,
-        title: mlProductData.title,
-        price: mlProductData.price,
-        imageUrl: mlProductData.thumbnail || '',
+        productMlbId: mlProductData.id,
+        mlbTitle: mlProductData.title,
+        mlbPrice: mlProductData.price,
+        mlbThumbnail: mlProductData.thumbnail || '',
+        mlbSoldQuantity: mlProductData.sold_quantity || 0,
+        mlbSoldValue: mlProductData.sold_value || null,
+        mlbPermalink: mlProductData.permalink || null,
         categoryIds: [categoryId],
-        salesQuantity: mlProductData.sold_quantity || 0,
-        metadata: {
-          mlb: {
-            permalink: mlProductData.permalink,
-            sold_value: mlProductData.sold_value,
-          },
-          product1688: product1688Data || null,
-        },
+        product1688Id: product1688Data?.item_id || null,
+        product1688Price: product1688Data?.price || null,
+        product1688GoodsScore: product1688Data?.goods_score || null,
+        product1688Title: product1688Data?.title || null,
+        product1688TranslatedTitle: product1688Data?.translated_title || null,
+        product1688QuantityBegin: product1688Data?.quantity_begin || null,
       }
 
       if (existingProduct) {

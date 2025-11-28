@@ -256,19 +256,27 @@ model Subscription {
 }
 
 model ProductCatalog {
-  id            String   @id @default(uuid())
-  itemId        String   @map("item_id")
-  title         String
-  price         Decimal
-  imageUrl      String   @map("image_url")
-  categoryIds   Json?    @map("category_ids")
-  salesQuantity Int      @default(0) @map("sales_quantity")
-  isSimilar     Boolean? @map("is_similar")
-  metadata      Json?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                        String   @id @default(uuid())
+  categoryId                String?  @map("category_id")
+  productMlbId              String   @map("product_mlb_id")
+  mlbThumbnail              String?  @map("mlb_thumbnail")
+  mlbTitle                  String?  @map("mlb_title")
+  mlbPrice                  Decimal? @map("mlb_price")
+  mlbSoldQuantity           Int?     @map("mlb_sold_quantity")
+  mlbSoldValue              Decimal? @map("mlb_sold_value")
+  mlbPermalink              String?  @map("mlb_permalink")
+  product1688Id              String?  @map("product_1688_id")
+  product1688Price          Decimal? @map("product_1688_price")
+  product1688GoodsScore     Decimal? @map("product_1688_goods_score")
+  product1688Title          String?  @map("product_1688_title")
+  product1688TranslatedTitle String? @map("product_1688_translated_title")
+  product1688QuantityBegin  Int?     @map("product_1688_quantity_begin")
+  categoryIds               Json?    @map("category_ids")
+  isSimilar                 Boolean? @map("is_similar")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
 
-  @@index([itemId])
+  @@index([productMlbId])
   @@map("product_catalog")
 }
 
