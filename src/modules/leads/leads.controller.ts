@@ -40,7 +40,7 @@ export class LeadsController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Listar leads' })
   @ApiResponse({ status: 200, description: 'Lista de leads' })
   async findAll(@Query() filterLeadDto: FilterLeadDto) {
@@ -50,7 +50,7 @@ export class LeadsController {
   @Get('stats/origin')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Estatísticas por origem' })
   @ApiResponse({ status: 200, description: 'Stats por origem' })
   async getStatsByOrigin() {
@@ -60,7 +60,7 @@ export class LeadsController {
   @Get('stats/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Estatísticas por status' })
   @ApiResponse({ status: 200, description: 'Stats por status' })
   async getStatsByStatus() {
@@ -70,7 +70,7 @@ export class LeadsController {
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter lead específico' })
   @ApiResponse({ status: 200, description: 'Lead encontrado' })
   async findOne(@Param('id') id: string) {
@@ -80,7 +80,7 @@ export class LeadsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Atualizar lead' })
   @ApiResponse({ status: 200, description: 'Lead atualizado' })
   async update(@Param('id') id: string, @Body() updateLeadDto: UpdateLeadDto) {
@@ -90,7 +90,7 @@ export class LeadsController {
   @Post(':id/convert')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Converter lead em usuário' })
   @ApiResponse({ status: 200, description: 'Lead convertido' })
   async convertToUser(@Param('id') id: string) {
@@ -100,7 +100,7 @@ export class LeadsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover lead' })
   @ApiResponse({ status: 200, description: 'Lead removido' })
   async remove(@Param('id') id: string) {

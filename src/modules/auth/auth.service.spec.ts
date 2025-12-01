@@ -20,8 +20,8 @@ describe('AuthService', () => {
     email: 'test@example.com',
     name: 'Test User',
     password: 'hashedPassword',
-    role: UserRole.USER,
-    status: UserStatus.ACTIVE,
+    role: UserRole.user,
+    status: UserStatus.active,
     phone: null,
     avatar: null,
     phoneVerified: false,
@@ -112,7 +112,7 @@ describe('AuthService', () => {
     })
 
     it('deve lançar exceção quando usuário está suspenso', async () => {
-      const suspendedUser = { ...mockUser, status: UserStatus.SUSPENDED }
+      const suspendedUser = { ...mockUser, status: UserStatus.suspended }
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(suspendedUser as any)
       ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
 
@@ -122,7 +122,7 @@ describe('AuthService', () => {
     })
 
     it('deve lançar exceção quando usuário está inativo', async () => {
-      const inactiveUser = { ...mockUser, status: UserStatus.INACTIVE }
+      const inactiveUser = { ...mockUser, status: UserStatus.inactive }
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(inactiveUser as any)
       ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
 

@@ -19,7 +19,7 @@ import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { CartService } from './cart.service'
-import { CreateCartDto, UpdateCartDto } from './dto'
+import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
 
 @ApiTags('cart')
 @Controller('cart')
@@ -29,7 +29,7 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Post()
-  @Roles('USER', 'ADMIN')
+  @Roles('user', 'admin')
   @ApiOperation({ summary: 'Criar ou atualizar carrinho' })
   @ApiResponse({ status: 201, description: 'Carrinho criado/atualizado' })
   async create(@CurrentUser() user: any, @Body() createCartDto: CreateCartDto) {
@@ -37,7 +37,7 @@ export class CartController {
   }
 
   @Get()
-  @Roles('USER', 'ADMIN')
+  @Roles('user', 'admin')
   @ApiOperation({ summary: 'Obter carrinho do usuário' })
   @ApiResponse({ status: 200, description: 'Carrinho do usuário' })
   async getMyCart(@CurrentUser() user: any) {
@@ -45,7 +45,7 @@ export class CartController {
   }
 
   @Get('all')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Listar todos os carrinhos (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de carrinhos' })
   async findAll() {
@@ -53,7 +53,7 @@ export class CartController {
   }
 
   @Patch()
-  @Roles('USER', 'ADMIN')
+  @Roles('user', 'admin')
   @ApiOperation({ summary: 'Atualizar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho atualizado' })
   async update(
@@ -68,7 +68,7 @@ export class CartController {
   }
 
   @Delete('clear')
-  @Roles('USER', 'ADMIN')
+  @Roles('user', 'admin')
   @ApiOperation({ summary: 'Limpar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho limpo' })
   async clear(@CurrentUser() user: any) {
@@ -76,11 +76,11 @@ export class CartController {
   }
 
   @Post('sync')
-  @Roles('USER', 'ADMIN')
+  @Roles('user', 'admin')
   @ApiOperation({ summary: 'Sincronizar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho sincronizado' })
-  async sync(@CurrentUser() user: any, @Body() createCartDto: CreateCartDto) {
-    return this.cartService.sync(user.id, createCartDto)
+  async sync(@CurrentUser() user: any, @Body() syncCartDto: SyncCartDto) {
+    return this.cartService.sync(user.id, syncCartDto)
   }
 }
 

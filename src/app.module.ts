@@ -33,7 +33,20 @@ import { CliModule } from './cli/cli.module';
     // Configuração
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env', '../.env'],
+      load: [() => {
+        const config = {
+          ncmDatabase: {
+            host: process.env.DB_HOST_NCM_IMPOSTOS || undefined,
+            port: process.env.DB_PORT_NCM_IMPOSTOS ? parseInt(process.env.DB_PORT_NCM_IMPOSTOS, 10) : undefined,
+            database: process.env.DB_DATABASE_NCM_IMPOSTOS || undefined,
+            username: process.env.DB_USERNAME_NCM_IMPOSTOS || undefined,
+            password: process.env.DB_PASSWORD_NCM_IMPOSTOS || undefined,
+          },
+        }
+        console.log('[ConfigModule] Loading NCM config:', JSON.stringify(config.ncmDatabase))
+        return config
+      }],
     }),
 
     // Rate Limiting

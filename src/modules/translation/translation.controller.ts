@@ -59,7 +59,7 @@ export class TranslationController {
   }
 
   @Delete('clear-cache')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Limpar cache de traduções' })
   @ApiResponse({ status: 200, description: 'Cache limpo' })
   async clearCache() {

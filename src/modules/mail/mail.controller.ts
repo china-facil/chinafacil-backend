@@ -19,7 +19,7 @@ export class MailController {
   constructor(private readonly mailService: MailService) {}
 
   @Post('send')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Enviar email' })
   @ApiResponse({ status: 201, description: 'Email enviado' })
   async sendEmail(@Body() sendEmailDto: SendEmailDto) {

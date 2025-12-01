@@ -19,7 +19,7 @@ export class StatisticsController {
   constructor(private readonly statisticsService: StatisticsService) {}
 
   @Get('total-clients-by-plan')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Total de clientes por plano' })
   @ApiResponse({ status: 200, description: 'Estatísticas por plano' })
   async getTotalClientsByPlan() {
@@ -27,7 +27,7 @@ export class StatisticsController {
   }
 
   @Get('monthly-metrics')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Métricas mensais' })
   @ApiQuery({ name: 'year', required: false, type: Number })
   @ApiQuery({ name: 'month', required: false, type: Number })
@@ -43,7 +43,7 @@ export class StatisticsController {
   }
 
   @Get('admin-dashboard')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Estatísticas do dashboard admin' })
   @ApiResponse({ status: 200, description: 'Dashboard statistics' })
   async getAdminDashboard() {
@@ -51,7 +51,7 @@ export class StatisticsController {
   }
 
   @Get('solicitations-by-status')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Solicitações agrupadas por status' })
   @ApiResponse({ status: 200, description: 'Contagem por status' })
   async getSolicitationsByStatus() {
@@ -59,7 +59,7 @@ export class StatisticsController {
   }
 
   @Get('user-growth')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Crescimento de usuários' })
   @ApiQuery({ name: 'months', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Crescimento mensal' })

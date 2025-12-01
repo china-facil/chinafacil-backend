@@ -3,14 +3,6 @@ import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class CreateCalculatorUserDto {
   @ApiProperty({
-    example: 'João Silva',
-    description: 'Nome',
-  })
-  @IsString()
-  @IsNotEmpty()
-  name: string
-
-  @ApiProperty({
     example: 'joao@example.com',
     description: 'Email',
   })
@@ -24,15 +16,7 @@ export class CreateCalculatorUserDto {
   })
   @IsOptional()
   @IsString()
-  phone?: string
-
-  @ApiPropertyOptional({
-    example: 'Empresa LTDA',
-    description: 'Empresa',
-  })
-  @IsOptional()
-  @IsString()
-  company?: string
+  telefone?: string
 }
 
 

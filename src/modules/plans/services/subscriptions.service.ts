@@ -28,8 +28,9 @@ export class SubscriptionsService {
       throw new NotFoundException('Usuário não encontrado')
     }
 
+    const planId = BigInt(createSubscriptionDto.planId)
     const plan = await this.prisma.plan.findUnique({
-      where: { id: createSubscriptionDto.planId },
+      where: { id: planId },
     })
 
     if (!plan) {
@@ -39,14 +40,15 @@ export class SubscriptionsService {
     const subscription = await this.prisma.subscription.create({
       data: {
         userId: createSubscriptionDto.userId,
-        planId: createSubscriptionDto.planId,
-        status: createSubscriptionDto.status || SubscriptionStatus.PENDING,
-        startedAt: createSubscriptionDto.startedAt
-          ? new Date(createSubscriptionDto.startedAt)
-          : null,
-        expiresAt: createSubscriptionDto.expiresAt
-          ? new Date(createSubscriptionDto.expiresAt)
-          : null,
+        planId: planId,
+        price: createSubscriptionDto.price || plan.price,
+        status: createSubscriptionDto.status || SubscriptionStatus.active,
+        currentPeriodStart: createSubscriptionDto.currentPeriodStart
+          ? new Date(createSubscriptionDto.currentPeriodStart)
+          : new Date(),
+        currentPeriodEnd: createSubscriptionDto.currentPeriodEnd
+          ? new Date(createSubscriptionDto.currentPeriodEnd)
+          : new Date(),
       },
       include: {
         user: {
@@ -84,7 +86,7 @@ export class SubscriptionsService {
     return subscriptions
   }
 
-  async findOne(id: string) {
+  async findOne(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
       include: {
@@ -118,7 +120,7 @@ export class SubscriptionsService {
     return subscription
   }
 
-  async update(id: string, updateSubscriptionDto: UpdateSubscriptionDto) {
+  async update(id: number, updateSubscriptionDto: UpdateSubscriptionDto) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
     })
@@ -130,27 +132,32 @@ export class SubscriptionsService {
     const updateData: any = {}
 
     if (updateSubscriptionDto.planId) {
+      const planId = BigInt(updateSubscriptionDto.planId)
       const plan = await this.prisma.plan.findUnique({
-        where: { id: updateSubscriptionDto.planId },
+        where: { id: planId },
       })
 
       if (!plan) {
         throw new NotFoundException('Plano não encontrado')
       }
 
-      updateData.planId = updateSubscriptionDto.planId
+      updateData.planId = planId
     }
 
     if (updateSubscriptionDto.status) {
       updateData.status = updateSubscriptionDto.status
     }
 
-    if (updateSubscriptionDto.startedAt) {
-      updateData.startedAt = new Date(updateSubscriptionDto.startedAt)
+    if (updateSubscriptionDto.currentPeriodStart) {
+      updateData.currentPeriodStart = new Date(updateSubscriptionDto.currentPeriodStart)
     }
 
-    if (updateSubscriptionDto.expiresAt) {
-      updateData.expiresAt = new Date(updateSubscriptionDto.expiresAt)
+    if (updateSubscriptionDto.currentPeriodEnd) {
+      updateData.currentPeriodEnd = new Date(updateSubscriptionDto.currentPeriodEnd)
+    }
+
+    if (updateSubscriptionDto.price !== undefined) {
+      updateData.price = updateSubscriptionDto.price
     }
 
     const updatedSubscription = await this.prisma.subscription.update({
@@ -171,7 +178,7 @@ export class SubscriptionsService {
     return updatedSubscription
   }
 
-  async remove(id: string) {
+  async remove(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
     })
@@ -189,7 +196,7 @@ export class SubscriptionsService {
     }
   }
 
-  async cancel(id: string) {
+  async cancel(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
     })
@@ -201,7 +208,7 @@ export class SubscriptionsService {
     const updatedSubscription = await this.prisma.subscription.update({
       where: { id },
       data: {
-        status: SubscriptionStatus.CANCELLED,
+        status: SubscriptionStatus.inactive,
       },
       include: {
         user: {
@@ -218,7 +225,7 @@ export class SubscriptionsService {
     return updatedSubscription
   }
 
-  async activate(id: string) {
+  async activate(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
     })
@@ -230,8 +237,8 @@ export class SubscriptionsService {
     const updatedSubscription = await this.prisma.subscription.update({
       where: { id },
       data: {
-        status: SubscriptionStatus.ACTIVE,
-        startedAt: subscription.startedAt || new Date(),
+        status: SubscriptionStatus.active,
+        currentPeriodStart: subscription.currentPeriodStart || new Date(),
       },
       include: {
         user: {

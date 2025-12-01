@@ -10,7 +10,7 @@ export class StatisticsService {
     const subscriptions = await this.prisma.subscription.groupBy({
       by: ['planId'],
       where: {
-        status: SubscriptionStatus.ACTIVE,
+        status: SubscriptionStatus.active,
       },
       _count: {
         id: true,
@@ -91,11 +91,11 @@ export class StatisticsService {
       }),
       this.prisma.subscription.findMany({
         where: {
-          startedAt: {
+          currentPeriodStart: {
             gte: startDate,
             lt: endDate,
           },
-          status: SubscriptionStatus.ACTIVE,
+          status: SubscriptionStatus.active,
         },
         include: {
           plan: {
@@ -113,7 +113,7 @@ export class StatisticsService {
         : 0
 
     const totalRevenue = totalRevenueSubscriptions.reduce((sum, sub) => {
-      return sum + (sub.plan?.price ? Number(sub.plan.price) : 0)
+      return sum + (sub.price ? Number(sub.price) : 0)
     }, 0)
 
     return {
@@ -153,12 +153,12 @@ export class StatisticsService {
       }),
       this.prisma.subscription.count({
         where: {
-          status: SubscriptionStatus.ACTIVE,
+          status: SubscriptionStatus.active,
         },
       }),
       this.prisma.plan.count({
         where: {
-          isActive: true,
+          deletedAt: null,
         },
       }),
     ])

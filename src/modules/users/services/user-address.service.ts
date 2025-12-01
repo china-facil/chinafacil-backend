@@ -22,21 +22,41 @@ export class UserAddressService {
       data: {
         ...createUserAddressDto,
         userId,
-        isDefault: addressCount === 0,
       },
     })
+
+    // Se for o primeiro endereço, definir como padrão
+    if (addressCount === 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { defaultAddress: address.id },
+      })
+    }
 
     return address
   }
 
   async findAll(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { defaultAddress: true },
+    })
+
     const addresses = await this.prisma.userAddress.findMany({
       where: { userId },
-      orderBy: [
-        { isDefault: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: {
+        createdAt: 'desc',
+      },
     })
+
+    // Ordenar para que o endereço padrão apareça primeiro
+    if (user?.defaultAddress) {
+      addresses.sort((a, b) => {
+        if (a.id === user.defaultAddress) return -1
+        if (b.id === user.defaultAddress) return 1
+        return 0
+      })
+    }
 
     return addresses
   }
@@ -92,21 +112,21 @@ export class UserAddressService {
       throw new NotFoundException('Endereço não encontrado')
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { defaultAddress: true },
+    })
+
     await this.prisma.userAddress.delete({
       where: { id },
     })
 
-    if (address.isDefault) {
-      const firstAddress = await this.prisma.userAddress.findFirst({
-        where: { userId },
+    // Se o endereço removido era o padrão, limpar default_address
+    if (user?.defaultAddress === id) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { defaultAddress: null },
       })
-
-      if (firstAddress) {
-        await this.prisma.userAddress.update({
-          where: { id: firstAddress.id },
-          data: { isDefault: true },
-        })
-      }
     }
 
     return {
@@ -126,16 +146,9 @@ export class UserAddressService {
       throw new NotFoundException('Endereço não encontrado')
     }
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.userAddress.updateMany({
-        where: { userId },
-        data: { isDefault: false },
-      })
-
-      await tx.userAddress.update({
-        where: { id },
-        data: { isDefault: true },
-      })
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { defaultAddress: id },
     })
 
     return {

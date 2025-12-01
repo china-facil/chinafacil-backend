@@ -68,7 +68,14 @@ export class OpenAIService {
     throw new Error(`${operationName} failed after ${maxAttempts} attempts`)
   }
 
+  private ensureInitialized() {
+    if (!this.openai) {
+      throw new Error('OpenAI service not initialized. OPENAI_API_KEY is required.')
+    }
+  }
+
   async completion(completionDto: CompletionDto) {
+    this.ensureInitialized()
     return this.retryWithBackoff(async () => {
       const response = await this.openai.completions.create({
         model: completionDto.model || 'gpt-3.5-turbo-instruct',
@@ -85,6 +92,7 @@ export class OpenAIService {
   }
 
   async chatCompletion(chatCompletionDto: ChatCompletionDto) {
+    this.ensureInitialized()
     return this.retryWithBackoff(async () => {
       const response = await this.openai.chat.completions.create({
         model: chatCompletionDto.model || 'gpt-4',
@@ -101,6 +109,7 @@ export class OpenAIService {
   }
 
   async completionsImage(body: any) {
+    this.ensureInitialized()
     let response: any = null
 
     do {
@@ -128,6 +137,7 @@ export class OpenAIService {
   }
 
   async chatCompletionStream(chatCompletionDto: ChatCompletionDto) {
+    this.ensureInitialized()
     try {
       const stream = await this.openai.chat.completions.create({
         model: chatCompletionDto.model || 'gpt-4',
@@ -145,6 +155,7 @@ export class OpenAIService {
   }
 
   async generateEmbedding(text: string) {
+    this.ensureInitialized()
     return this.retryWithBackoff(async () => {
       const response = await this.openai.embeddings.create({
         model: 'text-embedding-ada-002',

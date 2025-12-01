@@ -22,8 +22,8 @@ export class CheckExpiredSubscriptionsCommand extends CommandRunner {
 
     const expiredSubscriptions = await this.prisma.subscription.findMany({
       where: {
-        status: SubscriptionStatus.ACTIVE,
-        expiresAt: {
+        status: SubscriptionStatus.active,
+        currentPeriodEnd: {
           lte: today,
         },
       },
@@ -59,31 +59,30 @@ export class CheckExpiredSubscriptionsCommand extends CommandRunner {
           await tx.subscription.update({
             where: { id: subscription.id },
             data: {
-              status: SubscriptionStatus.EXPIRED,
+              status: SubscriptionStatus.inactive,
             },
           })
 
-          if (subscription.user && subscription.user.role !== UserRole.USER) {
+          if (subscription.user && subscription.user.role !== UserRole.user) {
             await tx.user.update({
               where: { id: subscription.user.id },
               data: {
-                role: UserRole.USER,
+                role: UserRole.user,
               },
             })
           }
 
           await tx.notification.create({
             data: {
-              userId: subscription.user.id,
-              title: 'WARNING',
-              message: `Sua assinatura do plano ${subscription.plan.name} expirou. Entre em contato para renovar.`,
               type: 'WARNING',
-              data: {
+              notifiableType: 'App\\Models\\User',
+              notifiableId: subscription.user.id,
+              data: JSON.stringify({
                 message: `Sua assinatura do plano ${subscription.plan.name} expirou. Entre em contato para renovar.`,
                 subscriptionId: subscription.id,
                 planName: subscription.plan.name,
-                expiredAt: subscription.expiresAt?.toISOString(),
-              },
+                expiredAt: subscription.currentPeriodEnd?.toISOString(),
+              }),
             },
           })
         })

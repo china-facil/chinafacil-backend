@@ -34,7 +34,7 @@ export class SolicitationsController {
   constructor(private readonly solicitationsService: SolicitationsService) {}
 
   @Post()
-  @Roles('ADMIN', 'USER')
+  @Roles('admin', 'user')
   @ApiOperation({ summary: 'Criar nova solicitação' })
   @ApiResponse({ status: 201, description: 'Solicitação criada com sucesso' })
   async create(@Body() createSolicitationDto: CreateSolicitationDto) {
@@ -42,7 +42,7 @@ export class SolicitationsController {
   }
 
   @Get()
-  @Roles('ADMIN', 'SELLER', 'USER')
+  @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Listar solicitações com filtros' })
   @ApiResponse({ status: 200, description: 'Lista de solicitações' })
   async findAll(@Query() filterDto: FilterSolicitationDto) {
@@ -50,7 +50,7 @@ export class SolicitationsController {
   }
 
   @Get('statistics')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter estatísticas de solicitações' })
   @ApiResponse({ status: 200, description: 'Estatísticas' })
   async getStatistics() {
@@ -58,7 +58,7 @@ export class SolicitationsController {
   }
 
   @Get('kanban')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter solicitações em formato kanban' })
   @ApiResponse({ status: 200, description: 'Kanban board' })
   async getKanban() {
@@ -66,7 +66,7 @@ export class SolicitationsController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'SELLER', 'USER')
+  @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Obter detalhes de uma solicitação' })
   @ApiResponse({ status: 200, description: 'Detalhes da solicitação' })
   @ApiResponse({ status: 404, description: 'Solicitação não encontrada' })
@@ -75,7 +75,7 @@ export class SolicitationsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Atualizar solicitação' })
   @ApiResponse({ status: 200, description: 'Solicitação atualizada' })
   async update(
@@ -86,7 +86,7 @@ export class SolicitationsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover solicitação' })
   @ApiResponse({ status: 200, description: 'Solicitação removida' })
   async remove(@Param('id') id: string) {
@@ -94,7 +94,7 @@ export class SolicitationsController {
   }
 
   @Post(':id/assign/responsibility')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Atribuir responsável à solicitação' })
   @ApiResponse({ status: 200, description: 'Responsável atribuído' })
   async assignResponsibility(

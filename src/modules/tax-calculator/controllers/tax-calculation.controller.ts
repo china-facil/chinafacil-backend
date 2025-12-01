@@ -40,7 +40,7 @@ export class TaxCalculationController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Listar cálculos com filtros e paginação (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de cálculos' })
   @ApiQuery({ name: 'userId', required: false, type: String })
@@ -56,7 +56,7 @@ export class TaxCalculationController {
   @Get('user/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN', 'USER')
+  @Roles('admin', 'user')
   @ApiOperation({ summary: 'Listar cálculos por usuário' })
   @ApiResponse({ status: 200, description: 'Cálculos do usuário' })
   async findByUser(@Param('userId') userId: string) {

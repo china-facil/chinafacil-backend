@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../../../database/prisma.service'
 import { CreateCalculatorUserDto } from '../dto'
+import * as crypto from 'crypto'
 
 @Injectable()
 export class CalculatorUsersService {
@@ -16,7 +17,11 @@ export class CalculatorUsersService {
     }
 
     const calculatorUser = await this.prisma.calculatorUser.create({
-      data: createCalculatorUserDto,
+      data: {
+        id: crypto.randomUUID(),
+        email: createCalculatorUserDto.email,
+        telefone: createCalculatorUserDto.telefone || '',
+      },
     })
 
     return calculatorUser

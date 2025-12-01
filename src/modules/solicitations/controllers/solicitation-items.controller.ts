@@ -28,7 +28,7 @@ export class SolicitationItemsController {
   ) {}
 
   @Post()
-  @Roles('ADMIN', 'SELLER', 'USER')
+  @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Adicionar item à solicitação' })
   @ApiResponse({ status: 201, description: 'Item adicionado' })
   async addItem(
@@ -39,7 +39,7 @@ export class SolicitationItemsController {
   }
 
   @Delete(':itemId')
-  @Roles('ADMIN', 'SELLER', 'USER')
+  @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Remover item da solicitação' })
   @ApiResponse({ status: 200, description: 'Item removido' })
   async removeItem(

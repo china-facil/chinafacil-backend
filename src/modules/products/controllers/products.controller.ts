@@ -198,6 +198,69 @@ export class ProductsController {
       priceMax: priceMax ? Number(priceMax) : undefined,
     })
   }
+
+  @Get('category/info/:categoryId')
+  @ApiOperation({ summary: 'Obter informações de uma categoria' })
+  @ApiResponse({ status: 200, description: 'Informações da categoria' })
+  async getCategoryInfo(@Param('categoryId') categoryId: string) {
+    return this.productsService.getCategoryInfo(categoryId)
+  }
+
+  @Get('details/:id')
+  @ApiOperation({ summary: 'Obter propriedades detalhadas de um produto' })
+  @ApiResponse({ status: 200, description: 'Propriedades do produto' })
+  async getProductDetails(@Param('id') id: string) {
+    return this.productsService.getProductDetails(id)
+  }
+
+  @Get('skus/:id')
+  @ApiOperation({ summary: 'Obter SKUs/variações de um produto' })
+  @ApiResponse({ status: 200, description: 'SKUs do produto' })
+  async getProductSkuDetails(@Param('id') id: string) {
+    return this.productsService.getProductSkuDetails(id)
+  }
+
+  @Get('shipping')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Obter informações de frete de um produto' })
+  @ApiQuery({ name: 'item_id', required: true, type: String })
+  @ApiQuery({ name: 'province', required: false, type: String })
+  @ApiQuery({ name: 'total_weight', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Informações de frete' })
+  async getProductShipping(
+    @Query('item_id') itemId: string,
+    @Query('province') province?: string,
+    @Query('total_weight') totalWeight?: number,
+  ) {
+    return this.productsService.getShipping1688({
+      itemId,
+      quantity: 1,
+      province: province || '浙江省',
+      city: undefined,
+    })
+  }
+
+  @Get('statistics/:itemId')
+  @ApiOperation({ summary: 'Obter estatísticas de vendas de um produto' })
+  @ApiResponse({ status: 200, description: 'Estatísticas do produto' })
+  async getProductStatistics(@Param('itemId') itemId: string) {
+    return this.productsService.getProductStatistics(itemId)
+  }
+
+  @Get('description/:itemId')
+  @ApiOperation({ summary: 'Obter descrição detalhada de um produto' })
+  @ApiResponse({ status: 200, description: 'Descrição do produto' })
+  async getProductDescription(@Param('itemId') itemId: string) {
+    return this.productsService.getProductDescription(itemId)
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obter detalhes completos de um produto' })
+  @ApiResponse({ status: 200, description: 'Detalhes do produto' })
+  async show(@Param('id') id: string) {
+    return this.productsService.show(id)
+  }
 }
 
 

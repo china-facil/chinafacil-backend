@@ -14,6 +14,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Public } from '../../../common/decorators/public.decorator'
 import { Roles } from '../../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
@@ -28,7 +29,7 @@ export class PlansController {
   constructor(private readonly plansService: PlansService) {}
 
   @Post()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Criar novo plano' })
   @ApiResponse({ status: 201, description: 'Plano criado com sucesso' })
   async create(@Body() createPlanDto: CreatePlanDto) {
@@ -36,7 +37,7 @@ export class PlansController {
   }
 
   @Get()
-  @Roles('ADMIN', 'SELLER', 'USER')
+  @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Listar todos os planos' })
   @ApiResponse({ status: 200, description: 'Lista de planos' })
   async findAll() {
@@ -44,6 +45,7 @@ export class PlansController {
   }
 
   @Get('active')
+  @Public()
   @ApiOperation({ summary: 'Listar planos ativos' })
   @ApiResponse({ status: 200, description: 'Lista de planos ativos' })
   async findActive() {
@@ -51,7 +53,7 @@ export class PlansController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter detalhes de um plano' })
   @ApiResponse({ status: 200, description: 'Detalhes do plano' })
   @ApiResponse({ status: 404, description: 'Plano não encontrado' })
@@ -60,7 +62,7 @@ export class PlansController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Atualizar plano' })
   @ApiResponse({ status: 200, description: 'Plano atualizado com sucesso' })
   @ApiResponse({ status: 404, description: 'Plano não encontrado' })
@@ -72,7 +74,7 @@ export class PlansController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover plano' })
   @ApiResponse({
     status: 200,

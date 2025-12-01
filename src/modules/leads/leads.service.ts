@@ -1,25 +1,33 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-import { LeadStatus } from '@prisma/client'
+import { UserRole } from '@prisma/client'
 import { PrismaService } from '../../database/prisma.service'
 import { CreateLeadDto, FilterLeadDto, UpdateLeadDto } from './dto'
+import * as crypto from 'crypto'
 
 @Injectable()
 export class LeadsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createLeadDto: CreateLeadDto) {
-    const existing = await this.prisma.lead.findFirst({
-      where: { email: createLeadDto.email },
+    const existing = await this.prisma.user.findFirst({
+      where: { 
+        email: createLeadDto.email,
+      },
     })
 
     if (existing) {
       return existing
     }
 
-    const lead = await this.prisma.lead.create({
+    const lead = await this.prisma.user.create({
       data: {
-        ...createLeadDto,
-        status: createLeadDto.status || LeadStatus.NEW,
+        id: crypto.randomUUID(),
+        name: createLeadDto.name,
+        email: createLeadDto.email,
+        phone: createLeadDto.phone,
+        password: crypto.randomBytes(32).toString('hex'),
+        role: UserRole.lead,
+        companyData: createLeadDto.company ? { company: createLeadDto.company } : undefined,
       },
     })
 
@@ -27,37 +35,39 @@ export class LeadsService {
   }
 
   async findAll(filterLeadDto: FilterLeadDto) {
-    const { search, status, origin, page = 1, limit = 10 } = filterLeadDto
+    const { search, page = 1, limit = 10 } = filterLeadDto
 
-    const where: any = {}
+    const where: any = {
+      role: UserRole.lead,
+    }
 
     if (search) {
       where.OR = [
         { name: { contains: search } },
         { email: { contains: search } },
         { phone: { contains: search } },
-        { company: { contains: search } },
       ]
     }
 
-    if (status) {
-      where.status = status
-    }
-
-    if (origin) {
-      where.origin = origin
-    }
-
     const [leads, total] = await Promise.all([
-      this.prisma.lead.findMany({
+      this.prisma.user.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: {
           createdAt: 'desc',
         },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          companyData: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
-      this.prisma.lead.count({ where }),
+      this.prisma.user.count({ where }),
     ])
 
     return {
@@ -70,8 +80,11 @@ export class LeadsService {
   }
 
   async findOne(id: string) {
-    const lead = await this.prisma.lead.findUnique({
-      where: { id },
+    const lead = await this.prisma.user.findFirst({
+      where: { 
+        id,
+        role: UserRole.lead,
+      },
     })
 
     if (!lead) {
@@ -84,9 +97,17 @@ export class LeadsService {
   async update(id: string, updateLeadDto: UpdateLeadDto) {
     const lead = await this.findOne(id)
 
-    const updatedLead = await this.prisma.lead.update({
+    const updateData: any = {}
+    if (updateLeadDto.name) updateData.name = updateLeadDto.name
+    if (updateLeadDto.email) updateData.email = updateLeadDto.email
+    if (updateLeadDto.phone !== undefined) updateData.phone = updateLeadDto.phone
+    if (updateLeadDto.company !== undefined) {
+      updateData.companyData = updateLeadDto.company ? { company: updateLeadDto.company } : null
+    }
+
+    const updatedLead = await this.prisma.user.update({
       where: { id },
-      data: updateLeadDto,
+      data: updateData,
     })
 
     return updatedLead
@@ -95,7 +116,7 @@ export class LeadsService {
   async remove(id: string) {
     const lead = await this.findOne(id)
 
-    await this.prisma.lead.delete({
+    await this.prisma.user.delete({
       where: { id },
     })
 
@@ -107,45 +128,18 @@ export class LeadsService {
   async convertToUser(id: string) {
     const lead = await this.findOne(id)
 
-    await this.prisma.lead.update({
-      where: { id },
-      data: {
-        status: LeadStatus.CONVERTED,
-      },
-    })
-
     return {
-      message: 'Lead marcado como convertido',
+      message: 'Lead já é um usuário',
       lead,
     }
   }
 
   async getStatsByOrigin() {
-    const stats = await this.prisma.lead.groupBy({
-      by: ['origin'],
-      _count: {
-        id: true,
-      },
-    })
-
-    return stats.map((item) => ({
-      origin: item.origin,
-      count: item._count.id,
-    }))
+    return []
   }
 
   async getStatsByStatus() {
-    const stats = await this.prisma.lead.groupBy({
-      by: ['status'],
-      _count: {
-        id: true,
-      },
-    })
-
-    return stats.map((item) => ({
-      status: item.status,
-      count: item._count.id,
-    }))
+    return []
   }
 }
 

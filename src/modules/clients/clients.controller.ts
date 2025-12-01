@@ -29,7 +29,7 @@ export class ClientsController {
   constructor(private readonly clientsService: ClientsService) {}
 
   @Post()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Criar novo cliente' })
   @ApiResponse({ status: 201, description: 'Cliente criado com sucesso' })
   async create(@Body() createClientDto: CreateClientDto) {
@@ -37,7 +37,7 @@ export class ClientsController {
   }
 
   @Get()
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Listar clientes com paginação e filtros' })
   @ApiResponse({ status: 200, description: 'Lista de clientes' })
   async findAll(@Query() filterDto: FilterClientDto) {
@@ -45,7 +45,7 @@ export class ClientsController {
   }
 
   @Get('active-plans')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Listar clientes com planos ativos' })
   @ApiResponse({ status: 200, description: 'Lista de clientes com planos ativos' })
   async findActivePlans() {
@@ -53,7 +53,7 @@ export class ClientsController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter detalhes de um cliente' })
   @ApiResponse({ status: 200, description: 'Detalhes do cliente' })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
@@ -62,7 +62,7 @@ export class ClientsController {
   }
 
   @Patch(':id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Atualizar cliente' })
   @ApiResponse({ status: 200, description: 'Cliente atualizado com sucesso' })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
@@ -74,7 +74,7 @@ export class ClientsController {
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover cliente (soft delete)' })
   @ApiResponse({ status: 200, description: 'Cliente removido com sucesso' })
   @ApiResponse({ status: 404, description: 'Cliente não encontrado' })
@@ -83,7 +83,7 @@ export class ClientsController {
   }
 
   @Post(':clientId/users/:userId')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Vincular usuário ao cliente' })
   @ApiResponse({ status: 200, description: 'Usuário vinculado com sucesso' })
   async attachUser(
@@ -94,7 +94,7 @@ export class ClientsController {
   }
 
   @Delete(':clientId/users/:userId')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Desvincular usuário do cliente' })
   @ApiResponse({ status: 200, description: 'Usuário desvinculado com sucesso' })
   async detachUser(

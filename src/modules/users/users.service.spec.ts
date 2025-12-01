@@ -18,8 +18,8 @@ describe('UsersService', () => {
     password: 'hashedPassword',
     phone: '11999999999',
     avatar: null,
-    role: UserRole.USER,
-    status: UserStatus.ACTIVE,
+    role: UserRole.user,
+    status: UserStatus.active,
     phoneVerified: false,
     employees: null,
     monthlyBilling: null,
@@ -99,7 +99,7 @@ describe('UsersService', () => {
       expect(prismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            role: UserRole.USER,
+            role: UserRole.user,
           }),
         }),
       )
@@ -142,12 +142,12 @@ describe('UsersService', () => {
       jest.spyOn(prismaService.user, 'findMany').mockResolvedValue([])
       jest.spyOn(prismaService.user, 'count').mockResolvedValue(0)
 
-      await service.findAll({ role: UserRole.ADMIN, page: 1, limit: 10 })
+      await service.findAll({ role: UserRole.admin, page: 1, limit: 10 })
 
       expect(prismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            role: UserRole.ADMIN,
+            role: UserRole.admin,
           }),
         }),
       )
@@ -232,7 +232,7 @@ describe('UsersService', () => {
       expect(prismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            role: UserRole.USER,
+            role: UserRole.user,
           }),
         }),
       )

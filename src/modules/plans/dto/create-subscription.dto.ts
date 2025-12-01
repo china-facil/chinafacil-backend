@@ -21,7 +21,7 @@ export class CreateSubscriptionDto {
 
   @ApiPropertyOptional({
     enum: SubscriptionStatus,
-    default: SubscriptionStatus.PENDING,
+    default: SubscriptionStatus.active,
   })
   @IsOptional()
   @IsEnum(SubscriptionStatus)
@@ -29,19 +29,26 @@ export class CreateSubscriptionDto {
 
   @ApiPropertyOptional({
     example: '2024-01-01T00:00:00Z',
-    description: 'Data de início da assinatura',
+    description: 'Data de início do período atual',
   })
   @IsOptional()
   @IsDateString()
-  startedAt?: string
+  currentPeriodStart?: string
 
   @ApiPropertyOptional({
     example: '2024-12-31T23:59:59Z',
-    description: 'Data de expiração da assinatura',
+    description: 'Data de fim do período atual',
   })
   @IsOptional()
   @IsDateString()
-  expiresAt?: string
+  currentPeriodEnd?: string
+
+  @ApiPropertyOptional({
+    example: 100.00,
+    description: 'Preço da assinatura',
+  })
+  @IsOptional()
+  price?: number
 }
 
 

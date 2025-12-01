@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { LeadOrigin, LeadStatus } from '@prisma/client'
-import { IsEmail, IsEnum, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator'
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class CreateLeadDto {
   @ApiProperty({
@@ -34,31 +33,6 @@ export class CreateLeadDto {
   @IsOptional()
   @IsString()
   company?: string
-
-  @ApiProperty({
-    example: 'WEBSITE',
-    description: 'Origem do lead',
-    enum: LeadOrigin,
-  })
-  @IsEnum(LeadOrigin)
-  @IsNotEmpty()
-  origin: LeadOrigin
-
-  @ApiPropertyOptional({
-    example: 'NEW',
-    description: 'Status do lead',
-    enum: LeadStatus,
-  })
-  @IsOptional()
-  @IsEnum(LeadStatus)
-  status?: LeadStatus
-
-  @ApiPropertyOptional({
-    description: 'Dados adicionais',
-  })
-  @IsOptional()
-  @IsObject()
-  metadata?: any
 }
 
 

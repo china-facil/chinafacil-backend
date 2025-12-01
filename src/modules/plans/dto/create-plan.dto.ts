@@ -27,20 +27,20 @@ export class CreatePlanDto {
   price: number
 
   @ApiPropertyOptional({
-    example: { feature1: true, feature2: true, limit_requests: 1000 },
-    description: 'Features do plano (JSON)',
+    example: 'Subtítulo do plano',
+    description: 'Subtítulo do plano',
   })
   @IsOptional()
-  features?: any
+  @IsString()
+  subtitle?: string
 
   @ApiPropertyOptional({
-    example: true,
-    description: 'Se o plano está ativo',
-    default: true,
+    example: 'https://example.com/image.jpg',
+    description: 'URL da imagem do plano',
   })
   @IsOptional()
-  @IsBoolean()
-  isActive?: boolean
+  @IsString()
+  image?: string
 }
 
 

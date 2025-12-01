@@ -8,7 +8,13 @@ export class PlansService {
 
   async create(createPlanDto: CreatePlanDto) {
     const plan = await this.prisma.plan.create({
-      data: createPlanDto,
+      data: {
+        name: createPlanDto.name,
+        description: createPlanDto.description || '',
+        price: createPlanDto.price,
+        subtitle: createPlanDto.subtitle,
+        image: createPlanDto.image,
+      },
     })
 
     return plan
@@ -48,7 +54,7 @@ export class PlansService {
   async findActive() {
     const plans = await this.prisma.plan.findMany({
       where: {
-        isActive: true,
+        deletedAt: null,
       },
       orderBy: {
         price: 'asc',
@@ -59,8 +65,9 @@ export class PlansService {
   }
 
   async findOne(id: string) {
+    const planId = BigInt(id)
     const plan = await this.prisma.plan.findUnique({
-      where: { id },
+      where: { id: planId },
       include: {
         subscriptions: {
           include: {
@@ -92,8 +99,9 @@ export class PlansService {
   }
 
   async update(id: string, updatePlanDto: UpdatePlanDto) {
+    const planId = BigInt(id)
     const plan = await this.prisma.plan.findUnique({
-      where: { id },
+      where: { id: planId },
     })
 
     if (!plan) {
@@ -101,7 +109,7 @@ export class PlansService {
     }
 
     const updatedPlan = await this.prisma.plan.update({
-      where: { id },
+      where: { id: planId },
       data: updatePlanDto,
     })
 
@@ -109,8 +117,9 @@ export class PlansService {
   }
 
   async remove(id: string) {
+    const planId = BigInt(id)
     const plan = await this.prisma.plan.findUnique({
-      where: { id },
+      where: { id: planId },
     })
 
     if (!plan) {
@@ -118,13 +127,13 @@ export class PlansService {
     }
 
     const subscriptionsCount = await this.prisma.subscription.count({
-      where: { planId: id },
+      where: { planId: planId },
     })
 
     if (subscriptionsCount > 0) {
       await this.prisma.plan.update({
-        where: { id },
-        data: { isActive: false },
+        where: { id: planId },
+        data: { deletedAt: new Date() },
       })
 
       return {
@@ -133,7 +142,7 @@ export class PlansService {
     }
 
     await this.prisma.plan.delete({
-      where: { id },
+      where: { id: planId },
     })
 
     return {

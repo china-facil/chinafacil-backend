@@ -30,7 +30,7 @@ export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
   @Post()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Criar notificação (admin)' })
   @ApiResponse({ status: 201, description: 'Notificação criada' })
   async create(@Body() createNotificationDto: CreateNotificationDto) {
@@ -38,7 +38,7 @@ export class NotificationsController {
   }
 
   @Get()
-  @Roles('USER', 'ADMIN', 'SELLER')
+  @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Listar notificações do usuário' })
   @ApiResponse({ status: 200, description: 'Lista de notificações' })
   async findByUser(
@@ -49,7 +49,7 @@ export class NotificationsController {
   }
 
   @Put(':id/read')
-  @Roles('USER', 'ADMIN', 'SELLER')
+  @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Marcar notificação como lida' })
   @ApiResponse({ status: 200, description: 'Notificação marcada como lida' })
   async markAsRead(@Param('id') id: string, @CurrentUser() user: any) {
@@ -57,7 +57,7 @@ export class NotificationsController {
   }
 
   @Put('mark-all-as-read')
-  @Roles('USER', 'ADMIN', 'SELLER')
+  @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Marcar todas as notificações como lidas' })
   @ApiResponse({ status: 200, description: 'Notificações marcadas como lidas' })
   async markAllAsRead(@CurrentUser() user: any) {
@@ -65,7 +65,7 @@ export class NotificationsController {
   }
 
   @Put('mark-all-as-unread')
-  @Roles('USER', 'ADMIN', 'SELLER')
+  @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Marcar todas as notificações como não lidas' })
   @ApiResponse({
     status: 200,
@@ -76,7 +76,7 @@ export class NotificationsController {
   }
 
   @Delete()
-  @Roles('USER', 'ADMIN', 'SELLER')
+  @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Remover todas as notificações' })
   @ApiResponse({ status: 200, description: 'Notificações removidas' })
   async deleteAll(@CurrentUser() user: any) {

@@ -32,7 +32,7 @@ export class FreightsController {
   constructor(private readonly freightsService: FreightsService) {}
 
   @Post('freights')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Criar frete' })
   @ApiResponse({ status: 201, description: 'Frete criado' })
   async create(@Body() createFreightDto: CreateFreightDto) {
@@ -54,7 +54,7 @@ export class FreightsController {
   }
 
   @Patch('freights/:id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Atualizar frete' })
   @ApiResponse({ status: 200, description: 'Frete atualizado' })
   async update(
@@ -65,7 +65,7 @@ export class FreightsController {
   }
 
   @Delete('freights/:id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover frete' })
   @ApiResponse({ status: 200, description: 'Frete removido' })
   async remove(@Param('id') id: string) {

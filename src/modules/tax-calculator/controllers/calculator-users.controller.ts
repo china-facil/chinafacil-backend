@@ -28,7 +28,7 @@ export class CalculatorUsersController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Listar usuários da calculadora (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de usuários' })
   async findAll() {

@@ -86,13 +86,207 @@ export class ProductsService {
     return this.tmService.getProductShipping(params)
   }
 
+  async show(id: string) {
+    this.logger.log(`ProductsService::show - Iniciando busca para produto ID: ${id}`)
+
+    const isAlibabaProduct = id.startsWith('alb-')
+
+    if (isAlibabaProduct) {
+      this.logger.log(`ProductsService::show - Produto identificado como Alibaba: ${id}`)
+      return this.getDetailsAlibabaIntl(id.replace('alb-', ''))
+    }
+
+    const cacheKey = `product_options::${id}`
+    const cachedProductOptions = await this.cacheManager.get(cacheKey)
+    if (cachedProductOptions) {
+      this.logger.log(`ProductsService::show - Produto encontrado no cache: ${id}`)
+      return {
+        status: 'success',
+        cached: true,
+        data: cachedProductOptions,
+      }
+    }
+
+    const localProduct = await this.prisma.productCatalog.findFirst({
+      where: { product1688Id: id },
+    })
+
+    if (localProduct) {
+      this.logger.log(`ProductsService::show - Produto encontrado no banco local: ${id}`)
+      try {
+        const response = await this.tmService.getProductDetails(id)
+
+        if (response?.data && Object.keys(response.data).length > 0) {
+          const productData = response.data
+          await this.cacheManager.set(cacheKey, productData, 24 * 60 * 60 * 1000)
+          return {
+            status: 'success',
+            data: productData,
+            source: 'tmservice_from_catalog',
+          }
+        }
+      } catch (error) {
+        this.logger.error(`ProductsService::show - Erro ao buscar dados via TmService: ${id}`, error.message)
+      }
+    }
+
+    this.logger.log(`ProductsService::show - Chamando tmService para: ${id}`)
+
+    try {
+      const response = await this.tmService.getProductDetails(id)
+
+      if (response?.code && response.code !== 200) {
+        return {
+          status: 'error',
+          message: response.msg || 'Erro ao buscar detalhes do produto',
+          code: response.code,
+        }
+      }
+
+      if (!response?.data || Object.keys(response.data).length === 0) {
+        await this.cacheManager.set(cacheKey, { removed: true, removedAt: new Date() }, 24 * 60 * 60 * 1000)
+        return {
+          status: 'error',
+          message: 'Este produto não está mais disponível no fornecedor',
+          code: 404,
+        }
+      }
+
+      const product = response.data
+      await this.cacheManager.set(cacheKey, product, 24 * 60 * 60 * 1000)
+      return {
+        status: 'success',
+        data: product,
+        source: 'external',
+      }
+    } catch (error) {
+      this.logger.error(`ProductsService::show - Erro no tmService: ${id}`, error.message)
+      return {
+        status: 'error',
+        message: 'Erro interno do servidor ao buscar produto',
+        code: 500,
+      }
+    }
+  }
+
+  async getProductDetails(id: string) {
+    const cacheKey = `product_details::${id}`
+    const cachedProductDetails = await this.cacheManager.get(cacheKey)
+    if (cachedProductDetails) {
+      return {
+        status: 'success',
+        cached: true,
+        data: cachedProductDetails,
+      }
+    }
+
+    const response = await this.tmService.getProductDetails(id)
+    const product = response?.data
+    if (product?.product_props) {
+      await this.cacheManager.set(cacheKey, product.product_props, 24 * 60 * 60 * 1000)
+      return {
+        status: 'success',
+        data: product.product_props,
+      }
+    }
+
+    return {
+      status: 'error',
+      message: 'Erro ao buscar detalhes do produto',
+      code: 500,
+    }
+  }
+
+  async getProductSkuDetails(id: string) {
+    const cacheKey = `product_details_skul::${id}`
+    const cachedProductDetails = await this.cacheManager.get(cacheKey)
+    if (cachedProductDetails) {
+      return {
+        status: 'success',
+        cached: true,
+        data: cachedProductDetails,
+      }
+    }
+
+    const response = await this.tmService.getProductDetails(id)
+    const product = response?.data
+    if (product?.skus) {
+      await this.cacheManager.set(cacheKey, product.skus, 24 * 60 * 60 * 1000)
+      return {
+        status: 'success',
+        data: product.skus,
+      }
+    }
+
+    return {
+      status: 'error',
+      message: 'Erro ao buscar SKUs do produto',
+      code: 500,
+    }
+  }
+
+  async getProductStatistics(itemId: string) {
+    try {
+      const result = await this.tmService.getProductStatistics(itemId)
+      return result
+    } catch (error) {
+      this.logger.error(`ProductsService::getProductStatistics - Erro: ${itemId}`, error.message)
+      return {
+        code: 500,
+        msg: 'Erro interno do servidor',
+        data: null,
+      }
+    }
+  }
+
+  async getProductDescription(itemId: string) {
+    try {
+      const cacheKey = `product_description::${itemId}`
+      const cachedDescription = await this.cacheManager.get(cacheKey)
+      if (cachedDescription) {
+        return {
+          status: 'success',
+          cached: true,
+          data: cachedDescription,
+        }
+      }
+
+      const result = await this.tmService.getProductDescription(itemId)
+
+      if (result && result.code === 200 && result.data) {
+        await this.cacheManager.set(cacheKey, result.data, 24 * 60 * 60 * 1000)
+      }
+
+      return result
+    } catch (error) {
+      this.logger.error(`ProductsService::getProductDescription - Erro: ${itemId}`, error.message)
+      return {
+        code: 500,
+        msg: 'Erro interno do servidor',
+        data: null,
+      }
+    }
+  }
+
+  async getCategoryInfo(categoryId: string) {
+    try {
+      const result = await this.tmService.getCategoryInfo(categoryId)
+      return result
+    } catch (error) {
+      this.logger.error(`ProductsService::getCategoryInfo - Erro: ${categoryId}`, error.message)
+      return {
+        code: 500,
+        msg: 'Erro interno do servidor',
+        data: null,
+      }
+    }
+  }
+
   async addToFavorites(userId: string, addFavoriteDto: AddFavoriteDto) {
-    const existing = await this.prisma.favoriteProduct.findUnique({
+    const existing = await this.prisma.favoriteProduct.findFirst({
       where: {
-        userId_productId: {
-          userId,
-          productId: addFavoriteDto.productId,
-        },
+        userId,
+        itemId: addFavoriteDto.productId,
       },
     })
 
@@ -106,8 +300,7 @@ export class ProductsService {
     const favorite = await this.prisma.favoriteProduct.create({
       data: {
         userId,
-        productId: addFavoriteDto.productId,
-        productData: addFavoriteDto.productData,
+        itemId: addFavoriteDto.productId,
       },
     })
 
@@ -118,12 +311,10 @@ export class ProductsService {
   }
 
   async removeFromFavorites(userId: string, productId: string) {
-    const favorite = await this.prisma.favoriteProduct.findUnique({
+    const favorite = await this.prisma.favoriteProduct.findFirst({
       where: {
-        userId_productId: {
-          userId,
-          productId,
-        },
+        userId,
+        itemId: productId,
       },
     })
 
@@ -133,10 +324,7 @@ export class ProductsService {
 
     await this.prisma.favoriteProduct.delete({
       where: {
-        userId_productId: {
-          userId,
-          productId,
-        },
+        id: favorite.id,
       },
     })
 

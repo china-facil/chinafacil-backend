@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { Inject } from '@nestjs/common'
-import { PrismaService } from '../../../database/prisma.service'
+import { NcmDatabaseService } from '../../../database/ncm-database.service'
 import { AIService } from '../../ai/ai.service'
 
 @Injectable()
@@ -10,7 +10,7 @@ export class NcmService {
   private readonly logger = new Logger(NcmService.name)
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly ncmDatabase: NcmDatabaseService,
     private readonly aiService: AIService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
@@ -20,7 +20,7 @@ export class NcmService {
       throw new NotFoundException('Código NCM não fornecido')
     }
 
-    const cleanCode = this.normalizeNcmCode(ncmCode.trim())
+    const cleanCode = ncmCode.trim().replace(/[^0-9]/g, '')
 
     if (!this.isValidNcmCode(cleanCode)) {
       throw new NotFoundException(`Código NCM inválido: ${ncmCode}`)
@@ -33,17 +33,32 @@ export class NcmService {
       return { ...cached, cached: true }
     }
 
-    const ncm = await this.prisma.ncm.findUnique({
-      where: { code: cleanCode },
-    })
+    try {
+      const ncm = await this.ncmDatabase.findByCode(cleanCode)
 
-    if (!ncm) {
+      if (!ncm) {
+        throw new NotFoundException(`Código NCM não encontrado: ${ncmCode}`)
+      }
+
+      const result = {
+        codigo: ncm.codigo,
+        nome: ncm.nome,
+        ii: ncm.ii,
+        ipi: ncm.ipi,
+        pis: ncm.pis,
+        cofins: ncm.cofins,
+      }
+
+      await this.cacheManager.set(cacheKey, result, 604800000)
+
+      return result
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error
+      }
+      this.logger.error(`Erro ao buscar NCM: ${error.message}`)
       throw new NotFoundException(`Código NCM não encontrado: ${ncmCode}`)
     }
-
-    await this.cacheManager.set(cacheKey, ncm, 604800000)
-
-    return ncm
   }
 
   private normalizeNcmCode(code: string): string {
@@ -55,30 +70,9 @@ export class NcmService {
     return cleanCode.length === 8 && /^\d{8}$/.test(cleanCode)
   }
 
-  async createOrUpdate(ncmData: { code: string; description: string; taxRate?: number }) {
-    const cleanCode = this.normalizeNcmCode(ncmData.code)
-
-    if (!this.isValidNcmCode(cleanCode)) {
-      throw new Error(`Código NCM inválido: ${ncmData.code}`)
-    }
-
-    const ncm = await this.prisma.ncm.upsert({
-      where: { code: cleanCode },
-      update: {
-        description: ncmData.description,
-        taxRate: ncmData.taxRate,
-      },
-      create: {
-        code: cleanCode,
-        description: ncmData.description,
-        taxRate: ncmData.taxRate,
-      },
-    })
-
-    const cacheKey = `ncm:code:${cleanCode}`
-    await this.cacheManager.del(cacheKey)
-
-    return ncm
+  async findByCodeLike(ncmCode: string) {
+    const cleanCode = ncmCode.trim().replace(/[^0-9]/g, '')
+    return await this.ncmDatabase.findByCodeLike(cleanCode)
   }
 
   async findByDescription(product: any) {
@@ -109,6 +103,8 @@ export class NcmService {
     const maxAttempts = 3
     let aiResponse: any = null
 
+    let openAiError: Error | null = null
+
     while (attempts < maxAttempts) {
       try {
         const response = await this.aiService.chatCompletion({
@@ -124,8 +120,12 @@ export class NcmService {
           aiResponse = JSON.parse(cleaned)
           break
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Tentativa ${attempts + 1} falhou: ${error.message}`)
+        if (error.message?.includes('not initialized') || error.message?.includes('API key') || error.message?.includes('não configurado')) {
+          openAiError = new Error('OpenAI service não configurado. OPENAI_API_KEY é obrigatório.')
+          break
+        }
       }
 
       attempts++
@@ -134,29 +134,49 @@ export class NcmService {
       }
     }
 
+    if (openAiError) {
+      this.logger.error(openAiError.message)
+      throw openAiError
+    }
+
     if (!aiResponse?.number) {
       throw new Error('Não foi possível identificar o código NCM')
     }
 
-    const ncm = await this.prisma.ncm.findUnique({
-      where: { code: aiResponse.number },
-    })
+    const cleanCode = aiResponse.number.replace(/[^0-9]/g, '')
+    
+    try {
+      const ncm = await this.ncmDatabase.findByCode(cleanCode)
 
-    if (!ncm) {
+      if (!ncm) {
+        throw new NotFoundException(
+          `Código NCM não encontrado no banco: ${aiResponse.number}`,
+        )
+      }
+
+      const result = {
+        codigo: ncm.codigo,
+        nome: ncm.nome,
+        ii: ncm.ii,
+        ipi: ncm.ipi,
+        pis: ncm.pis,
+        cofins: ncm.cofins,
+        text: aiResponse.text,
+        number: aiResponse.number,
+      }
+
+      await this.cacheManager.set(cacheKey, result, 604800000)
+
+      return result
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error
+      }
+      this.logger.error(`Erro ao buscar NCM: ${error.message}`)
       throw new NotFoundException(
         `Código NCM não encontrado no banco: ${aiResponse.number}`,
       )
     }
-
-    const result = {
-      ...ncm,
-      text: aiResponse.text,
-      number: aiResponse.number,
-    }
-
-    await this.cacheManager.set(cacheKey, result, 604800000)
-
-    return result
   }
 }
 

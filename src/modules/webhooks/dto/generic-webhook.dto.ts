@@ -1,13 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger'
-import { IsNotEmpty, IsObject, IsString } from 'class-validator'
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator'
 
 export class GenericWebhookDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Source da webhook',
+    default: 'generic',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  source: string
+  source?: string
 
   @ApiProperty({
     description: 'Payload da webhook',

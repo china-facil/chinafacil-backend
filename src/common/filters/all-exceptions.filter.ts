@@ -22,6 +22,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let message: string | object = 'Internal server error';
     let errors: any = null;
 
+    this.logger.debug(`Exception caught: ${exception instanceof Error ? exception.message : typeof exception}`);
+
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
@@ -46,6 +48,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception.stack,
       );
     } else if (exception instanceof Error) {
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
       // Verificar se é erro de conexão
       if (
         exception.message?.includes('ECONNREFUSED') ||
@@ -55,12 +58,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
         status = HttpStatus.SERVICE_UNAVAILABLE;
         message = 'Erro de conexão com o banco de dados. Verifique se o banco está rodando.';
       } else {
-        message = exception.message;
+        message = exception.message || 'Internal server error';
       }
       this.logger.error(
         `Unhandled error: ${exception.message}`,
         exception.stack,
       );
+    } else {
+      this.logger.error(`Unknown exception type: ${typeof exception}`, JSON.stringify(exception));
+    }
+
+    let finalMessage: string;
+    if (typeof message === 'string') {
+      finalMessage = message;
+    } else if (message && typeof message === 'object' && 'message' in message) {
+      finalMessage = (message as any).message;
+    } else {
+      finalMessage = JSON.stringify(message) || 'Internal server error';
     }
 
     const errorResponse = {
@@ -68,7 +82,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      message: typeof message === 'string' ? message : (message as any).message || message,
+      message: finalMessage,
       ...(errors && { errors }),
     };
 
@@ -103,6 +117,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return 'Registro não encontrado';
       case 'P2003':
         return 'Violação de integridade referencial';
+      case 'P2023':
+        return (error.meta as any)?.message || 'Dados inconsistentes no banco de dados';
       default:
         return 'Erro no banco de dados';
     }

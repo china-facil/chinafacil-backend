@@ -9,11 +9,10 @@ export class NotificationsService {
   async create(createNotificationDto: CreateNotificationDto) {
     const notification = await this.prisma.notification.create({
       data: {
-        userId: createNotificationDto.userId,
-        title: createNotificationDto.type,
-        message: JSON.stringify(createNotificationDto.data),
-        type: createNotificationDto.type as any,
-        data: createNotificationDto.data,
+        type: createNotificationDto.type,
+        notifiableType: 'App\\Models\\User',
+        notifiableId: createNotificationDto.userId,
+        data: JSON.stringify(createNotificationDto.data),
       },
     })
 
@@ -26,7 +25,10 @@ export class NotificationsService {
     const skip = (page - 1) * limit
     const take = limit
 
-    const where: any = { userId }
+    const where: any = {
+      notifiableType: 'App\\Models\\User',
+      notifiableId: userId,
+    }
 
     if (read !== undefined) {
       if (read) {
@@ -48,7 +50,8 @@ export class NotificationsService {
       this.prisma.notification.count({ where }),
       this.prisma.notification.count({
         where: {
-          userId,
+          notifiableType: 'App\\Models\\User',
+          notifiableId: userId,
           readAt: null,
         },
       }),
@@ -71,7 +74,11 @@ export class NotificationsService {
       where: { id },
     })
 
-    if (!notification || notification.userId !== userId) {
+    if (
+      !notification ||
+      notification.notifiableType !== 'App\\Models\\User' ||
+      notification.notifiableId !== userId
+    ) {
       throw new NotFoundException('Notificação não encontrada')
     }
 
@@ -88,7 +95,8 @@ export class NotificationsService {
   async markAllAsRead(userId: string) {
     await this.prisma.notification.updateMany({
       where: {
-        userId,
+        notifiableType: 'App\\Models\\User',
+        notifiableId: userId,
         readAt: null,
       },
       data: {
@@ -104,7 +112,8 @@ export class NotificationsService {
   async markAllAsUnread(userId: string) {
     await this.prisma.notification.updateMany({
       where: {
-        userId,
+        notifiableType: 'App\\Models\\User',
+        notifiableId: userId,
         readAt: { not: null },
       },
       data: {
@@ -119,7 +128,10 @@ export class NotificationsService {
 
   async deleteAll(userId: string) {
     await this.prisma.notification.deleteMany({
-      where: { userId },
+      where: {
+        notifiableType: 'App\\Models\\User',
+        notifiableId: userId,
+      },
     })
 
     return {

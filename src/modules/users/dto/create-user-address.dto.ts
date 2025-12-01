@@ -35,12 +35,7 @@ export class CreateUserAddressDto {
   @ApiProperty({ description: 'CEP' })
   @IsNotEmpty({ message: 'CEP é obrigatório' })
   @IsString()
-  zipCode: string
-
-  @ApiProperty({ description: 'País', default: 'Brasil', required: false })
-  @IsOptional()
-  @IsString()
-  country?: string
+  postalCode: string
 }
 
 

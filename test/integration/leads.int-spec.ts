@@ -28,7 +28,6 @@ describe('Leads API (Integration)', () => {
           name: 'Test Lead',
           email: 'test@example.com',
           phone: '11999999999',
-          origin: 'landing',
         })
       expect(response.status).toBeGreaterThanOrEqual(200)
       expect(response.status).toBeLessThan(600)
@@ -92,4 +91,5 @@ describe('Leads API (Integration)', () => {
     })
   })
 })
+
 

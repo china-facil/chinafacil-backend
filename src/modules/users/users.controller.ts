@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger'
 import { diskStorage } from 'multer'
 import { extname } from 'path'
+import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
@@ -33,14 +34,22 @@ import {
 import { UsersService } from './users.service'
 
 @ApiTags('users')
-@Controller('users')
+@Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post()
-  @Roles('ADMIN')
+  @Get('me')
+  @ApiOperation({ summary: 'Obter dados do usuário autenticado' })
+  @ApiResponse({ status: 200, description: 'Dados do usuário' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  async me(@CurrentUser() user: any) {
+    return this.usersService.getDataUser(user.id)
+  }
+
+  @Post('users')
+  @Roles('admin')
   @ApiOperation({ summary: 'Criar novo usuário' })
   @ApiResponse({ status: 201, description: 'Usuário criado com sucesso' })
   @ApiResponse({ status: 400, description: 'Email já cadastrado' })
@@ -50,24 +59,24 @@ export class UsersController {
     return this.usersService.create(createUserDto)
   }
 
-  @Get()
-  @Roles('ADMIN', 'SELLER')
+  @Get('users')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Listar usuários com paginação e filtros' })
   @ApiResponse({ status: 200, description: 'Lista de usuários' })
-  async findAll(@Query() filterDto: FilterUserDto) {
+  async findAllUsers(@Query() filterDto: FilterUserDto) {
     return this.usersService.findAll(filterDto)
   }
 
-  @Get('leads')
-  @Roles('ADMIN', 'SELLER')
+  @Get('users/leads')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Listar leads (usuários sem assinatura)' })
   @ApiResponse({ status: 200, description: 'Lista de leads' })
   async findLeads() {
     return this.usersService.findLeads()
   }
 
-  @Get(':id')
-  @Roles('ADMIN', 'SELLER', 'USER')
+  @Get('users/:id')
+  @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Obter detalhes de um usuário' })
   @ApiResponse({ status: 200, description: 'Detalhes do usuário' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
@@ -75,8 +84,8 @@ export class UsersController {
     return this.usersService.findOne(id)
   }
 
-  @Patch(':id')
-  @Roles('ADMIN', 'USER')
+  @Patch('users/:id')
+  @Roles('admin', 'user')
   @ApiOperation({ summary: 'Atualizar usuário' })
   @ApiResponse({ status: 200, description: 'Usuário atualizado com sucesso' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
@@ -84,8 +93,8 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto)
   }
 
-  @Delete(':id')
-  @Roles('ADMIN')
+  @Delete('users/:id')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover usuário' })
   @ApiResponse({ status: 200, description: 'Usuário removido com sucesso' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
@@ -93,8 +102,8 @@ export class UsersController {
     return this.usersService.remove(id)
   }
 
-  @Patch(':id/phone')
-  @Roles('ADMIN', 'USER')
+  @Patch('users/:id/phone')
+  @Roles('admin', 'user')
   @ApiOperation({ summary: 'Atualizar telefone do usuário' })
   @ApiResponse({ status: 200, description: 'Telefone atualizado com sucesso' })
   async updatePhone(
@@ -104,16 +113,16 @@ export class UsersController {
     return this.usersService.updatePhone(id, updatePhoneDto)
   }
 
-  @Patch(':id/validate-phone')
-  @Roles('ADMIN', 'USER')
+  @Patch('users/:id/validate-phone')
+  @Roles('admin', 'user')
   @ApiOperation({ summary: 'Validar telefone do usuário' })
   @ApiResponse({ status: 200, description: 'Telefone validado com sucesso' })
   async validatePhone(@Param('id') id: string) {
     return this.usersService.validatePhone(id)
   }
 
-  @Post(':id/avatar')
-  @Roles('ADMIN', 'USER')
+  @Post('users/:id/avatar')
+  @Roles('admin', 'user')
   @ApiOperation({ summary: 'Upload de avatar do usuário' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ status: 200, description: 'Avatar atualizado com sucesso' })

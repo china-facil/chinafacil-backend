@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
@@ -19,6 +20,8 @@ import {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
@@ -39,20 +42,31 @@ export class AuthService {
       })
 
       if (!user) {
+        this.logger.debug(`Usuário não encontrado para email: ${email}`)
         return null
       }
 
-      const isPasswordValid = await bcrypt.compare(password, user.password)
+      this.logger.debug(`Usuário encontrado: ${user.email}, role: ${user.role}, status: ${user.status}`)
+      this.logger.debug(`Password hash no banco: ${user.password.substring(0, 20)}...`)
+
+      // PHP usa $2y$ enquanto Node.js bcrypt usa $2a$ ou $2b$
+      // Converter $2y$ para $2b$ para compatibilidade
+      const normalizedHash = user.password.replace(/^\$2y\$/, '$2b$')
+      
+      const isPasswordValid = await bcrypt.compare(password, normalizedHash)
 
       if (!isPasswordValid) {
+        this.logger.debug(`Senha inválida para usuário: ${email}`)
         return null
       }
 
-      if (user.status === UserStatus.SUSPENDED) {
+      this.logger.debug(`Senha válida para usuário: ${email}`)
+
+      if (user.status === UserStatus.suspended) {
         throw new UnauthorizedException('Usuário suspenso')
       }
 
-      if (user.status === UserStatus.INACTIVE) {
+      if (user.status === UserStatus.inactive) {
         throw new UnauthorizedException('Usuário inativo')
       }
 
@@ -73,6 +87,33 @@ export class AuthService {
     }
   }
 
+  private getDefaultAbilities(role: string): Array<{ action: string; subject: string }> {
+    switch (role) {
+      case 'admin':
+        return [{ action: 'manage', subject: 'all' }]
+      case 'seller':
+        return [
+          { action: 'read', subject: 'Solicitations' },
+          { action: 'manage', subject: 'Solicitations' },
+          { action: 'read', subject: 'General' },
+          { action: 'read', subject: 'UserProfile' },
+          { action: 'read', subject: 'Auth' },
+          { action: 'read', subject: 'Logout' },
+          { action: 'read', subject: 'ClientDashboard' },
+        ]
+      case 'user':
+      default:
+        return [
+          { action: 'read', subject: 'Solicitations' },
+          { action: 'read', subject: 'General' },
+          { action: 'read', subject: 'UserProfile' },
+          { action: 'read', subject: 'Logout' },
+          { action: 'read', subject: 'Auth' },
+          { action: 'read', subject: 'ClientDashboard' },
+        ]
+    }
+  }
+
   async login(loginDto: LoginDto) {
     try {
       const user = await this.validateUser(loginDto.email, loginDto.password)
@@ -80,6 +121,38 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException('Credenciais inválidas')
       }
+
+      // Buscar abilities do banco ou usar padrão baseado no role
+      let abilities: Array<{ action: string; subject: string }> = []
+      
+      try {
+        const abilitiesFromDb = await this.prisma.$queryRaw<Array<{ action: string; subject: string }>>`
+          SELECT action, subject 
+          FROM abilities 
+          WHERE abilitiable_type = 'App\\\\Models\\\\User' 
+          AND abilitiable_id = ${user.id}
+        `
+        
+        if (abilitiesFromDb && abilitiesFromDb.length > 0) {
+          abilities = abilitiesFromDb
+        } else {
+          abilities = this.getDefaultAbilities(user.role)
+        }
+      } catch (error) {
+        // Se a tabela abilities não existir, usar abilities padrão
+        this.logger.warn('Erro ao buscar abilities do banco, usando padrão:', error)
+        abilities = this.getDefaultAbilities(user.role)
+      }
+
+      // Buscar favorites do usuário
+      const favorites = await this.prisma.favoriteProduct.findMany({
+        where: { userId: user.id },
+        select: { itemId: true },
+      })
+
+      const favoritesIds = favorites
+        .map((f) => f.itemId)
+        .filter((id): id is string => id !== null)
 
       const payload = {
         sub: user.id,
@@ -89,17 +162,33 @@ export class AuthService {
       }
 
       const accessToken = this.jwtService.sign(payload)
-      const refreshToken = this.jwtService.sign(payload, {
-        secret: this.configService.get('JWT_REFRESH_SECRET'),
-        expiresIn: this.configService.get('JWT_REFRESH_EXPIRATION') || '30d',
-      })
+
+      // Formatar dados do usuário conforme esperado pelo frontend
+      const userData = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone || null,
+        avatar: user.avatar || null,
+        role: user.role,
+        status: user.status,
+        phoneVerified: user.phoneVerified,
+        phone_verified: user.phoneVerified, // Duplicado para compatibilidade
+        employees: user.employees || null,
+        monthlyBilling: user.monthlyBilling || null,
+        cnpj: user.cnpj || null,
+        companyData: user.companyData || null,
+        emailVerifiedAt: user.emailVerifiedAt?.toISOString() || null,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString(),
+        subscription: user.subscription || null,
+        abilities,
+        favorites: favoritesIds,
+      }
 
       return {
-        user,
-        accessToken,
-        refreshToken,
-        tokenType: 'Bearer',
-        expiresIn: this.configService.get('JWT_EXPIRATION') || '7d',
+        token: accessToken,
+        data: userData,
       }
     } catch (error: any) {
       // Se já for uma exceção HTTP, relançar
@@ -140,8 +229,8 @@ export class AuthService {
         phone: registerDto.phone,
         cnpj: registerDto.cnpj,
         companyData: registerDto.companyData,
-        role: UserRole.USER,
-        status: UserStatus.ACTIVE,
+        role: UserRole.user,
+        status: UserStatus.active,
       },
       select: {
         id: true,
@@ -197,7 +286,7 @@ export class AuthService {
         throw new UnauthorizedException('Usuário não encontrado')
       }
 
-      if (user.status !== UserStatus.ACTIVE) {
+      if (user.status !== UserStatus.active) {
         throw new UnauthorizedException('Usuário inativo ou suspenso')
       }
 

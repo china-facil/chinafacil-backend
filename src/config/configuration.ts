@@ -6,6 +6,14 @@ export default () => ({
     url: process.env.DATABASE_URL,
   },
   
+  ncmDatabase: {
+    host: process.env.DB_HOST_NCM_IMPOSTOS || '127.0.0.1',
+    port: process.env.DB_PORT_NCM_IMPOSTOS ? parseInt(process.env.DB_PORT_NCM_IMPOSTOS, 10) : 3306,
+    database: process.env.DB_DATABASE_NCM_IMPOSTOS || 'forge',
+    username: process.env.DB_USERNAME_NCM_IMPOSTOS || 'forge',
+    password: process.env.DB_PASSWORD_NCM_IMPOSTOS || '',
+  },
+  
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),

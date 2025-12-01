@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
-import { CreateCartDto, UpdateCartDto } from './dto'
+import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
 
 @Injectable()
 export class CartService {
+  private readonly logger = new Logger(CartService.name)
+
   constructor(private readonly prisma: PrismaService) {}
 
   async create(userId: string, createCartDto: CreateCartDto) {
@@ -90,8 +92,253 @@ export class CartService {
     }
   }
 
-  async sync(userId: string, createCartDto: CreateCartDto) {
-    return this.create(userId, createCartDto)
+  private mergeCartItems(
+    localItems: any[],
+    backendItems: any[],
+    syncType: string = 'update',
+  ): any[] {
+    const merged: any[] = []
+    const backendMap = new Map<string, any>()
+
+    // Cria mapa dos itens do backend
+    for (const item of backendItems) {
+      backendMap.set(item.id, item)
+    }
+
+    // Processa itens locais
+    for (const localItem of localItems) {
+      const productId = localItem.id
+
+      if (backendMap.has(productId)) {
+        // Item existe no backend - estratégia depende do tipo de sync
+        const backendItem = backendMap.get(productId)
+
+        if (syncType === 'update') {
+          // Para update: Prioridade TOTAL ao local (mantém quantidades alteradas)
+          merged.push(localItem)
+        } else if (syncType === 'initial') {
+          // Para initial: Prioridade ao LOCAL nas quantidades, mas mescla variações
+          const mergedVariations = this.mergeVariations(
+            backendItem.variations || [],
+            localItem.variations || [],
+            'local',
+          )
+          merged.push({
+            ...localItem,
+            variations: mergedVariations,
+          })
+        }
+        // Para delete: não adiciona (será removido)
+
+        backendMap.delete(productId)
+      } else {
+        // Item só existe localmente
+        if (syncType !== 'delete') {
+          merged.push(localItem)
+        }
+      }
+    }
+
+    // Estratégia baseada no tipo de sincronização:
+    if (syncType === 'initial' || syncType === 'update') {
+      // Adiciona itens que só existem no backend (de outros navegadores)
+      for (const item of backendMap.values()) {
+        merged.push(item)
+      }
+    }
+    // Para delete: NÃO adiciona itens que só existem no backend (foram excluídos)
+
+    return merged
+  }
+
+  private mergeVariations(
+    backendVariations: any[],
+    localVariations: any[],
+    priority: string = 'backend',
+  ): any[] {
+    const merged: any[] = []
+    const localMap = new Map<string, any>()
+
+    // Função auxiliar para criar chave consistente
+    const variationKey = (variation: any): string => {
+      const colorVid = variation?.color?.vid ? String(variation.color.vid) : ''
+      const specVid =
+        variation?.specification?.vid !== null &&
+        variation?.specification?.vid !== undefined
+          ? String(variation.specification.vid)
+          : ''
+      return `${colorVid}_${specVid}`
+    }
+
+    // Cria mapa das variações locais
+    for (const variation of localVariations) {
+      const key = variationKey(variation)
+      localMap.set(key, variation)
+    }
+
+    if (priority === 'local') {
+      // Prioridade ao LOCAL (localStorage)
+      const processedKeys = new Set<string>()
+
+      for (const localVariation of localVariations) {
+        const key = variationKey(localVariation)
+        merged.push(localVariation) // Usa dados locais
+        processedKeys.add(key)
+      }
+
+      // Adiciona variações que só existem no backend
+      for (const backendVariation of backendVariations) {
+        const key = variationKey(backendVariation)
+        if (!processedKeys.has(key)) {
+          merged.push(backendVariation)
+        }
+      }
+    } else {
+      // Prioridade ao BACKEND
+      for (const backendVariation of backendVariations) {
+        const key = variationKey(backendVariation)
+        if (localMap.has(key)) {
+          // Variação existe localmente - usa dados do BACKEND
+          merged.push(backendVariation)
+          localMap.delete(key)
+        } else {
+          // Variação só existe no backend
+          merged.push(backendVariation)
+        }
+      }
+
+      // Adiciona variações que só existem localmente (novos itens)
+      for (const variation of localMap.values()) {
+        merged.push(variation)
+      }
+    }
+
+    return merged
+  }
+
+  async sync(userId: string, syncCartDto: SyncCartDto) {
+    const localCart = syncCartDto.local_cart || []
+    const syncType = syncCartDto.sync_type || 'update'
+
+    this.logger.debug(`Sincronizando carrinho para usuário ${userId}`, {
+      localCartCount: localCart.length,
+      syncType,
+    })
+
+    // Buscar carrinho no backend (sem solicitation_id)
+    const backendCart = await this.prisma.cart.findFirst({
+      where: {
+        userId,
+        solicitationId: null,
+      },
+    })
+
+    // Se não há carrinho no backend
+    if (!backendCart) {
+      if (localCart.length > 0) {
+        // Criar novo carrinho com itens locais
+        this.logger.debug('Criando novo carrinho no backend')
+        const newCart = await this.prisma.cart.create({
+          data: {
+            userId,
+            items: localCart,
+          },
+        })
+
+        return {
+          status: 'success',
+          data: {
+            id: newCart.id,
+            user_id: newCart.userId,
+            items: newCart.items,
+          },
+          message: 'Carrinho sincronizado com sucesso',
+        }
+      } else {
+        // Carrinho vazio - não criar
+        this.logger.debug('Carrinho local vazio - não criando carrinho no backend')
+        return {
+          status: 'success',
+          data: {
+            items: [],
+            id: null,
+            user_id: userId,
+          },
+          message: 'Carrinho vazio sincronizado',
+        }
+      }
+    }
+
+    // Há carrinho no backend
+    const backendItems = Array.isArray(backendCart.items)
+      ? backendCart.items
+      : []
+
+    this.logger.debug('Mesclando carrinho existente', {
+      backendItemsCount: backendItems.length,
+      localCartCount: localCart.length,
+      syncType,
+    })
+
+    if (localCart.length === 0) {
+      // Carrinho local vazio
+      if (syncType === 'delete') {
+        // Limpar carrinho no backend
+        this.logger.debug('Limpando carrinho no backend (delete)')
+        const updatedCart = await this.prisma.cart.update({
+          where: { id: backendCart.id },
+          data: {
+            items: [],
+          },
+        })
+
+        return {
+          status: 'success',
+          data: {
+            id: updatedCart.id,
+            user_id: updatedCart.userId,
+            items: [],
+          },
+          message: 'Carrinho sincronizado com sucesso',
+        }
+      } else {
+        // Mantém carrinho do backend
+        this.logger.debug('Mantendo carrinho do backend (initial/update)')
+        return {
+          status: 'success',
+          data: {
+            id: backendCart.id,
+            user_id: backendCart.userId,
+            items: backendItems,
+          },
+          message: 'Carrinho sincronizado com sucesso',
+        }
+      }
+    }
+
+    // Mesclar itens
+    const mergedItems = this.mergeCartItems(localCart, backendItems, syncType)
+
+    this.logger.debug('Itens mesclados', {
+      mergedItemsCount: mergedItems.length,
+    })
+
+    const updatedCart = await this.prisma.cart.update({
+      where: { id: backendCart.id },
+      data: {
+        items: mergedItems,
+      },
+    })
+
+    return {
+      status: 'success',
+      data: {
+        id: updatedCart.id,
+        user_id: updatedCart.userId,
+        items: Array.isArray(updatedCart.items) ? updatedCart.items : [],
+      },
+      message: 'Carrinho sincronizado com sucesso',
+    }
   }
 }
 

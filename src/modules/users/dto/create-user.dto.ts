@@ -54,7 +54,7 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     enum: UserRole,
-    default: UserRole.USER,
+    default: UserRole.user,
   })
   @IsOptional()
   @IsEnum(UserRole)
@@ -62,27 +62,27 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     enum: UserStatus,
-    default: UserStatus.ACTIVE,
+    default: UserStatus.active,
   })
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus
 
   @ApiPropertyOptional({
-    example: 10,
-    description: 'Número de funcionários',
+    example: '1-5',
+    description: 'Número de funcionários (pode ser range como "1-5")',
   })
   @IsOptional()
-  @IsNumber()
-  employees?: number
+  @IsString()
+  employees?: string
 
   @ApiPropertyOptional({
-    example: 50000,
+    example: '50000',
     description: 'Faturamento mensal',
   })
   @IsOptional()
-  @IsNumber()
-  monthlyBilling?: number
+  @IsString()
+  monthlyBilling?: string
 
   @ApiPropertyOptional({
     example: '12345678000190',

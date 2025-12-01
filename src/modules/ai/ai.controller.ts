@@ -32,7 +32,7 @@ export class AIController {
   constructor(private readonly aiService: AIService) {}
 
   @Post('completion')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Gerar completion (OpenAI)' })
   @ApiResponse({ status: 201, description: 'Completion gerado' })
   async completion(@Body() completionDto: CompletionDto) {
@@ -40,7 +40,7 @@ export class AIController {
   }
 
   @Post('chat')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Chat completion' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 201, description: 'Resposta gerada' })
@@ -52,7 +52,7 @@ export class AIController {
   }
 
   @Post('chat/stream')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Chat completion com streaming (SSE)' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 200, description: 'Stream de respostas' })
@@ -97,7 +97,7 @@ export class AIController {
   }
 
   @Post('embedding')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Gerar embedding (OpenAI)' })
   @ApiResponse({ status: 201, description: 'Embedding gerado' })
   async generateEmbedding(@Body('text') text: string) {
@@ -105,7 +105,7 @@ export class AIController {
   }
 
   @Post('product-similarity')
-  @Roles('ADMIN', 'SELLER')
+  @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Analisar similaridade entre produtos' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 201, description: 'Análise concluída' })

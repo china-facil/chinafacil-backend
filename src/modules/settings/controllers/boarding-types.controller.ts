@@ -28,7 +28,7 @@ export class BoardingTypesController {
   constructor(private readonly boardingTypesService: BoardingTypesService) {}
 
   @Post('boarding-types')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Criar tipo de embarque' })
   @ApiResponse({ status: 201, description: 'Tipo criado' })
   async create(@Body() createBoardingTypeDto: CreateBoardingTypeDto) {
@@ -64,7 +64,7 @@ export class BoardingTypesController {
   }
 
   @Patch('boarding-types/:id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Atualizar tipo' })
   @ApiResponse({ status: 200, description: 'Tipo atualizado' })
   async update(
@@ -75,7 +75,7 @@ export class BoardingTypesController {
   }
 
   @Delete('boarding-types/:id')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Remover tipo' })
   @ApiResponse({ status: 200, description: 'Tipo removido' })
   async remove(@Param('id') id: string) {

@@ -12,15 +12,18 @@ datasource db {
 // ===== ENUMS =====
 
 enum UserRole {
-  ADMIN
-  USER
-  SELLER
+  admin
+  user
+  seller
+  lead
+  sourcer
+  client
 }
 
 enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
+  active
+  inactive
+  suspended
 }
 
 enum SolicitationStatus {
@@ -31,10 +34,8 @@ enum SolicitationStatus {
 }
 
 enum SubscriptionStatus {
-  ACTIVE
-  CANCELLED
-  EXPIRED
-  PENDING
+  active
+  inactive
 }
 
 enum LeadStatus {
@@ -82,22 +83,23 @@ enum ExportType {
 // ===== MODELS =====
 
 model User {
-  id              String    @id @default(uuid())
+  id              String       @id @default(uuid())
   name            String
-  email           String    @unique
+  email           String       @unique
   password        String
   phone           String?
   avatar          String?
-  role            UserRole  @default(USER)
-  status          UserStatus @default(ACTIVE)
-  phoneVerified   Boolean   @default(false) @map("phone_verified")
-  employees       Int?
-  monthlyBilling  Decimal?  @map("monthly_billing")
+  role            UserRole     @default(user)
+  status          UserStatus   @default(active)
+  phoneVerified   Boolean      @default(false) @map("phone_verified")
+  employees       String?
+  monthlyBilling  String?      @map("monthly_billing")
   cnpj            String?
-  companyData     Json?     @map("company_data")
-  emailVerifiedAt DateTime? @map("email_verified_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  companyData     Json?        @map("company_data")
+  emailVerifiedAt DateTime?    @map("email_verified_at")
+  defaultAddress  String?      @map("default_address")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
 
   solicitations   Solicitation[]
   addresses       UserAddress[]
@@ -211,26 +213,23 @@ model Cart {
   userId         String   @map("user_id")
   solicitationId String?  @unique @map("solicitation_id")
   items          Json
-  subtotal       Decimal
-  shippingCost   Decimal  @map("shipping_cost")
-  tax            Decimal
-  total          Decimal
   pricingData    Json?    @map("pricing_data")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  solicitation Solicitation? @relation(fields: [solicitationId], references: [id])
+  solicitation Solicitation? @relation(fields: [solicitationId], references: [id], onDelete: SetNull)
 
   @@map("carts")
 }
 
 model Plan {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  price       Decimal
-  features    Json?
-  isActive    Boolean  @default(true) @map("is_active")
+  id          BigInt   @id @default(autoincrement())
+  name        String   @db.VarChar(50)
+  subtitle    String?  @db.VarChar(100)
+  image       String?  @db.VarChar(255)
+  description String   @db.Text
+  price       Float
+  deletedAt   DateTime? @map("deleted_at")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -240,17 +239,21 @@ model Plan {
 }
 
 model Subscription {
-  id        String             @id @default(uuid())
-  userId    String             @unique @map("user_id")
-  planId    String             @map("plan_id")
-  status    SubscriptionStatus @default(PENDING)
-  startedAt DateTime?          @map("started_at")
-  expiresAt DateTime?          @map("expires_at")
-  createdAt DateTime           @default(now()) @map("created_at")
-  updatedAt DateTime           @updatedAt @map("updated_at")
+  id                  Int                @id @default(autoincrement())
+  userId              String             @unique @map("user_id")
+  planId              BigInt             @map("plan_id")
+  price               Decimal            @map("price")
+  status              SubscriptionStatus @default(active)
+  currentPeriodStart  DateTime           @map("current_period_start")
+  currentPeriodEnd    DateTime           @map("current_period_end")
+  supplierSearch      Int                @default(0) @map("supplier_search")
+  viabilityStudy      Int?               @map("viability_study")
+  canceledAt          DateTime?          @map("canceled_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id])
-  plan Plan @relation(fields: [planId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -283,13 +286,12 @@ model ProductCatalog {
 model FavoriteProduct {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
-  productId   String   @map("product_id")
-  productData Json     @map("product_data")
+  itemId      String?  @map("item_id")
   createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, productId])
   @@map("favorite_products")
 }
 
@@ -302,9 +304,7 @@ model UserAddress {
   neighborhood String
   city         String
   state        String
-  zipCode      String   @map("zip_code")
-  country      String   @default("Brasil")
-  isDefault    Boolean  @default(false) @map("is_default")
+  postalCode   String   @map("postal_code")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -337,37 +337,47 @@ model Freight {
   @@map("freights")
 }
 
-model Ncm {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  description String
-  taxRate     Decimal? @map("tax_rate")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  @@map("ncms")
-}
 
 model TaxCalculation {
-  id                String   @id @default(uuid())
-  userId            String?  @map("user_id")
-  productData       Json     @map("product_data")
-  ncmCode           String?  @map("ncm_code")
-  calculationResult Json     @map("calculation_result")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id                  BigInt   @id @default(autoincrement())
+  userId              String?  @map("user_id") @db.VarChar(36)
+  userEmail           String?  @map("user_email") @db.VarChar(255)
+  tempUserId          String?  @map("temp_user_id") @db.VarChar(50)
+  productName         String   @map("product_name") @db.VarChar(255)
+  productImageUrl     String?  @map("product_image_url") @db.VarChar(255)
+  ncmCode             String?  @map("ncm_code") @db.VarChar(20)
+  volumeUn            Decimal  @map("volume_un") @db.Decimal(10, 4)
+  weightUn            Decimal  @map("weight_un") @db.Decimal(10, 2)
+  quantity            Int
+  unitPriceBrl         Decimal  @map("unit_price_brl") @db.Decimal(12, 2)
+  currency            String   @db.VarChar(3) @default("BRL")
+  unitPriceOriginal   Decimal? @map("unit_price_original") @db.Decimal(12, 2)
+  yuanRate            Decimal? @map("yuan_rate") @db.Decimal(8, 4)
+  dolarRate           Decimal? @map("dolar_rate") @db.Decimal(8, 4)
+  distanceKm          Decimal? @map("distance_km") @db.Decimal(8, 2)
+  volumeType          String   @map("volume_type") @default("unitario")
+  weightType          String   @map("weight_type") @default("unitario")
+  totalVolume         Decimal  @map("total_volume") @db.Decimal(10, 4)
+  totalWeight         Decimal  @map("total_weight") @db.Decimal(10, 2)
+  supplierPrice       Decimal  @map("supplier_price") @db.Decimal(12, 2)
+  totalCost           Decimal  @map("total_cost") @db.Decimal(12, 2)
+  calculationBreakdown Json?   @map("calculation_breakdown")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
+  @@index([userEmail])
+  @@index([tempUserId])
+  @@index([createdAt])
   @@map("tax_calculations")
 }
 
 model CalculatorUser {
-  id        String   @id @default(uuid())
-  name      String
-  email     String
-  phone     String?
-  company   String?
+  id        String   @id @db.Char(36)
+  email     String   @unique @db.VarChar(255)
+  telefone  String   @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -387,51 +397,20 @@ model UserSellerLead {
   @@map("user_seller_leads")
 }
 
-model Lead {
-  id          String      @id @default(uuid())
-  name        String
-  email       String      @unique
-  phone       String?
-  company     String?
-  status      LeadStatus  @default(NEW)
-  origin      LeadOrigin  @default(OTHER)
-  notes       String?     @db.Text
-  metadata    Json?
-  assignedTo  String?     @map("assigned_to")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-
-  @@map("leads")
-}
-
 model Notification {
-  id        String            @id @default(uuid())
-  userId    String            @map("user_id")
-  title     String
-  message   String            @db.Text
-  type      NotificationType  @default(INFO)
-  isRead    Boolean           @default(false) @map("is_read")
-  readAt    DateTime?         @map("read_at")
-  data      Json?
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  type           String
+  notifiableType String   @map("notifiable_type")
+  notifiableId   String   @map("notifiable_id") @db.VarChar(36)
+  data           String   @db.Text
+  readAt         DateTime? @map("read_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
+  @@index([notifiableType, notifiableId])
   @@map("notifications")
 }
 
-model WebhookLog {
-  id          String    @id @default(uuid())
-  event       String
-  source      String
-  payload     Json
-  response    Json?
-  status      String
-  error       String?   @db.Text
-  processedAt DateTime? @map("processed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-
-  @@map("webhook_logs")
-}
 
 model Export {
   id          String        @id @default(uuid())

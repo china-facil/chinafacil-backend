@@ -37,7 +37,7 @@ export class WebhooksController {
   @Get('logs')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Obter logs de webhooks' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Logs de webhooks' })

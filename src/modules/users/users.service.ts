@@ -32,8 +32,8 @@ export class UsersService {
       data: {
         ...createUserDto,
         password: hashedPassword,
-        role: createUserDto.role || UserRole.USER,
-        status: createUserDto.status || UserStatus.ACTIVE,
+        role: createUserDto.role || UserRole.user,
+        status: createUserDto.status || UserStatus.active,
       },
       select: {
         id: true,
@@ -235,7 +235,7 @@ export class UsersService {
   async findLeads() {
     const leads = await this.prisma.user.findMany({
       where: {
-        role: UserRole.USER,
+        role: UserRole.user,
         subscription: null,
       },
       select: {
@@ -331,6 +331,108 @@ export class UsersService {
     })
 
     return updatedUser
+  }
+
+  async getDataUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscription: {
+          include: {
+            plan: true,
+          },
+        },
+        addresses: true,
+        favorites: {
+          select: {
+            itemId: true,
+          },
+        },
+        clientUsers: {
+          include: {
+            client: true,
+          },
+        },
+      },
+    })
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado')
+    }
+
+    // Buscar abilities do banco (polymorphic relation)
+    const abilitiesResult = await this.prisma.$queryRaw<
+      Array<{ action: string; subject: string }>
+    >`
+      SELECT action, subject 
+      FROM abilities 
+      WHERE abilitiable_type = 'App\\Models\\User' 
+      AND abilitiable_id = ${userId}
+    `
+
+    const abilities =
+      abilitiesResult.length > 0
+        ? abilitiesResult
+        : this.getDefaultAbilities(user.role)
+
+    const favoritesIds = user.favorites
+      .map((f) => f.itemId)
+      .filter((id): id is string => id !== null)
+
+    const clients = user.clientUsers.map((cu) => cu.client)
+
+    return {
+      status: 'success',
+      data: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone || null,
+        avatar: user.avatar || null,
+        email: user.email,
+        role: user.role,
+        cnpj: user.cnpj || null,
+        status: user.status,
+        leads: [], // TODO: Implementar se necessário
+        email_verified_at: user.emailVerifiedAt?.toISOString() || null,
+        created_at: user.createdAt.toISOString(),
+        updated_at: user.updatedAt.toISOString(),
+        abilities,
+        clients,
+        address: user.addresses || [],
+        phone_verified: user.phoneVerified,
+        favorites: favoritesIds,
+        employees: user.employees || null,
+        monthly_billing: user.monthlyBilling || null,
+      },
+    }
+  }
+
+  private getDefaultAbilities(role: UserRole): Array<{ action: string; subject: string }> {
+    switch (role) {
+      case UserRole.admin:
+        return [{ action: 'manage', subject: 'all' }]
+      case UserRole.user:
+        return [
+          { action: 'read', subject: 'Solicitations' },
+          { action: 'read', subject: 'General' },
+          { action: 'read', subject: 'UserProfile' },
+          { action: 'read', subject: 'Logout' },
+          { action: 'read', subject: 'Auth' },
+          { action: 'read', subject: 'ClientDashboard' },
+        ]
+      case UserRole.seller:
+        return [
+          { action: 'read', subject: 'Solicitations' },
+          { action: 'manage', subject: 'Solicitations' },
+          { action: 'read', subject: 'General' },
+          { action: 'read', subject: 'UserProfile' },
+          { action: 'read', subject: 'Auth' },
+          { action: 'read', subject: 'Logout' },
+          { action: 'read', subject: 'ClientDashboard' },
+        ]
+      default:
+        return []
+    }
   }
 }
 

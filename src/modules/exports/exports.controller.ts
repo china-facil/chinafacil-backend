@@ -49,7 +49,7 @@ export class ExportsController {
   }
 
   @Get('pending')
-  @Roles('ADMIN')
+  @Roles('admin')
   @ApiOperation({ summary: 'Listar exportações pendentes' })
   @ApiResponse({ status: 200, description: 'Exportações pendentes' })
   async getPendingExports() {
