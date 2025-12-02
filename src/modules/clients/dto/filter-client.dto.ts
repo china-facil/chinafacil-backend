@@ -4,18 +4,18 @@ import { IsNumber, IsOptional, IsString, Min } from 'class-validator'
 
 export class FilterClientDto {
   @ApiPropertyOptional({
-    description: 'Buscar por nome ou email',
+    description: 'Buscar por nome',
   })
   @IsOptional()
   @IsString()
   search?: string
 
   @ApiPropertyOptional({
-    description: 'Filtrar por status',
+    description: 'Filtrar por status do plano',
   })
   @IsOptional()
   @IsString()
-  status?: string
+  planStatus?: string
 
   @ApiPropertyOptional({
     description: 'Página atual',
@@ -37,5 +37,3 @@ export class FilterClientDto {
   @Min(1)
   limit?: number = 10
 }
-
-

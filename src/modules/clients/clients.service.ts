@@ -23,7 +23,7 @@ export class ClientsService {
   }
 
   async findAll(filterDto: FilterClientDto) {
-    const { search, status, page = 1, limit = 10 } = filterDto
+    const { search, planStatus, page = 1, limit = 10 } = filterDto
 
     const skip = (page - 1) * limit
     const take = limit
@@ -33,15 +33,11 @@ export class ClientsService {
     }
 
     if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { email: { contains: search } },
-        { cfCode: { contains: search } },
-      ]
+      where.name = { contains: search }
     }
 
-    if (status) {
-      where.status = status
+    if (planStatus) {
+      where.planStatus = planStatus
     }
 
     const [clients, total] = await Promise.all([
@@ -178,8 +174,9 @@ export class ClientsService {
       select: {
         id: true,
         name: true,
-        email: true,
-        cfCode: true,
+        price: true,
+        supplierSearch: true,
+        viabilityStudy: true,
         planStatus: true,
         createdAt: true,
       },
@@ -261,5 +258,3 @@ export class ClientsService {
     }
   }
 }
-
-

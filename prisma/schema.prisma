@@ -114,16 +114,15 @@ model User {
 }
 
 model Client {
-  id          String    @id @default(uuid())
-  name        String
-  email       String?
-  status      String    @default("active")
-  cfCode      String?   @map("cf_code")
-  planStatus  String?   @map("plan_status")
-  companyData Json?     @map("company_data")
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(uuid())
+  name            String
+  price           Decimal?  @db.Decimal(10, 2)
+  supplierSearch  Int?      @map("supplier_search")
+  viabilityStudy  Int?      @map("viability_study")
+  planStatus      String?   @default("active") @map("plan_status")
+  deletedAt       DateTime? @map("deleted_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   users         ClientUser[]
   solicitations Solicitation[]

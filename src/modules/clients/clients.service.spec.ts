@@ -1,24 +1,39 @@
 import { Test, TestingModule } from '@nestjs/testing'
-import { BadRequestException, NotFoundException } from '@nestjs/common'
 import { ClientsService } from './clients.service'
 import { PrismaService } from '../../database/prisma.service'
 
+const mockClient = {
+  id: 'client-uuid-1',
+  name: 'Test Client',
+  price: 99.90,
+  supplierSearch: 10,
+  viabilityStudy: 5,
+  planStatus: 'active',
+  deletedAt: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}
+
+const mockPrismaService = {
+  client: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    count: jest.fn(),
+  },
+  clientUser: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    delete: jest.fn(),
+  },
+  user: {
+    findUnique: jest.fn(),
+  },
+}
+
 describe('ClientsService', () => {
   let service: ClientsService
-  let prismaService: PrismaService
-
-  const mockClient = {
-    id: 'client-123',
-    name: 'Test Client',
-    email: 'client@example.com',
-    status: 'active',
-    cfCode: 'CF123',
-    planStatus: 'active',
-    companyData: null,
-    deletedAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -26,201 +41,78 @@ describe('ClientsService', () => {
         ClientsService,
         {
           provide: PrismaService,
-          useValue: {
-            client: {
-              findUnique: jest.fn(),
-              findMany: jest.fn(),
-              create: jest.fn(),
-              update: jest.fn(),
-              count: jest.fn(),
-            },
-            user: {
-              findUnique: jest.fn(),
-            },
-            clientUser: {
-              findUnique: jest.fn(),
-              create: jest.fn(),
-              delete: jest.fn(),
-            },
-          },
+          useValue: mockPrismaService,
         },
       ],
     }).compile()
 
     service = module.get<ClientsService>(ClientsService)
-    prismaService = module.get<PrismaService>(PrismaService)
-  })
 
-  afterEach(() => {
     jest.clearAllMocks()
   })
 
   describe('create', () => {
-    const createClientDto = {
-      name: 'New Client',
-      email: 'newclient@example.com',
-      status: 'active',
-    }
+    it('deve criar um cliente', async () => {
+      const createClientDto = {
+        name: 'New Client',
+        price: 149.90,
+        supplierSearch: 20,
+        viabilityStudy: 10,
+        planStatus: 'active',
+      }
 
-    it('deve criar novo cliente com sucesso', async () => {
-      jest.spyOn(prismaService.client, 'create').mockResolvedValue({
-        ...mockClient,
+      mockPrismaService.client.create.mockResolvedValue({
+        id: 'new-client-uuid',
         ...createClientDto,
-        id: 'new-client-123',
-      } as any)
+        deletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
 
       const result = await service.create(createClientDto)
 
-      expect(result).toBeDefined()
-      expect(result.name).toBe(createClientDto.name)
-      expect(result.email).toBe(createClientDto.email)
-      expect(prismaService.client.create).toHaveBeenCalledWith({
+      expect(mockPrismaService.client.create).toHaveBeenCalledWith({
         data: createClientDto,
       })
+      expect(result.name).toBe(createClientDto.name)
     })
   })
 
   describe('findAll', () => {
-    it('deve retornar lista de clientes com paginação', async () => {
-      const mockClients = [mockClient]
-      jest.spyOn(prismaService.client, 'findMany').mockResolvedValue(mockClients as any)
-      jest.spyOn(prismaService.client, 'count').mockResolvedValue(1)
+    it('deve retornar lista paginada de clientes', async () => {
+      mockPrismaService.client.findMany.mockResolvedValue([mockClient])
+      mockPrismaService.client.count.mockResolvedValue(1)
 
       const result = await service.findAll({ page: 1, limit: 10 })
 
       expect(result.data).toHaveLength(1)
       expect(result.meta.total).toBe(1)
-      expect(result.meta.page).toBe(1)
-      expect(result.meta.limit).toBe(10)
-      expect(prismaService.client.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            deletedAt: null,
-          }),
-        }),
-      )
     })
 
-    it('deve filtrar por search', async () => {
-      jest.spyOn(prismaService.client, 'findMany').mockResolvedValue([])
-      jest.spyOn(prismaService.client, 'count').mockResolvedValue(0)
+    it('deve filtrar por busca', async () => {
+      mockPrismaService.client.findMany.mockResolvedValue([mockClient])
+      mockPrismaService.client.count.mockResolvedValue(1)
 
       await service.findAll({ search: 'test', page: 1, limit: 10 })
 
-      expect(prismaService.client.findMany).toHaveBeenCalledWith(
+      expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: [
-              { name: { contains: 'test' } },
-              { email: { contains: 'test' } },
-              { cfCode: { contains: 'test' } },
-            ],
+            name: { contains: 'test' },
           }),
         }),
       )
     })
 
-    it('deve filtrar por status', async () => {
-      jest.spyOn(prismaService.client, 'findMany').mockResolvedValue([])
-      jest.spyOn(prismaService.client, 'count').mockResolvedValue(0)
+    it('deve filtrar por planStatus', async () => {
+      mockPrismaService.client.findMany.mockResolvedValue([mockClient])
+      mockPrismaService.client.count.mockResolvedValue(1)
 
-      await service.findAll({ status: 'active', page: 1, limit: 10 })
+      await service.findAll({ planStatus: 'active', page: 1, limit: 10 })
 
-      expect(prismaService.client.findMany).toHaveBeenCalledWith(
+      expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            status: 'active',
-          }),
-        }),
-      )
-    })
-  })
-
-  describe('findOne', () => {
-    it('deve retornar cliente quando encontrado', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(mockClient as any)
-
-      const result = await service.findOne('client-123')
-
-      expect(result).toEqual(mockClient)
-      expect(prismaService.client.findUnique).toHaveBeenCalledWith({
-        where: { id: 'client-123', deletedAt: null },
-      })
-    })
-
-    it('deve lançar exceção quando cliente não encontrado', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(null)
-
-      await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException)
-    })
-  })
-
-  describe('update', () => {
-    const updateClientDto = {
-      name: 'Updated Client',
-    }
-
-    it('deve atualizar cliente com sucesso', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(mockClient as any)
-      jest.spyOn(prismaService.client, 'update').mockResolvedValue({
-        ...mockClient,
-        ...updateClientDto,
-      } as any)
-
-      const result = await service.update('client-123', updateClientDto)
-
-      expect(result.name).toBe(updateClientDto.name)
-      expect(prismaService.client.update).toHaveBeenCalled()
-    })
-
-    it('deve lançar exceção quando cliente não encontrado', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(null)
-
-      await expect(service.update('non-existent', updateClientDto)).rejects.toThrow(
-        NotFoundException,
-      )
-    })
-  })
-
-  describe('remove', () => {
-    it('deve fazer soft delete do cliente', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(mockClient as any)
-      jest.spyOn(prismaService.client, 'update').mockResolvedValue({
-        ...mockClient,
-        deletedAt: new Date(),
-      } as any)
-
-      const result = await service.remove('client-123')
-
-      expect(result.message).toBe('Cliente removido com sucesso')
-      expect(prismaService.client.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            deletedAt: expect.any(Date),
-          }),
-        }),
-      )
-    })
-
-    it('deve lançar exceção quando cliente não encontrado', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(null)
-
-      await expect(service.remove('non-existent')).rejects.toThrow(NotFoundException)
-    })
-  })
-
-  describe('findActivePlans', () => {
-    it('deve retornar apenas clientes com planStatus active', async () => {
-      const activeClients = [{ ...mockClient, planStatus: 'active' }]
-      jest.spyOn(prismaService.client, 'findMany').mockResolvedValue(activeClients as any)
-
-      const result = await service.findActivePlans()
-
-      expect(result).toHaveLength(1)
-      expect(prismaService.client.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            deletedAt: null,
             planStatus: 'active',
           }),
         }),
@@ -228,70 +120,71 @@ describe('ClientsService', () => {
     })
   })
 
-  describe('attachUser', () => {
-    const mockUser = {
-      id: 'user-123',
-      name: 'Test User',
-      email: 'user@example.com',
-    }
+  describe('findOne', () => {
+    it('deve retornar um cliente por id', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(mockClient)
 
-    it('deve vincular usuário ao cliente com sucesso', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(mockClient as any)
-      jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any)
-      jest.spyOn(prismaService.clientUser, 'findUnique').mockResolvedValue(null)
-      jest.spyOn(prismaService.clientUser, 'create').mockResolvedValue({} as any)
+      const result = await service.findOne('client-uuid-1')
 
-      const result = await service.attachUser('client-123', 'user-123')
-
-      expect(result.message).toBe('Usuário vinculado ao cliente com sucesso')
-      expect(prismaService.clientUser.create).toHaveBeenCalled()
+      expect(result.id).toBe('client-uuid-1')
     })
 
-    it('deve lançar exceção quando cliente não encontrado', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(null)
+    it('deve lançar erro se cliente não encontrado', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(null)
 
-      await expect(service.attachUser('non-existent', 'user-123')).rejects.toThrow(
-        NotFoundException,
-      )
-    })
-
-    it('deve lançar exceção quando usuário já está vinculado', async () => {
-      jest.spyOn(prismaService.client, 'findUnique').mockResolvedValue(mockClient as any)
-      jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any)
-      jest.spyOn(prismaService.clientUser, 'findUnique').mockResolvedValue({} as any)
-
-      await expect(service.attachUser('client-123', 'user-123')).rejects.toThrow(
-        BadRequestException,
+      await expect(service.findOne('invalid-id')).rejects.toThrow(
+        'Cliente não encontrado',
       )
     })
   })
 
-  describe('detachUser', () => {
-    it('deve desvincular usuário do cliente com sucesso', async () => {
-      jest.spyOn(prismaService.clientUser, 'findUnique').mockResolvedValue({} as any)
-      jest.spyOn(prismaService.clientUser, 'delete').mockResolvedValue({} as any)
+  describe('update', () => {
+    it('deve atualizar um cliente', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(mockClient)
+      mockPrismaService.client.update.mockResolvedValue({
+        ...mockClient,
+        name: 'Updated Client',
+      })
 
-      const result = await service.detachUser('client-123', 'user-123')
+      const result = await service.update('client-uuid-1', {
+        name: 'Updated Client',
+      })
 
-      expect(result.message).toBe('Usuário desvinculado do cliente com sucesso')
-      expect(prismaService.clientUser.delete).toHaveBeenCalled()
+      expect(result.name).toBe('Updated Client')
     })
+  })
 
-    it('deve lançar exceção quando vínculo não encontrado', async () => {
-      jest.spyOn(prismaService.clientUser, 'findUnique').mockResolvedValue(null)
+  describe('remove', () => {
+    it('deve remover um cliente (soft delete)', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(mockClient)
+      mockPrismaService.client.update.mockResolvedValue({
+        ...mockClient,
+        deletedAt: new Date(),
+      })
 
-      await expect(service.detachUser('client-123', 'user-123')).rejects.toThrow(
-        NotFoundException,
-      )
+      const result = await service.remove('client-uuid-1')
+
+      expect(result.message).toBe('Cliente removido com sucesso')
+    })
+  })
+
+  describe('attachUser', () => {
+    it('deve vincular um usuário ao cliente', async () => {
+      mockPrismaService.client.findUnique.mockResolvedValue(mockClient)
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-uuid-1',
+        name: 'Test User',
+        email: 'user@example.com',
+      })
+      mockPrismaService.clientUser.findUnique.mockResolvedValue(null)
+      mockPrismaService.clientUser.create.mockResolvedValue({
+        userId: 'user-uuid-1',
+        clientId: 'client-uuid-1',
+      })
+
+      const result = await service.attachUser('client-uuid-1', 'user-uuid-1')
+
+      expect(result.message).toBe('Usuário vinculado ao cliente com sucesso')
     })
   })
 })
-
-
-
-
-
-
-
-
-

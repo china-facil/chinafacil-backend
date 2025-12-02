@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator'
 
 export class CreateClientDto {
   @ApiProperty({
@@ -11,20 +11,28 @@ export class CreateClientDto {
   name: string
 
   @ApiPropertyOptional({
-    example: 'contato@empresaxyz.com',
-    description: 'Email do cliente',
+    example: 99.90,
+    description: 'Preço do plano',
   })
   @IsOptional()
-  @IsString()
-  email?: string
+  @IsNumber()
+  price?: number
 
   @ApiPropertyOptional({
-    example: 'CF-2024-001',
-    description: 'Código CF do cliente',
+    example: 10,
+    description: 'Quantidade de buscas de fornecedor',
   })
   @IsOptional()
-  @IsString()
-  cfCode?: string
+  @IsNumber()
+  supplierSearch?: number
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Quantidade de estudos de viabilidade',
+  })
+  @IsOptional()
+  @IsNumber()
+  viabilityStudy?: number
 
   @ApiPropertyOptional({
     example: 'active',
@@ -33,13 +41,4 @@ export class CreateClientDto {
   @IsOptional()
   @IsString()
   planStatus?: string
-
-  @ApiPropertyOptional({
-    example: { razao_social: 'Empresa XYZ LTDA', cnpj: '12345678000190' },
-    description: 'Dados da empresa (JSON)',
-  })
-  @IsOptional()
-  companyData?: any
 }
-
-
