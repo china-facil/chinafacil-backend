@@ -28,12 +28,12 @@ export class SubscriptionsService {
       throw new NotFoundException('Usuário não encontrado')
     }
 
-    const planId = BigInt(createSubscriptionDto.planId)
-    const plan = await this.prisma.plan.findUnique({
+    const planId = createSubscriptionDto.planId
+    const client = await this.prisma.client.findUnique({
       where: { id: planId },
     })
 
-    if (!plan) {
+    if (!client) {
       throw new NotFoundException('Plano não encontrado')
     }
 
@@ -41,7 +41,7 @@ export class SubscriptionsService {
       data: {
         userId: createSubscriptionDto.userId,
         planId: planId,
-        price: createSubscriptionDto.price || plan.price,
+        price: createSubscriptionDto.price || Number(client.price || 0),
         status: createSubscriptionDto.status || SubscriptionStatus.active,
         currentPeriodStart: createSubscriptionDto.currentPeriodStart
           ? new Date(createSubscriptionDto.currentPeriodStart)
@@ -58,7 +58,7 @@ export class SubscriptionsService {
             email: true,
           },
         },
-        plan: true,
+        client: true,
       },
     })
 
@@ -79,7 +79,7 @@ export class SubscriptionsService {
             phone: true,
           },
         },
-        plan: true,
+        client: true,
       },
     })
 
@@ -98,7 +98,7 @@ export class SubscriptionsService {
             phone: true,
           },
         },
-        plan: true,
+        client: true,
       },
     })
 
@@ -113,7 +113,7 @@ export class SubscriptionsService {
     const subscription = await this.prisma.subscription.findUnique({
       where: { userId },
       include: {
-        plan: true,
+        client: true,
       },
     })
 
@@ -171,7 +171,7 @@ export class SubscriptionsService {
             email: true,
           },
         },
-        plan: true,
+        client: true,
       },
     })
 
@@ -218,7 +218,7 @@ export class SubscriptionsService {
             email: true,
           },
         },
-        plan: true,
+        client: true,
       },
     })
 
@@ -248,7 +248,7 @@ export class SubscriptionsService {
             email: true,
           },
         },
-        plan: true,
+        client: true,
       },
     })
 

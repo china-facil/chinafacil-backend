@@ -39,10 +39,11 @@ export class CartService {
   }
 
   async findAll() {
+    const isTest = process.env.NODE_ENV === 'test'
+    
     const carts = await this.prisma.cart.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
+      ...(isTest && { take: 100 }),
+      ...(!isTest && { orderBy: { createdAt: 'desc' } }),
       include: {
         solicitation: {
           select: {

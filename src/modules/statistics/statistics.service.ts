@@ -19,7 +19,7 @@ export class StatisticsService {
 
     const result = await Promise.all(
       subscriptions.map(async (sub) => {
-        const plan = await this.prisma.plan.findUnique({
+        const client = await this.prisma.client.findUnique({
           where: { id: sub.planId },
           select: {
             id: true,
@@ -29,7 +29,7 @@ export class StatisticsService {
         })
 
         return {
-          plan,
+          client,
           count: sub._count.id,
         }
       }),
@@ -76,7 +76,7 @@ export class StatisticsService {
             lt: endDate,
           },
           status: {
-            in: [SolicitationStatus.OPEN, SolicitationStatus.IN_PROGRESS],
+            in: [SolicitationStatus.open, SolicitationStatus.in_progress],
           },
         },
       }),
@@ -86,7 +86,7 @@ export class StatisticsService {
             gte: startDate,
             lt: endDate,
           },
-          status: SolicitationStatus.COMPLETED,
+          status: SolicitationStatus.finished,
         },
       }),
       this.prisma.subscription.findMany({
@@ -98,7 +98,7 @@ export class StatisticsService {
           status: SubscriptionStatus.active,
         },
         include: {
-          plan: {
+          client: {
             select: {
               price: true,
             },
@@ -148,7 +148,7 @@ export class StatisticsService {
       this.prisma.solicitation.count(),
       this.prisma.solicitation.count({
         where: {
-          status: SolicitationStatus.OPEN,
+          status: SolicitationStatus.open,
         },
       }),
       this.prisma.subscription.count({

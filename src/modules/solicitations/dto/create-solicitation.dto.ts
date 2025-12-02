@@ -29,7 +29,7 @@ export class CreateSolicitationDto {
 
   @ApiPropertyOptional({
     enum: SolicitationStatus,
-    default: SolicitationStatus.OPEN,
+    default: SolicitationStatus.open,
   })
   @IsOptional()
   @IsEnum(SolicitationStatus)

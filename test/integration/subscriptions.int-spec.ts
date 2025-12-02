@@ -8,9 +8,9 @@ describe('Subscriptions API (Integration)', () => {
   })
 
   describe('POST /api/subscriptions', () => {
-    it('should handle create subscription request', async () => {
-      const res = await ctx.authReq.post('/api/subscriptions').send({ userId: ctx.adminUserId, planId: 'some-plan-id' })
-      expect([200, 201, 400, 404, 500]).toContain(res.status)
+    it('should return 404 for non-existent plan', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions').send({ userId: ctx.adminUserId, planId: 99999 })
+      expect(res.status).toBe(404)
     })
 
     it('should return 400 with invalid payload', async () => {
@@ -19,62 +19,68 @@ describe('Subscriptions API (Integration)', () => {
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/subscriptions').send({}).expect(401)
+      const res = await ctx.req.post('/api/subscriptions').send({})
+      expect(res.status).toBe(401)
     })
   })
 
   describe('GET /api/subscriptions', () => {
-    it('should handle list subscriptions request', async () => {
+    it('should list subscriptions successfully', async () => {
       const res = await ctx.authReq.get('/api/subscriptions')
-      expect([200, 404, 500]).toContain(res.status)
+      expect(res.status).toBe(200)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/subscriptions').expect(401)
+      const res = await ctx.req.get('/api/subscriptions')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('GET /api/subscriptions/user/:userId', () => {
-    it('should handle get subscription by user request', async () => {
+    it('should return 200 for user (empty list if none)', async () => {
       const res = await ctx.authReq.get(`/api/subscriptions/user/${ctx.adminUserId}`)
-      expect([200, 404, 500]).toContain(res.status)
+      expect(res.status).toBe(200)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/subscriptions/user/some-id').expect(401)
+      const res = await ctx.req.get('/api/subscriptions/user/some-id')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('GET /api/subscriptions/:id', () => {
-    it('should handle get subscription by id request', async () => {
-      const res = await ctx.authReq.get('/api/subscriptions/1')
-      expect([200, 404, 500]).toContain(res.status)
+    it('should return 404 for non-existent subscription', async () => {
+      const res = await ctx.authReq.get('/api/subscriptions/99999')
+      expect(res.status).toBe(404)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/subscriptions/1').expect(401)
+      const res = await ctx.req.get('/api/subscriptions/1')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('POST /api/subscriptions/:id/cancel', () => {
-    it('should handle cancel subscription request', async () => {
-      const res = await ctx.authReq.post('/api/subscriptions/1/cancel')
-      expect([200, 404, 500]).toContain(res.status)
+    it('should return 404 for non-existent subscription', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions/99999/cancel')
+      expect(res.status).toBe(404)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/subscriptions/1/cancel').expect(401)
+      const res = await ctx.req.post('/api/subscriptions/1/cancel')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('POST /api/subscriptions/:id/activate', () => {
-    it('should handle activate subscription request', async () => {
-      const res = await ctx.authReq.post('/api/subscriptions/1/activate')
-      expect([200, 404, 500]).toContain(res.status)
+    it('should return 404 for non-existent subscription', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions/99999/activate')
+      expect(res.status).toBe(404)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/subscriptions/1/activate').expect(401)
+      const res = await ctx.req.post('/api/subscriptions/1/activate')
+      expect(res.status).toBe(401)
     })
   })
 })

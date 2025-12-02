@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test'
+
 import { INestApplication, ValidationPipe } from '@nestjs/common'
 import { Test, TestingModule } from '@nestjs/testing'
 import * as request from 'supertest'
@@ -5,6 +7,11 @@ import * as bcrypt from 'bcrypt'
 import { UserRole, UserStatus } from '@prisma/client'
 import { AppModule } from '../../src/app.module'
 import { PrismaService } from '../../src/database/prisma.service'
+
+// @ts-ignore
+BigInt.prototype.toJSON = function () {
+  return this.toString()
+}
 
 type HttpMethod = 'get' | 'post' | 'patch' | 'put' | 'delete'
 

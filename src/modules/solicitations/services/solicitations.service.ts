@@ -19,7 +19,7 @@ export class SolicitationsService {
       data: {
         ...createSolicitationDto,
         code,
-        status: createSolicitationDto.status || SolicitationStatus.OPEN,
+        status: createSolicitationDto.status || SolicitationStatus.open,
       },
       include: {
         user: {
@@ -33,7 +33,6 @@ export class SolicitationsService {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -86,7 +85,6 @@ export class SolicitationsService {
             select: {
               id: true,
               name: true,
-              email: true,
             },
           },
           items: {
@@ -134,7 +132,6 @@ export class SolicitationsService {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
         items: {
@@ -185,7 +182,6 @@ export class SolicitationsService {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -222,7 +218,7 @@ export class SolicitationsService {
     ] = await Promise.all([
       this.prisma.solicitation.count(),
       this.prisma.solicitation.count({
-        where: { status: SolicitationStatus.OPEN },
+        where: { status: SolicitationStatus.open },
       }),
       this.prisma.solicitationItem.count(),
       this.prisma.solicitation.groupBy({
@@ -269,10 +265,10 @@ export class SolicitationsService {
 
     type SolicitationWithRelations = typeof solicitations[0]
     const kanban: Record<SolicitationStatus, SolicitationWithRelations[]> = {
-      [SolicitationStatus.OPEN]: [],
-      [SolicitationStatus.IN_PROGRESS]: [],
-      [SolicitationStatus.COMPLETED]: [],
-      [SolicitationStatus.CANCELLED]: [],
+      [SolicitationStatus.open]: [],
+      [SolicitationStatus.in_progress]: [],
+      [SolicitationStatus.finished]: [],
+      [SolicitationStatus.pending]: [],
     }
 
     solicitations.forEach((solicitation) => {

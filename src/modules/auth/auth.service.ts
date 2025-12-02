@@ -35,7 +35,7 @@ export class AuthService {
         include: {
           subscription: {
             include: {
-              plan: true,
+              client: true,
             },
           },
         },
@@ -447,7 +447,7 @@ export class AuthService {
         updatedAt: true,
         subscription: {
           include: {
-            plan: true,
+            client: true,
           },
         },
       },

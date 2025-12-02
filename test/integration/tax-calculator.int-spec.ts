@@ -24,29 +24,31 @@ describe('Tax Calculator API (Integration)', () => {
   })
 
   describe('GET /api/tax-calculations', () => {
-    it('should list tax calculations', async () => {
+    it('should list tax calculations successfully', async () => {
       const res = await ctx.authReq.get('/api/tax-calculations')
-      expect(res.status).toBeLessThan(500)
+      expect(res.status).toBe(200)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/tax-calculations').expect(401)
+      const res = await ctx.req.get('/api/tax-calculations')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('GET /api/tax-calculations/user/:userId', () => {
-    it('should get user tax calculations', async () => {
+    it('should get user tax calculations successfully', async () => {
       const res = await ctx.authReq.get(`/api/tax-calculations/user/${ctx.adminUserId}`)
-      expect(res.status).toBeLessThan(500)
+      expect(res.status).toBe(200)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/tax-calculations/user/some-id').expect(401)
+      const res = await ctx.req.get('/api/tax-calculations/user/some-id')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('POST /api/calculator-users', () => {
-    it('should create calculator user', async () => {
+    it('should create calculator user successfully', async () => {
       const email = `calc-user-${Date.now()}@example.com`
       const res = await ctx.req.post('/api/calculator-users').send({ email, telefone: '11999999999' })
       expect(res.status).toBe(201)
@@ -59,37 +61,38 @@ describe('Tax Calculator API (Integration)', () => {
   })
 
   describe('GET /api/calculator-users', () => {
-    it('should list calculator users', async () => {
+    it('should list calculator users successfully', async () => {
       const res = await ctx.authReq.get('/api/calculator-users')
-      expect(res.status).toBeLessThan(500)
+      expect(res.status).toBe(200)
     })
 
     it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/calculator-users').expect(401)
+      const res = await ctx.req.get('/api/calculator-users')
+      expect(res.status).toBe(401)
     })
   })
 
   describe('GET /api/ncm/by-code', () => {
-    it('should handle NCM by code request', async () => {
-      const res = await ctx.req.get('/api/ncm/by-code?ncm_code=9705.00.00')
-      expect(res.status).toBeLessThan(500)
+    it('should return 404 for non-existent NCM', async () => {
+      const res = await ctx.req.get('/api/ncm/by-code?ncm_code=0000.00.00')
+      expect(res.status).toBe(404)
     })
 
-    it('should return 400/404 with invalid NCM', async () => {
+    it('should return 400 with invalid NCM format', async () => {
       const res = await ctx.req.get('/api/ncm/by-code?ncm_code=invalid')
-      expect([400, 404]).toContain(res.status)
+      expect(res.status).toBe(400)
     })
   })
 
   describe('POST /api/ncm/item', () => {
-    it('should handle NCM item request', async () => {
+    it('should get NCM item successfully', async () => {
       const res = await ctx.req.post('/api/ncm/item').send({ description: 'Test product description' })
-      expect(res.status).toBeLessThan(600)
+      expect(res.status).toBe(200)
     })
 
-    it('should handle invalid payload', async () => {
+    it('should return 400 with invalid payload', async () => {
       const res = await ctx.req.post('/api/ncm/item').send({})
-      expect(res.status).toBeLessThan(600)
+      expect(res.status).toBe(400)
     })
   })
 })

@@ -104,7 +104,7 @@ export class UsersService {
           updatedAt: true,
           subscription: {
             include: {
-              plan: true,
+              client: true,
             },
           },
         },
@@ -144,7 +144,7 @@ export class UsersService {
         updatedAt: true,
         subscription: {
           include: {
-            plan: true,
+            client: true,
           },
         },
         addresses: true,
@@ -339,7 +339,7 @@ export class UsersService {
       include: {
         subscription: {
           include: {
-            plan: true,
+            client: true,
           },
         },
         addresses: true,

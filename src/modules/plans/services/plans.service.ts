@@ -25,27 +25,6 @@ export class PlansService {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        subscriptions: {
-          select: {
-            id: true,
-            status: true,
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          take: 5,
-        },
-        _count: {
-          select: {
-            subscriptions: true,
-          },
-        },
-      },
     })
 
     return plans
@@ -68,27 +47,6 @@ export class PlansService {
     const planId = BigInt(id)
     const plan = await this.prisma.plan.findUnique({
       where: { id: planId },
-      include: {
-        subscriptions: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-        _count: {
-          select: {
-            subscriptions: true,
-          },
-        },
-      },
     })
 
     if (!plan) {
@@ -126,29 +84,13 @@ export class PlansService {
       throw new NotFoundException('Plano não encontrado')
     }
 
-    const subscriptionsCount = await this.prisma.subscription.count({
-      where: { planId: planId },
-    })
-
-    if (subscriptionsCount > 0) {
-      await this.prisma.plan.update({
-        where: { id: planId },
-        data: { deletedAt: new Date() },
-      })
-
-      return {
-        message: 'Plano desativado (existem assinaturas ativas)',
-      }
-    }
-
-    await this.prisma.plan.delete({
+    await this.prisma.plan.update({
       where: { id: planId },
+      data: { deletedAt: new Date() },
     })
 
     return {
-      message: 'Plano removido com sucesso',
+      message: 'Plano desativado com sucesso',
     }
   }
 }
-
-
