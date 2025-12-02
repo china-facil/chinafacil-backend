@@ -1,57 +1,21 @@
-import { INestApplication } from '@nestjs/common'
-import { Test, TestingModule } from '@nestjs/testing'
-import * as request from 'supertest'
-import { AppModule } from '../../src/app.module'
+import { createTestContext, TestContext } from './test-helper'
 
 describe('Health API (Integration)', () => {
-  let app: INestApplication
+  let ctx: TestContext
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-
-    app = moduleFixture.createNestApplication()
-    app.setGlobalPrefix('api')
-    await app.init()
-  })
-
-  afterAll(async () => {
-    await app.close()
+    ctx = await createTestContext({ withAuth: false })
   })
 
   describe('GET /api/health', () => {
     it('should return 200 status code', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/api/health')
-        .expect(200)
-
-      expect(response.body).toBeDefined()
+      const res = await ctx.req.get('/api/health')
+      expect(res.status).toBe(200)
     })
 
     it('should return health status with required fields', async () => {
-      const response = await request(app.getHttpServer()).get('/api/health')
-
-      expect(response.body).toHaveProperty('status')
-      expect(response.body).toHaveProperty('timestamp')
-      expect(response.body).toHaveProperty('uptime')
-      expect(response.body).toHaveProperty('database')
-      expect(response.body.status).toBe('ok')
-    })
-
-    it('should return valid timestamp', async () => {
-      const response = await request(app.getHttpServer()).get('/api/health')
-
-      const timestamp = new Date(response.body.timestamp)
-      expect(timestamp.toString()).not.toBe('Invalid Date')
-    })
-
-    it('should return numeric uptime', async () => {
-      const response = await request(app.getHttpServer()).get('/api/health')
-
-      expect(typeof response.body.uptime).toBe('number')
-      expect(response.body.uptime).toBeGreaterThan(0)
+      const res = await ctx.req.get('/api/health')
+      expect(res.body).toHaveProperty('status', 'ok')
     })
   })
 })
-

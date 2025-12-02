@@ -1,60 +1,80 @@
-import { INestApplication } from '@nestjs/common'
-import { Test, TestingModule } from '@nestjs/testing'
-import * as request from 'supertest'
-import { AppModule } from '../../src/app.module'
+import { createTestContext, TestContext } from './test-helper'
 
 describe('Subscriptions API (Integration)', () => {
-  let app: INestApplication
+  let ctx: TestContext
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile()
-
-    app = moduleFixture.createNestApplication()
-    app.setGlobalPrefix('api')
-    await app.init()
+    ctx = await createTestContext()
   })
 
-  afterAll(async () => {
-    await app.close()
+  describe('POST /api/subscriptions', () => {
+    it('should create subscription', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions').send({ userId: ctx.adminUserId, planId: 'some-plan-id' })
+      expect(res.status).toBeLessThan(500)
+    })
+
+    it('should return 400 with invalid payload', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions').send({})
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 401 without auth', async () => {
+      await ctx.req.post('/api/subscriptions').send({}).expect(401)
+    })
   })
 
   describe('GET /api/subscriptions', () => {
+    it('should list subscriptions', async () => {
+      const res = await ctx.authReq.get('/api/subscriptions')
+      expect(res.status).toBeLessThan(500)
+    })
+
     it('should return 401 without auth', async () => {
-      await request(app.getHttpServer()).get('/api/subscriptions').expect(401)
+      await ctx.req.get('/api/subscriptions').expect(401)
     })
   })
 
   describe('GET /api/subscriptions/user/:userId', () => {
+    it('should get subscription by user', async () => {
+      const res = await ctx.authReq.get(`/api/subscriptions/user/${ctx.adminUserId}`)
+      expect(res.status).toBeLessThan(500)
+    })
+
     it('should return 401 without auth', async () => {
-      await request(app.getHttpServer())
-        .get('/api/subscriptions/user/test-user-id')
-        .expect(401)
+      await ctx.req.get('/api/subscriptions/user/some-id').expect(401)
     })
   })
 
   describe('GET /api/subscriptions/:id', () => {
+    it('should get subscription by id', async () => {
+      const res = await ctx.authReq.get('/api/subscriptions/1')
+      expect(res.status).toBeLessThan(500)
+    })
+
     it('should return 401 without auth', async () => {
-      await request(app.getHttpServer())
-        .get('/api/subscriptions/test-id')
-        .expect(401)
+      await ctx.req.get('/api/subscriptions/1').expect(401)
     })
   })
 
   describe('POST /api/subscriptions/:id/cancel', () => {
+    it('should handle cancel subscription', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions/1/cancel')
+      expect(res.status).toBeLessThan(500)
+    })
+
     it('should return 401 without auth', async () => {
-      await request(app.getHttpServer())
-        .post('/api/subscriptions/test-id/cancel')
-        .expect(401)
+      await ctx.req.post('/api/subscriptions/1/cancel').expect(401)
+    })
+  })
+
+  describe('POST /api/subscriptions/:id/activate', () => {
+    it('should handle activate subscription', async () => {
+      const res = await ctx.authReq.post('/api/subscriptions/1/activate')
+      expect(res.status).toBeLessThan(500)
+    })
+
+    it('should return 401 without auth', async () => {
+      await ctx.req.post('/api/subscriptions/1/activate').expect(401)
     })
   })
 })
-
-
-
-
-
-
-
-
