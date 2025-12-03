@@ -126,17 +126,41 @@ jobs:
           name: Deploy to AWS EC2
           command: |
             ssh -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} << 'EOF'
+              set -e
               cd ~/chinafacil-nest
+              
+              # Salva commit atual para rollback
+              CURRENT_COMMIT=$(git rev-parse HEAD)
+              
+              # Atualiza código
               git fetch origin main
               git reset --hard origin/main
+              
+              # Build nova imagem
               docker compose -f docker-compose.prod.yml build --no-cache
+              
+              # Deploy com rollback em caso de falha
               docker compose -f docker-compose.prod.yml up -d
+              
+              # Aguarda container iniciar
+              sleep 15
+              
+              # Health check interno
+              if ! curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+                echo "Health check failed! Rolling back..."
+                git reset --hard $CURRENT_COMMIT
+                docker compose -f docker-compose.prod.yml build --no-cache
+                docker compose -f docker-compose.prod.yml up -d
+                exit 1
+              fi
+              
+              echo "Deploy successful!"
               docker system prune -f
             EOF
       - run:
-          name: Health check
+          name: External health check
           command: |
-            sleep 30
+            sleep 10
             curl -f http://${AWS_EC2_HOST}:3000/api/health || exit 1
 
 workflows:
