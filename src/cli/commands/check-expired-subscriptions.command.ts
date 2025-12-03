@@ -36,7 +36,7 @@ export class CheckExpiredSubscriptionsCommand extends CommandRunner {
             role: true,
           },
         },
-        plan: {
+        client: {
           select: {
             id: true,
             name: true,
@@ -78,9 +78,9 @@ export class CheckExpiredSubscriptionsCommand extends CommandRunner {
               notifiableType: 'App\\Models\\User',
               notifiableId: subscription.user.id,
               data: JSON.stringify({
-                message: `Sua assinatura do plano ${subscription.plan.name} expirou. Entre em contato para renovar.`,
+                message: `Sua assinatura do plano ${subscription.client?.name || 'N/A'} expirou. Entre em contato para renovar.`,
                 subscriptionId: subscription.id,
-                planName: subscription.plan.name,
+                planName: subscription.client?.name || 'N/A',
                 expiredAt: subscription.currentPeriodEnd?.toISOString(),
               }),
             },
@@ -105,4 +105,3 @@ export class CheckExpiredSubscriptionsCommand extends CommandRunner {
     )
   }
 }
-

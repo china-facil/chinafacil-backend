@@ -1,5 +1,7 @@
 FROM node:18-alpine AS base
 
+RUN apk add --no-cache openssl openssl-dev libc6-compat
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -19,6 +21,9 @@ FROM base AS build
 RUN npm run build
 
 FROM node:18-alpine AS production
+
+RUN apk add --no-cache openssl openssl-dev libc6-compat
+
 ENV NODE_ENV=production
 
 WORKDIR /app
@@ -35,5 +40,3 @@ COPY --from=build /app/dist ./dist
 EXPOSE 3000
 
 CMD ["node", "dist/main.js"]
-
-

@@ -206,7 +206,6 @@ export class ExportProcessor {
             client: {
               select: {
                 id: true,
-                cfCode: true,
                 name: true,
               },
             },

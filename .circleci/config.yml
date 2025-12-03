@@ -1,0 +1,172 @@
+version: 2.1
+
+orbs:
+  node: circleci/node@5.2.0
+  aws-cli: circleci/aws-cli@4.1.3
+
+executors:
+  node-executor:
+    docker:
+      - image: cimg/node:18.20
+      - image: cimg/mysql:8.0
+        environment:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: chinafacil_test
+          MYSQL_USER: chinafacil
+          MYSQL_PASSWORD: chinafacil123
+      - image: cimg/redis:7.2
+
+jobs:
+  install-dependencies:
+    executor: node-executor
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-deps-{{ checksum "package-lock.json" }}
+            - v1-deps-
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: v1-deps-{{ checksum "package-lock.json" }}
+          paths:
+            - node_modules
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+
+  lint:
+    executor: node-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run ESLint
+          command: npm run lint
+
+  build:
+    executor: node-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Generate Prisma Client
+          command: npx prisma generate
+      - run:
+          name: Build application
+          command: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - dist
+            - node_modules
+
+  test-unit:
+    executor: node-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Generate Prisma Client
+          command: npx prisma generate
+      - run:
+          name: Run unit tests
+          command: npm test -- --passWithNoTests
+
+  test-integration:
+    executor: node-executor
+    environment:
+      DATABASE_URL: mysql://chinafacil:chinafacil123@127.0.0.1:3306/chinafacil_test
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+      NODE_ENV: test
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Wait for MySQL
+          command: |
+            for i in {1..30}; do
+              nc -z 127.0.0.1 3306 && echo "MySQL is up" && break
+              echo "Waiting for MySQL..."
+              sleep 2
+            done
+      - run:
+          name: Wait for Redis
+          command: |
+            for i in {1..30}; do
+              nc -z 127.0.0.1 6379 && echo "Redis is up" && break
+              echo "Waiting for Redis..."
+              sleep 2
+            done
+      - run:
+          name: Generate Prisma Client
+          command: npx prisma generate
+      - run:
+          name: Run database migrations
+          command: npx prisma db push --skip-generate
+      - run:
+          name: Run integration tests
+          command: npm run test:int -- --runInBand --forceExit
+
+  deploy-production:
+    docker:
+      - image: cimg/base:2024.01
+    steps:
+      - checkout
+      - aws-cli/setup:
+          profile_name: default
+      - add_ssh_keys:
+          fingerprints:
+            - "${SSH_FINGERPRINT}"
+      - run:
+          name: Deploy to AWS EC2
+          command: |
+            ssh -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} << 'EOF'
+              cd /var/www/chinafacil-nest
+              git fetch origin master
+              git reset --hard origin/master
+              npm ci --only=production
+              npx prisma generate
+              npx prisma migrate deploy
+              npm run build
+              pm2 restart chinafacil-nest || pm2 start dist/main.js --name chinafacil-nest
+            EOF
+      - run:
+          name: Health check
+          command: |
+            sleep 10
+            curl -f http://${AWS_EC2_HOST}:3000/api/health || exit 1
+
+workflows:
+  build-test-deploy:
+    jobs:
+      - install-dependencies
+      - lint:
+          requires:
+            - install-dependencies
+      - build:
+          requires:
+            - install-dependencies
+      - test-unit:
+          requires:
+            - install-dependencies
+      - test-integration:
+          requires:
+            - build
+      - deploy-production:
+          requires:
+            - lint
+            - build
+            - test-unit
+            - test-integration
+          filters:
+            branches:
+              only: master
+

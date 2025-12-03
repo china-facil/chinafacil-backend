@@ -10,13 +10,13 @@ export class CreateClientDto {
   @IsNotEmpty()
   name: string
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 99.90,
     description: 'Preço do plano',
   })
-  @IsOptional()
   @IsNumber()
-  price?: number
+  @IsNotEmpty()
+  price: number
 
   @ApiPropertyOptional({
     example: 10,

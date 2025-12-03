@@ -72,3 +72,4 @@ md/
 # Setup scripts with sensitive data
 setup-env.sh
 
+.env.docker
