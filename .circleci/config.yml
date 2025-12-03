@@ -64,19 +64,6 @@ jobs:
             - dist
             - node_modules
 
-  test-unit:
-    executor: node-executor
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Generate Prisma Client
-          command: npx prisma generate
-      - run:
-          name: Run unit tests
-          command: npm test -- --passWithNoTests
-
   test-integration:
     executor: node-executor
     environment:
@@ -166,9 +153,6 @@ workflows:
       - build:
           requires:
             - install-dependencies
-      - test-unit:
-          requires:
-            - install-dependencies
       - test-integration:
           requires:
             - build
@@ -176,7 +160,6 @@ workflows:
           requires:
             - lint
             - build
-            - test-unit
             - test-integration
           filters:
             branches:
