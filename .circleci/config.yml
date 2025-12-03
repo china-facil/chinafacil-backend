@@ -2,12 +2,11 @@ version: 2.1
 
 orbs:
   node: circleci/node@5.2.0
-  aws-cli: circleci/aws-cli@4.1.3
 
 executors:
   node-executor:
     docker:
-      - image: cimg/node:18.20
+      - image: cimg/node:22.11
       - image: cimg/mysql:8.0
         environment:
           MYSQL_ROOT_PASSWORD: password
@@ -120,8 +119,6 @@ jobs:
       - image: cimg/base:2024.01
     steps:
       - checkout
-      - aws-cli/setup:
-          profile_name: default
       - add_ssh_keys:
           fingerprints:
             - "${SSH_FINGERPRINT}"
@@ -129,19 +126,17 @@ jobs:
           name: Deploy to AWS EC2
           command: |
             ssh -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} << 'EOF'
-              cd /var/www/chinafacil-nest
-              git fetch origin master
-              git reset --hard origin/master
-              npm ci --only=production
-              npx prisma generate
-              npx prisma migrate deploy
-              npm run build
-              pm2 restart chinafacil-nest || pm2 start dist/main.js --name chinafacil-nest
+              cd ~/chinafacil-nest
+              git fetch origin main
+              git reset --hard origin/main
+              docker compose -f docker-compose.prod.yml build --no-cache
+              docker compose -f docker-compose.prod.yml up -d
+              docker system prune -f
             EOF
       - run:
           name: Health check
           command: |
-            sleep 10
+            sleep 30
             curl -f http://${AWS_EC2_HOST}:3000/api/health || exit 1
 
 workflows:
@@ -168,5 +163,5 @@ workflows:
             - test-integration
           filters:
             branches:
-              only: master
+              only: main
 

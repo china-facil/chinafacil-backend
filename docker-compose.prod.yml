@@ -1,0 +1,41 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: chinafacil-redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - chinafacil-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: chinafacil-app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - chinafacil-network
+    depends_on:
+      - redis
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  chinafacil-network:
+    driver: bridge
+
