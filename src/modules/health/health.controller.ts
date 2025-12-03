@@ -15,7 +15,7 @@ export class HealthController {
     schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', example: 'ok' },
+        status: { type: 'string', example: 'success' },
         timestamp: { type: 'string', example: '2025-11-12T14:30:00.000Z' },
         uptime: { type: 'number', example: 123.45 },
         database: { type: 'string', example: 'connected' },
