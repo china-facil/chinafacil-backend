@@ -15,7 +15,7 @@ describe('Health API (Integration)', () => {
 
     it('should return health status with required fields', async () => {
       const res = await ctx.req.get('/api/health')
-      expect(res.body).toHaveProperty('status', 'ok')
+      expect(res.body).toHaveProperty('status', 'success')
     })
   })
 })
