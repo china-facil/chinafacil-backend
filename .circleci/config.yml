@@ -98,7 +98,7 @@ jobs:
           command: |
             ssh -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} \<< 'EOF'
               set -e
-              cd ~/chinafacil-nest
+              cd ~/chinafacil-backend
               
               CURRENT_COMMIT=$(git rev-parse HEAD)
               
