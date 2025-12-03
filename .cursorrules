@@ -28,9 +28,32 @@ Este é um projeto backend construído com NestJS (Node.js framework). A estrutu
 ### Testes
 - NÃO crie testes unitários por padrão. Somente se for EXPLICITAMENTE solicitado teste unitário.
 - O padrão é criar testes de INTEGRAÇÃO simples.
-- Testes de integração devem fazer requisições HTTP e validar status code + análise simples da resposta.
-- EVITE métodos de teste com mais de 10 linhas. Mantenha testes concisos e diretos.
 - Use Jest e Supertest para testes de integração.
+
+### Regras de Testes de Integração por Endpoint
+
+**Quantidade de testes por endpoint:**
+- MÍNIMO: 2 testes por endpoint
+- MÁXIMO: 4 testes por endpoint
+
+**Estrutura obrigatória dos testes:**
+1. **Teste de Sucesso** (obrigatório): Valida que o endpoint funciona corretamente com payload válido
+2. **Teste de Bad Request** (obrigatório): Valida erro 400 quando payload é inválido ou incompleto
+3. **Teste de Middleware** (apenas se existir middleware): Um teste para cada middleware, validando erro de autorização (401/403)
+
+**Regras de quantidade:**
+- Endpoint SEM middleware: exatamente 2 testes (sucesso + bad request)
+- Endpoint COM 1 middleware: 3 testes (sucesso + bad request + 401)
+- Endpoint COM 2+ middlewares: até 4 testes (sucesso + bad request + até 2 testes de middleware)
+
+**Regras de implementação:**
+- EVITE métodos de teste com mais de 10 linhas de código
+- Cada teste deve validar UM ÚNICO status code esperado
+- NUNCA aceitar múltiplos status codes (ex: `expect([200, 400]).toContain(res.status)` é PROIBIDO)
+- Teste de sucesso: esperar exatamente 200, 201 ou 204
+- Teste de bad request: esperar exatamente 400
+- Teste de middleware: esperar exatamente 401 ou 403
+- Validar apenas campos principais da resposta, não toda a estrutura
 
 ### Banco de Dados (Prisma)
 - Nomes de tabelas em snake_case (exemplo: `user_profiles`, `order_items`).
