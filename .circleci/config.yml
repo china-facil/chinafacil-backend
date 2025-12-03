@@ -63,7 +63,6 @@ jobs:
       - image: cimg/node:22.11
       - image: cimg/redis:7.2
     environment:
-      DATABASE_URL: ${DATABASE_URL_TEST}
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       NODE_ENV: test
