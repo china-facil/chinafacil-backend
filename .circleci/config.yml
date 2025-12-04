@@ -2,6 +2,7 @@ version: 2.1
 
 orbs:
   node: circleci/node@5.2.0
+  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 executors:
   node-executor:
@@ -85,6 +86,15 @@ jobs:
           name: Run integration tests
           command: npm run test:int -- --runInBand --forceExit
 
+  sonar-scan:
+    docker:
+      - image: cimg/node:22.11
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - sonarcloud/scan
+
   deploy-production:
     docker:
       - image: cimg/base:2024.01
@@ -138,6 +148,9 @@ workflows:
           requires:
             - install-dependencies
       - test-integration:
+          requires:
+            - build
+      - sonar-scan:
           requires:
             - build
       - deploy-production:
