@@ -1,39 +1,100 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator'
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsInt, IsNotEmpty, IsNumber, IsOptional } from "class-validator";
 
 export class CreateBoardingTypeDto {
   @ApiProperty({
-    example: 'Marítimo',
-    description: 'Nome do tipo de embarque',
+    example: 100,
+    description: "CMB Start",
   })
-  @IsString()
   @IsNotEmpty()
-  name: string
+  @IsInt()
+  cmbStart: number;
 
-  @ApiPropertyOptional({
-    example: 'Embarque por via marítima',
-    description: 'Descrição',
+  @ApiProperty({
+    example: 200,
+    description: "CMB End",
   })
-  @IsOptional()
-  @IsString()
-  description?: string
+  @IsNotEmpty()
+  @IsInt()
+  cmbEnd: number;
+
+  @ApiProperty({
+    example: 50.0,
+    description: "Frete internacional",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  internationalShipping: number;
+
+  @ApiProperty({
+    example: 25.0,
+    description: "Taxa BL/AWB",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  taxBlAwb: number;
+
+  @ApiProperty({
+    example: 30.0,
+    description: "Armazenamento aéreo",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  storageAir: number;
+
+  @ApiProperty({
+    example: 35.0,
+    description: "Armazenamento marítimo",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  storageSea: number;
+
+  @ApiProperty({
+    example: 15.0,
+    description: "Taxa AFRMM",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  taxAfrmm: number;
+
+  @ApiProperty({
+    example: 40.0,
+    description: "Despachante",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  dispatcher: number;
+
+  @ApiProperty({
+    example: 20.0,
+    description: "SDA",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  sda: number;
+
+  @ApiProperty({
+    example: 45.0,
+    description: "Transporte de entrega",
+  })
+  @IsNotEmpty()
+  @IsNumber()
+  deliveryTransport: number;
 
   @ApiPropertyOptional({
-    example: 1500.50,
-    description: 'Despesas no Brasil',
+    example: 10.0,
+    description: "Outras taxas",
   })
   @IsOptional()
   @IsNumber()
-  brazilExpenses?: number
+  otherFees?: number;
 
-  @ApiPropertyOptional({
-    example: true,
-    description: 'Se está ativo',
-    default: true,
+  @ApiProperty({
+    example: 1500.5,
+    description: "Despesas no Brasil",
   })
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean
+  @IsNotEmpty()
+  @IsNumber()
+  brazilExpenses: number;
 }
-
-

@@ -1,10 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { ExportType } from '@prisma/client'
-import { IsEnum, IsNotEmpty, IsObject, IsOptional } from 'class-validator'
+import { IsEnum, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator'
+
+export enum ExportType {
+  CSV = 'csv',
+  XLSX = 'xlsx',
+  PDF = 'pdf',
+}
 
 export class RequestExportDto {
   @ApiProperty({
-    example: 'EXCEL',
+    example: 'xlsx',
     description: 'Tipo de exportação',
     enum: ExportType,
   })
@@ -12,12 +17,18 @@ export class RequestExportDto {
   @IsNotEmpty()
   type: ExportType
 
+  @ApiProperty({
+    example: 'User',
+    description: 'Modelo a ser exportado (User, Solicitation, Plan)',
+  })
+  @IsString()
+  @IsNotEmpty()
+  model: string
+
   @ApiPropertyOptional({
     description: 'Filtros e parâmetros',
   })
   @IsOptional()
   @IsObject()
-  params?: any
+  params?: Record<string, any>
 }
-
-

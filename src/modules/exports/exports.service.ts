@@ -1,111 +1,207 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
-import { ExportStatus } from '@prisma/client'
-import { PrismaService } from '../../database/prisma.service'
-import { CreateExportDto, RequestExportDto } from './dto'
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../../database/prisma.service";
+import { QuotationService } from "../settings/services/quotation.service";
+import { RequestExportDto, ExportType } from "./dto";
+import { UserResource, SolicitationResource, PlanResource } from "./resources";
+import * as fs from "fs/promises";
+import * as path from "path";
 
 @Injectable()
 export class ExportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ExportsService.name);
 
-  async create(createExportDto: CreateExportDto) {
-    const exportRecord = await this.prisma.export.create({
-      data: {
-        ...createExportDto,
-        status: ExportStatus.PENDING,
-      },
-    })
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly quotationService: QuotationService
+  ) {}
 
-    return exportRecord
-  }
+  async generateExport(requestExportDto: RequestExportDto): Promise<{ filePath: string; filename: string }> {
+    const { type, model, params } = requestExportDto;
 
-  async requestExport(userId: string, requestExportDto: RequestExportDto) {
-    const exportRecord = await this.create({
-      type: requestExportDto.type,
-      userId,
-      params: requestExportDto.params,
-      status: ExportStatus.PENDING,
-    })
+    const filename = this.getFilename(model);
+    const data = await this.getDataForExport(model, params);
 
-    return exportRecord
-  }
-
-  async findAll(userId?: string) {
-    const where = userId ? { userId } : {}
-
-    const exports = await this.prisma.export.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: 50,
-    })
-
-    return exports
-  }
-
-  async findOne(id: string) {
-    const exportRecord = await this.prisma.export.findUnique({
-      where: { id },
-    })
-
-    if (!exportRecord) {
-      throw new NotFoundException('Exportação não encontrada')
+    if (!data || data.length === 0) {
+      throw new NotFoundException("Nenhum dado encontrado para exportação");
     }
 
-    return exportRecord
-  }
+    let filePath: string;
 
-  async updateStatus(id: string, status: ExportStatus, fileUrl?: string) {
-    const exportRecord = await this.findOne(id)
-
-    const updatedExport = await this.prisma.export.update({
-      where: { id },
-      data: {
-        status,
-        fileUrl,
-        completedAt: status === ExportStatus.COMPLETED ? new Date() : null,
-      },
-    })
-
-    return updatedExport
-  }
-
-  async markAsProcessing(id: string) {
-    return this.updateStatus(id, ExportStatus.PROCESSING)
-  }
-
-  async markAsCompleted(id: string, fileUrl: string) {
-    return this.updateStatus(id, ExportStatus.COMPLETED, fileUrl)
-  }
-
-  async markAsFailed(id: string) {
-    return this.updateStatus(id, ExportStatus.FAILED)
-  }
-
-  async delete(id: string) {
-    const exportRecord = await this.findOne(id)
-
-    await this.prisma.export.delete({
-      where: { id },
-    })
+    switch (type) {
+      case ExportType.CSV:
+        filePath = await this.exportToCSV(filename, data);
+        break;
+      case ExportType.XLSX:
+        filePath = await this.exportToXLSX(filename, data);
+        break;
+      case ExportType.PDF:
+        filePath = await this.exportToPDF(filename, data, params);
+        break;
+      default:
+        throw new Error(`Tipo de exportação não suportado: ${type}`);
+    }
 
     return {
-      message: 'Exportação removida com sucesso',
-    }
+      filePath,
+      filename: `${filename}.${this.getExtension(type)}`,
+    };
   }
 
-  async getPendingExports() {
-    const exports = await this.prisma.export.findMany({
-      where: {
-        status: ExportStatus.PENDING,
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    })
+  private getFilename(model: string): string {
+    const filenames: Record<string, string> = {
+      User: "Usuarios",
+      Plan: "Planos",
+      Solicitation: "Solicitacoes",
+    };
+    return filenames[model] || "Exportacao";
+  }
 
-    return exports
+  private getExtension(type: ExportType): string {
+    const extensions: Record<ExportType, string> = {
+      [ExportType.CSV]: "csv",
+      [ExportType.XLSX]: "xlsx",
+      [ExportType.PDF]: "pdf",
+    };
+    return extensions[type];
+  }
+
+  private async getDataForExport(model: string, params?: Record<string, any>): Promise<Record<string, any>[]> {
+    this.logger.log(`Buscando dados para exportação, modelo: ${model}`);
+
+    let data: Record<string, any>[] = [];
+
+    switch (model) {
+      case "User": {
+        const query: any = {
+          take: 500,
+          orderBy: { createdAt: "desc" },
+        };
+
+        if (params?.roles) {
+          const roles = Array.isArray(params.roles) ? params.roles : params.roles.split(", ");
+          query.where = { role: { in: roles } };
+        }
+
+        const users = await this.prisma.user.findMany(query);
+        data = users.map((user) => {
+          const resource = new UserResource({ ...user, type: params?.type });
+          return resource.toArray();
+        });
+        break;
+      }
+
+      case "Solicitation": {
+        const solicitations = await this.prisma.solicitation.findMany({
+          take: 500,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+              },
+            },
+            client: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            cart: true,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        data = await Promise.all(
+          solicitations.map(async (solicitation) => {
+            const resource = new SolicitationResource(solicitation, this.quotationService);
+            return await resource.toArray();
+          })
+        );
+        break;
+      }
+
+      case "Plan": {
+        const plans = await this.prisma.client.findMany({
+          take: 500,
+          orderBy: { createdAt: "desc" },
+        });
+
+        data = plans.map((plan) => {
+          const resource = new PlanResource(plan);
+          return resource.toArray();
+        });
+        break;
+      }
+
+      default:
+        throw new Error(`Modelo não suportado para exportação: ${model}`);
+    }
+
+    return data;
+  }
+
+  private async exportToCSV(filename: string, data: Record<string, any>[]): Promise<string> {
+    this.logger.log(`Gerando exportação CSV: ${filename}`);
+
+    if (data.length === 0) {
+      throw new Error("Nenhum dado encontrado para exportação");
+    }
+
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+      headers.join(","),
+      ...data.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header];
+            if (value === null || value === undefined) {
+              return "";
+            }
+            if (typeof value === "object") {
+              return JSON.stringify(value).replace(/"/g, '""');
+            }
+            return String(value).replace(/"/g, '""');
+          })
+          .map((val) => `"${val}"`)
+          .join(",")
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const exportFilename = `${filename}.csv`;
+    const filePath = path.join(process.cwd(), "public", "export", exportFilename);
+    const dir = path.dirname(filePath);
+
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(filePath, csvContent, "utf-8");
+
+    return `/export/${exportFilename}`;
+  }
+
+  private async exportToXLSX(filename: string, data: Record<string, any>[]): Promise<string> {
+    this.logger.log(`Gerando exportação XLSX: ${filename}`);
+    this.logger.warn("Exportação XLSX requer biblioteca exceljs. Retornando CSV temporariamente.");
+
+    return this.exportToCSV(filename, data);
+  }
+
+  private async exportToPDF(
+    filename: string,
+    data: Record<string, any>[],
+    params?: Record<string, any>
+  ): Promise<string> {
+    this.logger.log(`Gerando exportação PDF: ${filename}`);
+    this.logger.warn("Exportação PDF requer biblioteca pdfkit. Retornando JSON temporariamente.");
+
+    const jsonFilename = `${filename}.json`;
+    const filePath = path.join(process.cwd(), "public", "export", jsonFilename);
+    const dir = path.dirname(filePath);
+
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(filePath, JSON.stringify(data, null, 2), "utf-8");
+
+    return `/export/${jsonFilename}`;
   }
 }
-
-

@@ -1,8 +1,7 @@
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
-import { LogsModule } from './common/logs/logs.module';
+import { ThrottlerModule } from "@nestjs/throttler";
 import { DatabaseModule } from './database/database.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -70,9 +69,6 @@ import { CliModule } from './cli/cli.module';
 
     // Database (Prisma)
     DatabaseModule,
-
-    // Sistema de Logs Centralizado
-    LogsModule,
 
     // Health Check
     HealthModule,

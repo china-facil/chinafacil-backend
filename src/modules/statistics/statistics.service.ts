@@ -163,21 +163,36 @@ export class StatisticsService {
       }),
     ])
 
-    const recentSolicitations = await this.prisma.solicitation.findMany({
-      take: 5,
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    });
+    const validUserIdSet = new Set(validUserIds.map((u) => u.id));
+
+    const allSolicitations = await this.prisma.solicitation.findMany({
+      take: 20,
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
-      include: {
-        user: {
+    });
+
+    const validSolicitations = allSolicitations.filter((s) => validUserIdSet.has(s.userId));
+
+    const recentSolicitations = await Promise.all(
+      validSolicitations.slice(0, 5).map(async (solicitation) => {
+        const user = await this.prisma.user.findUnique({
+          where: { id: solicitation.userId },
           select: {
             id: true,
             name: true,
             email: true,
           },
-        },
-      },
-    })
+        });
+        return {
+          ...solicitation,
+          user,
+        };
+      })
+    );
 
     return {
       totals: {

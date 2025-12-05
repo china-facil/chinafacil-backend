@@ -9,14 +9,25 @@ export class MailService {
   private transporter: nodemailer.Transporter
 
   constructor(private readonly configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get('MAIL_HOST'),
-      port: this.configService.get('MAIL_PORT'),
-      auth: {
-        user: this.configService.get('MAIL_USER'),
-        pass: this.configService.get('MAIL_PASSWORD'),
-      },
-    })
+    const mailHost = this.configService.get("MAIL_HOST");
+    const mailUser = this.configService.get("MAIL_USER");
+    const mailPassword = this.configService.get("MAIL_PASSWORD");
+
+    if (mailHost && mailUser && mailPassword) {
+      this.transporter = nodemailer.createTransport({
+        host: mailHost,
+        port: this.configService.get("MAIL_PORT"),
+        auth: {
+          user: mailUser,
+          pass: mailPassword,
+        },
+      });
+    } else {
+      this.logger.warn("Credenciais de email não configuradas. Usando transporte mock para testes.");
+      this.transporter = nodemailer.createTransport({
+        jsonTransport: true,
+      });
+    }
   }
 
   async sendEmail(sendEmailDto: SendEmailDto) {

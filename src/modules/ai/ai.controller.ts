@@ -21,6 +21,7 @@ import { AIService } from './ai.service'
 import {
   ChatCompletionDto,
   CompletionDto,
+  EmbeddingDto,
   ProductSimilarityDto,
 } from './dto'
 
@@ -100,8 +101,8 @@ export class AIController {
   @Roles('admin')
   @ApiOperation({ summary: 'Gerar embedding (OpenAI)' })
   @ApiResponse({ status: 201, description: 'Embedding gerado' })
-  async generateEmbedding(@Body('text') text: string) {
-    return this.aiService.generateEmbedding(text)
+  async generateEmbedding(@Body() embeddingDto: EmbeddingDto) {
+    return this.aiService.generateEmbedding(embeddingDto.text)
   }
 
   @Post('product-similarity')

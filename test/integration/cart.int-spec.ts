@@ -83,6 +83,11 @@ describe('Cart API (Integration)', () => {
       expect(res.status).toBe(201)
     })
 
+    it("should return 400 with invalid payload", async () => {
+      const res = await ctx.authReq.post("/api/cart/sync").send({ sync_type: "invalid-type" });
+      expect(res.status).toBe(400);
+    });
+
     it('should return 401 without auth', async () => {
       const res = await ctx.req.post('/api/cart/sync').send({})
       expect(res.status).toBe(401)
