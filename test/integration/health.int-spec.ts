@@ -8,10 +8,12 @@ describe('Health API (Integration)', () => {
   })
 
   describe('GET /api/health', () => {
-    it('should return 200 status code', async () => {
-      const res = await ctx.req.get('/api/health')
-      expect(res.status).toBe(200)
-    })
+    it("should return health status successfully", async () => {
+      const res = await ctx.req.get("/api/health");
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("status");
+      expect(res.body).toHaveProperty("timestamp");
+    });
 
     it('should return health status with required fields', async () => {
       const res = await ctx.req.get('/api/health')

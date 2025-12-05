@@ -9,14 +9,16 @@ describe('Leads API (Integration)', () => {
 
   describe('POST /api/leads', () => {
     it('should create lead successfully', async () => {
-      const email = `lead-${Date.now()}@example.com`
-      const res = await ctx.req.post('/api/leads').send({ name: 'New Lead', email })
+      const res = await ctx.req.post('/api/leads').send({
+        name: 'New Lead',
+        email: `lead-${Date.now()}@example.com`,
+      })
       expect(res.status).toBe(201)
+      expect(res.body).toHaveProperty('id')
     })
 
     it('should return 400 with invalid payload', async () => {
-      const res = await ctx.req.post('/api/leads').send({})
-      expect(res.status).toBe(400)
+      await ctx.req.post('/api/leads').send({}).expect(400)
     })
   })
 
@@ -24,59 +26,51 @@ describe('Leads API (Integration)', () => {
     it('should list leads successfully', async () => {
       const res = await ctx.authReq.get('/api/leads')
       expect(res.status).toBe(200)
+      expect(Array.isArray(res.body.data)).toBe(true)
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.get('/api/leads')
-      expect(res.status).toBe(401)
+      await ctx.req.get('/api/leads').expect(401)
     })
   })
 
   describe('GET /api/leads/:id', () => {
     it('should return 404 for non-existent lead', async () => {
-      const res = await ctx.authReq.get('/api/leads/non-existent-id')
-      expect(res.status).toBe(404)
+      await ctx.authReq.get('/api/leads/non-existent-id').expect(404)
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.get('/api/leads/some-id')
-      expect(res.status).toBe(401)
+      await ctx.req.get('/api/leads/some-id').expect(401)
     })
   })
 
   describe('PATCH /api/leads/:id', () => {
     it('should return 404 for non-existent lead', async () => {
-      const res = await ctx.authReq.patch('/api/leads/non-existent-id').send({ name: 'Updated Lead' })
-      expect(res.status).toBe(404)
+      await ctx.authReq.patch('/api/leads/non-existent-id').send({ name: 'Updated' }).expect(404)
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.patch('/api/leads/some-id').send({})
-      expect(res.status).toBe(401)
+      await ctx.req.patch('/api/leads/some-id').send({}).expect(401)
     })
   })
 
   describe('DELETE /api/leads/:id', () => {
     it('should return 404 for non-existent lead', async () => {
-      const res = await ctx.authReq.delete('/api/leads/non-existent-id')
-      expect(res.status).toBe(404)
+      await ctx.authReq.delete('/api/leads/non-existent-id').expect(404)
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.delete('/api/leads/some-id')
-      expect(res.status).toBe(401)
+      await ctx.req.delete('/api/leads/some-id').expect(401)
     })
   })
 
   describe('POST /api/leads/:id/convert', () => {
     it('should return 404 for non-existent lead', async () => {
-      const res = await ctx.authReq.post('/api/leads/non-existent-id/convert')
-      expect(res.status).toBe(404)
+      await ctx.authReq.post('/api/leads/non-existent-id/convert').expect(404)
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.post('/api/leads/some-id/convert')
-      expect(res.status).toBe(401)
+      await ctx.req.post('/api/leads/some-id/convert').expect(401)
     })
   })
 
@@ -84,11 +78,11 @@ describe('Leads API (Integration)', () => {
     it('should get leads stats by origin successfully', async () => {
       const res = await ctx.authReq.get('/api/leads/stats/origin')
       expect(res.status).toBe(200)
+      expect(res.body).toBeDefined()
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.get('/api/leads/stats/origin')
-      expect(res.status).toBe(401)
+      await ctx.req.get('/api/leads/stats/origin').expect(401)
     })
   })
 
@@ -96,11 +90,11 @@ describe('Leads API (Integration)', () => {
     it('should get leads stats by status successfully', async () => {
       const res = await ctx.authReq.get('/api/leads/stats/status')
       expect(res.status).toBe(200)
+      expect(res.body).toBeDefined()
     })
 
     it('should return 401 without auth', async () => {
-      const res = await ctx.req.get('/api/leads/stats/status')
-      expect(res.status).toBe(401)
+      await ctx.req.get('/api/leads/stats/status').expect(401)
     })
   })
 })
