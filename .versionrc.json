@@ -1,0 +1,18 @@
+{
+    "types": [
+        { "type": "feat", "section": "✨ Funcionalidades" },
+        { "type": "fix", "section": "🐛 Correções" },
+        { "type": "perf", "section": "⚡ Performance" },
+        { "type": "refactor", "section": "♻️ Refatoração" },
+        { "type": "docs", "section": "📚 Documentação" },
+        { "type": "style", "section": "💄 Estilos", "hidden": true },
+        { "type": "test", "section": "✅ Testes", "hidden": true },
+        { "type": "build", "section": "📦 Build", "hidden": true },
+        { "type": "ci", "section": "👷 CI/CD", "hidden": true },
+        { "type": "chore", "section": "🔧 Outros", "hidden": true },
+        { "type": "revert", "section": "⏪ Reverts" }
+    ],
+    "commitUrlFormat": "{{host}}/{{owner}}/{{repository}}/commit/{{hash}}",
+    "compareUrlFormat": "{{host}}/{{owner}}/{{repository}}/compare/{{previousTag}}...{{currentTag}}"
+}
+

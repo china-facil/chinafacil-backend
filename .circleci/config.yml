@@ -127,6 +127,31 @@ jobs:
             sleep 10
             curl -f http://${AWS_EC2_HOST}:3000/api/health || exit 1
 
+  release:
+    executor: node-executor
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Configure Git
+          command: |
+            git config user.email "ci@chinafacil.com.br"
+            git config user.name "CircleCI Bot"
+            git remote set-url origin https://${GITHUB_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git
+      - run:
+          name: Generate Changelog and Release
+          command: |
+            if git describe --tags --abbrev=0 > /dev/null 2>&1; then
+              npm run release
+            else
+              npm run release:first
+            fi
+      - run:
+          name: Push Changelog and Tags
+          command: |
+            git push --follow-tags origin main
+
 workflows:
   build-test-deploy:
     jobs:
@@ -145,6 +170,12 @@ workflows:
             - lint
             - build
             - test-integration
+          filters:
+            branches:
+              only: main
+      - release:
+          requires:
+            - deploy-production
           filters:
             branches:
               only: main
