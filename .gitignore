@@ -67,6 +67,7 @@ build/
 
 # Markdown files
 *.md
+!CHANGELOG.md
 md/
 
 # Setup scripts with sensitive data
