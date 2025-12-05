@@ -23,8 +23,8 @@ export class HealthService {
 
     return {
       status: 'success',
-      uptime,
       timestamp,
+      uptime,
       database: databaseStatus,
       redis: redisStatus,
     }
