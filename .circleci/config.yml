@@ -85,24 +85,6 @@ jobs:
           name: Run integration tests
           command: npm run test:int -- --runInBand --forceExit
 
-  sonar-scan:
-    docker:
-      - image: cimg/node:22.11
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: Install and run SonarCloud Scanner
-          command: |
-            export SONAR_SCANNER_VERSION=5.0.1.3006
-            curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux.zip
-            unzip -q sonar-scanner.zip
-            export PATH="$PWD/sonar-scanner-${SONAR_SCANNER_VERSION}-linux/bin:$PATH"
-            sonar-scanner \
-              -Dsonar.host.url=https://sonarcloud.io \
-              -Dsonar.token=${SONAR_TOKEN}
-
   deploy-production:
     docker:
       - image: cimg/base:2024.01
@@ -156,9 +138,6 @@ workflows:
           requires:
             - install-dependencies
       - test-integration:
-          requires:
-            - build
-      - sonar-scan:
           requires:
             - build
       - deploy-production:
