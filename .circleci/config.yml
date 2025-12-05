@@ -2,7 +2,6 @@ version: 2.1
 
 orbs:
   node: circleci/node@5.2.0
-  sonarcloud: sonarsource/sonarcloud@2.0.0
 
 executors:
   node-executor:
@@ -93,7 +92,16 @@ jobs:
       - checkout
       - attach_workspace:
           at: .
-      - sonarcloud/scan
+      - run:
+          name: Install and run SonarCloud Scanner
+          command: |
+            export SONAR_SCANNER_VERSION=5.0.1.3006
+            curl -sSLo sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux.zip
+            unzip -q sonar-scanner.zip
+            export PATH="$PWD/sonar-scanner-${SONAR_SCANNER_VERSION}-linux/bin:$PATH"
+            sonar-scanner \
+              -Dsonar.host.url=https://sonarcloud.io \
+              -Dsonar.token=${SONAR_TOKEN}
 
   deploy-production:
     docker:
