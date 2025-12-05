@@ -155,7 +155,12 @@ jobs:
 workflows:
   build-test-deploy:
     jobs:
-      - install-dependencies
+      - install-dependencies:
+          filters:
+            branches:
+              only:
+                - main
+                - homolog
       - lint:
           requires:
             - install-dependencies
