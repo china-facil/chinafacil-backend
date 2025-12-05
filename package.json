@@ -1,6 +1,6 @@
 {
   "name": "chinafacil-backend-nest",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "ChinaFácil Backend - NestJS com Prisma",
   "author": "ChinaFácil Team",
   "private": true,
