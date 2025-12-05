@@ -144,7 +144,7 @@ export class UsersService {
         updatedAt: true,
         subscription: {
           include: {
-            client: true,
+                                                                                                                                  client: true,
           },
         },
         addresses: true,
