@@ -33,6 +33,29 @@ describe('Settings API (Integration)', () => {
     })
 
     describe('GET /api/settings/boarding-types/:id', () => {
+      it('should get boarding type details successfully', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/boarding-types').send({
+          cmbStart: 100,
+          cmbEnd: 200,
+          internationalShipping: 50.0,
+          taxBlAwb: 25.0,
+          storageAir: 30.0,
+          storageSea: 35.0,
+          taxAfrmm: 15.0,
+          dispatcher: 40.0,
+          sda: 20.0,
+          deliveryTransport: 45.0,
+          brazilExpenses: 1000.0,
+        })
+        const res = await ctx.authReq.get(`/api/settings/boarding-types/${createRes.body.id}`)
+        expect(res.status).toBe(200)
+        expect(res.body).toHaveProperty('id')
+      })
+
+      it('should return 404 for non-existent boarding type', async () => {
+        await ctx.authReq.get('/api/settings/boarding-types/non-existent-id').expect(404)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.get('/api/settings/boarding-types/test-id').expect(401)
       })
@@ -69,6 +92,45 @@ describe('Settings API (Integration)', () => {
     })
 
     describe('PATCH /api/settings/boarding-types/:id', () => {
+      it('should update boarding type successfully', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/boarding-types').send({
+          cmbStart: 100,
+          cmbEnd: 200,
+          internationalShipping: 50.0,
+          taxBlAwb: 25.0,
+          storageAir: 30.0,
+          storageSea: 35.0,
+          taxAfrmm: 15.0,
+          dispatcher: 40.0,
+          sda: 20.0,
+          deliveryTransport: 45.0,
+          brazilExpenses: 1000.0,
+        })
+        const res = await ctx.authReq.patch(`/api/settings/boarding-types/${createRes.body.id}`).send({
+          brazilExpenses: 2000.0,
+        })
+        expect(res.status).toBe(200)
+      })
+
+      it('should return 400 with invalid payload', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/boarding-types').send({
+          cmbStart: 100,
+          cmbEnd: 200,
+          internationalShipping: 50.0,
+          taxBlAwb: 25.0,
+          storageAir: 30.0,
+          storageSea: 35.0,
+          taxAfrmm: 15.0,
+          dispatcher: 40.0,
+          sda: 20.0,
+          deliveryTransport: 45.0,
+          brazilExpenses: 1000.0,
+        })
+        await ctx.authReq.patch(`/api/settings/boarding-types/${createRes.body.id}`).send({
+          cmbStart: 'invalid',
+        }).expect(400)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.patch('/api/settings/boarding-types/test-id').send({
           brazilExpenses: 2000.0,
@@ -77,12 +139,39 @@ describe('Settings API (Integration)', () => {
     })
 
     describe('DELETE /api/settings/boarding-types/:id', () => {
+      it('should delete boarding type successfully', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/boarding-types').send({
+          cmbStart: 100,
+          cmbEnd: 200,
+          internationalShipping: 50.0,
+          taxBlAwb: 25.0,
+          storageAir: 30.0,
+          storageSea: 35.0,
+          taxAfrmm: 15.0,
+          dispatcher: 40.0,
+          sda: 20.0,
+          deliveryTransport: 45.0,
+          brazilExpenses: 1000.0,
+        })
+        const res = await ctx.authReq.delete(`/api/settings/boarding-types/${createRes.body.id}`)
+        expect(res.status).toBe(200)
+      })
+
+      it('should return 404 for non-existent boarding type', async () => {
+        await ctx.authReq.delete('/api/settings/boarding-types/non-existent-id').expect(404)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.delete('/api/settings/boarding-types/test-id').expect(401)
       })
     })
 
     describe('GET /api/settings/default-boarding-type', () => {
+      it('should get default boarding type successfully', async () => {
+        const res = await ctx.authReq.get('/api/settings/default-boarding-type')
+        expect(res.status).toBe(200)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.get('/api/settings/default-boarding-type').expect(401)
       })
@@ -103,6 +192,37 @@ describe('Settings API (Integration)', () => {
     })
 
     describe('GET /api/settings/freights/:id', () => {
+      it('should get freight details successfully', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/freights').send({
+          destino: 'São Paulo',
+          uf: 'SP',
+          taxaMin: 10.5,
+          peso10: 5.5,
+          peso20: 5.0,
+          peso35: 4.5,
+          peso50: 4.2,
+          peso70: 4.0,
+          peso100: 3.8,
+          peso300: 3.5,
+          peso500: 3.2,
+          entregaAte10kg: 15.0,
+          excDeEntrega: 20.0,
+          advalorem: 1.5,
+          gris: 2.0,
+          grisMin: 50.0,
+          pedagio100: 0.5,
+          sla: '5-7 dias úteis',
+          cep: '01310-100',
+        })
+        const res = await ctx.authReq.get(`/api/settings/freights/${createRes.body.id}`)
+        expect(res.status).toBe(200)
+        expect(res.body).toHaveProperty('id')
+      })
+
+      it('should return 404 for non-existent freight', async () => {
+        await ctx.authReq.get('/api/settings/freights/999999999999999999').expect(404)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.get('/api/settings/freights/test-id').expect(401)
       })
@@ -148,6 +268,61 @@ describe('Settings API (Integration)', () => {
     })
 
     describe('PATCH /api/settings/freights/:id', () => {
+      it('should update freight successfully', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/freights').send({
+          destino: 'São Paulo',
+          uf: 'SP',
+          taxaMin: 10.5,
+          peso10: 5.5,
+          peso20: 5.0,
+          peso35: 4.5,
+          peso50: 4.2,
+          peso70: 4.0,
+          peso100: 3.8,
+          peso300: 3.5,
+          peso500: 3.2,
+          entregaAte10kg: 15.0,
+          excDeEntrega: 20.0,
+          advalorem: 1.5,
+          gris: 2.0,
+          grisMin: 50.0,
+          pedagio100: 0.5,
+          sla: '5-7 dias úteis',
+          cep: '01310-100',
+        })
+        const res = await ctx.authReq.patch(`/api/settings/freights/${createRes.body.id}`).send({
+          peso10: 6.0,
+        })
+        expect(res.status).toBe(200)
+      })
+
+      it('should return 400 with invalid payload', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/freights').send({
+          destino: 'São Paulo',
+          uf: 'SP',
+          taxaMin: 10.5,
+          peso10: 5.5,
+          peso20: 5.0,
+          peso35: 4.5,
+          peso50: 4.2,
+          peso70: 4.0,
+          peso100: 3.8,
+          peso300: 3.5,
+          peso500: 3.2,
+          entregaAte10kg: 15.0,
+          excDeEntrega: 20.0,
+          advalorem: 1.5,
+          gris: 2.0,
+          grisMin: 50.0,
+          pedagio100: 0.5,
+          sla: '5-7 dias úteis',
+          cep: '01310-100',
+        })
+        await ctx.authReq.patch(`/api/settings/freights/${createRes.body.id}`).send({
+          uf: 'INVALID_UF_TOO_LONG',
+        }).expect(400)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.patch('/api/settings/freights/1').send({
           peso10: 6.0,
@@ -156,6 +331,36 @@ describe('Settings API (Integration)', () => {
     })
 
     describe('DELETE /api/settings/freights/:id', () => {
+      it('should delete freight successfully', async () => {
+        const createRes = await ctx.authReq.post('/api/settings/freights').send({
+          destino: 'São Paulo',
+          uf: 'SP',
+          taxaMin: 10.5,
+          peso10: 5.5,
+          peso20: 5.0,
+          peso35: 4.5,
+          peso50: 4.2,
+          peso70: 4.0,
+          peso100: 3.8,
+          peso300: 3.5,
+          peso500: 3.2,
+          entregaAte10kg: 15.0,
+          excDeEntrega: 20.0,
+          advalorem: 1.5,
+          gris: 2.0,
+          grisMin: 50.0,
+          pedagio100: 0.5,
+          sla: '5-7 dias úteis',
+          cep: '01310-100',
+        })
+        const res = await ctx.authReq.delete(`/api/settings/freights/${createRes.body.id}`)
+        expect(res.status).toBe(200)
+      })
+
+      it('should return 404 for non-existent freight', async () => {
+        await ctx.authReq.delete('/api/settings/freights/999999999999999999').expect(404)
+      })
+
       it('should return 401 without auth', async () => {
         await ctx.req.delete('/api/settings/freights/test-id').expect(401)
       })
@@ -168,8 +373,7 @@ describe('Settings API (Integration)', () => {
           destination: 'São Paulo',
           weight: 1000,
         })
-        expect(res.status).toBeGreaterThanOrEqual(200)
-        expect(res.status).toBeLessThan(500)
+        expect(res.status).toBe(201)
       })
 
       it('should return 400 with invalid payload', async () => {
@@ -190,8 +394,7 @@ describe('Settings API (Integration)', () => {
     describe('GET /api/settings/quotation', () => {
       it('should return quotation successfully', async () => {
         const res = await ctx.req.get('/api/settings/quotation')
-        expect(res.status).toBeGreaterThanOrEqual(200)
-        expect(res.status).toBeLessThan(600)
+        expect(res.status).toBe(200)
       })
     })
   })

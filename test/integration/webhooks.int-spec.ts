@@ -1,4 +1,5 @@
 import { createTestContext, TestContext } from "./test-helper";
+import * as crypto from "crypto";
 
 describe("Webhooks API (Integration)", () => {
   let ctx: TestContext;
@@ -8,6 +9,45 @@ describe("Webhooks API (Integration)", () => {
   });
 
   describe("POST /api/webhooks/typeform", () => {
+    it("should handle typeform webhook successfully", async () => {
+      process.env.TYPEFORM_WEBHOOK_SECRET = "test-secret";
+      const secret = "test-secret";
+      const payload = {
+        event_type: "form_response",
+        form_response: {
+          answers: [
+            {
+              field: { ref: "email" },
+              email: "test@example.com",
+            },
+          ],
+        },
+      };
+      const bodyString = JSON.stringify(payload);
+      const signature = crypto.createHmac("sha256", secret).update(bodyString).digest("hex");
+
+      const res = await ctx.req
+        .post("/api/webhooks/typeform")
+        .set("typeform-signature", `sha256=${signature}`)
+        .send(payload);
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+    });
+
+    it("should return 400 with invalid payload", async () => {
+      process.env.TYPEFORM_WEBHOOK_SECRET = "test-secret";
+      const secret = "test-secret";
+      const payload = {};
+      const bodyString = JSON.stringify(payload);
+      const signature = crypto.createHmac("sha256", secret).update(bodyString).digest("hex");
+
+      await ctx.req
+        .post("/api/webhooks/typeform")
+        .set("typeform-signature", `sha256=${signature}`)
+        .send(payload)
+        .expect(400);
+    });
+
     it("should return 401 without valid signature", async () => {
       await ctx.req
         .post("/api/webhooks/typeform")
@@ -16,10 +56,6 @@ describe("Webhooks API (Integration)", () => {
           form_response: {},
         })
         .expect(401);
-    });
-
-    it("should return 401 without signature (guard executes before validation)", async () => {
-      await ctx.req.post("/api/webhooks/typeform").send({}).expect(401);
     });
   });
 
