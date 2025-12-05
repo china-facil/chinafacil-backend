@@ -10,7 +10,7 @@ export class OpenAIService {
   private readonly maxAttempts = 3
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get('OPENAI_API_KEY')
+    const apiKey = this.configService.get('OPEN_AI_API_KEY')
     
     if (apiKey) {
       this.openai = new OpenAI({
@@ -70,7 +70,7 @@ export class OpenAIService {
 
   private ensureInitialized() {
     if (!this.openai) {
-      throw new Error('OpenAI service not initialized. OPENAI_API_KEY is required.')
+      throw new Error('OpenAI service not initialized. OPEN_AI_API_KEY is required.')
     }
   }
 
