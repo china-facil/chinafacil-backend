@@ -123,7 +123,7 @@ export class NcmService {
       } catch (error: any) {
         this.logger.warn(`Tentativa ${attempts + 1} falhou: ${error.message}`)
         if (error.message?.includes('not initialized') || error.message?.includes('API key') || error.message?.includes('não configurado')) {
-          openAiError = new Error('OpenAI service não configurado. OPENAI_API_KEY é obrigatório.')
+          openAiError = new Error('OpenAI service não configurado. OPEN_AI_API_KEY é obrigatório.')
           break
         }
       }

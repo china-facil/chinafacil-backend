@@ -66,19 +66,18 @@ enum NotificationType {
   SUCCESS
 }
 
-enum ExportStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
-enum ExportType {
-  CSV
-  EXCEL
-  PDF
-  JSON
-}
+// enum ExportStatus {
+//   PENDING
+//   PROCESSING
+//   COMPLETED
+//   FAILED
+// }
+// enum ExportType {
+//   CSV
+//   EXCEL
+//   PDF
+//   JSON
+// }
 
 // ===== MODELS =====
 
@@ -312,27 +311,50 @@ model UserAddress {
 }
 
 model BoardingType {
-  id             String   @id @default(uuid())
-  name           String
-  description    String?
-  brazilExpenses Decimal? @map("brazil_expenses")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                  String   @id @default(uuid())
+  cmbStart            Int      @map("cmb_start")
+  cmbEnd              Int      @map("cmb_end")
+  internationalShipping Float    @db.Double @map("international_shipping")
+  taxBlAwb            Float    @db.Double @map("tax_bl_awb")
+  storageAir          Float    @db.Double @map("storage_air")
+  storageSea          Float    @db.Double @map("storage_sea")
+  taxAfrmm            Float    @db.Double @map("tax_afrmm")
+  dispatcher          Float    @db.Double
+  sda                 Float    @db.Double
+  deliveryTransport   Float    @db.Double @map("delivery_transport")
+  otherFees           Float?   @db.Double @map("other_fees")
+  brazilExpenses      Float    @db.Double @map("brazil_expenses")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("boarding_types")
 }
 
 model Freight {
-  id          String   @id @default(uuid())
-  origin      String
-  destination String
-  cost        Decimal
-  days        Int
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              BigInt   @id @default(autoincrement())
+  destino         String   @db.VarChar(255)
+  uf              String   @db.VarChar(2)
+  taxaMin         Decimal  @db.Decimal(10, 4) @map("taxa_min")
+  peso10          Decimal  @db.Decimal(10, 4) @map("peso_10")
+  peso20          Decimal  @db.Decimal(10, 4) @map("peso_20")
+  peso35          Decimal  @db.Decimal(10, 4) @map("peso_35")
+  peso50          Decimal  @db.Decimal(10, 4) @map("peso_50")
+  peso70          Decimal  @db.Decimal(10, 4) @map("peso_70")
+  peso100         Decimal  @db.Decimal(10, 4) @map("peso_100")
+  peso300         Decimal  @db.Decimal(10, 4) @map("peso_300")
+  peso500         Decimal  @db.Decimal(10, 4) @map("peso_500")
+  entregaAte10kg  Decimal  @db.Decimal(10, 4) @map("entrega_ate_10kg")
+  excDeEntrega    Decimal  @db.Decimal(10, 4) @map("exc_de_entrega")
+  advalorem       Decimal  @db.Decimal(10, 4)
+  gris            Decimal  @db.Decimal(10, 4)
+  grisMin         Decimal  @db.Decimal(10, 4) @map("gris_min")
+  pedagio100      Decimal  @db.Decimal(10, 4) @map("pedagio_100")
+  sla             String   @db.VarChar(255)
+  cep             String   @db.VarChar(10)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  @@map("freights")
+  @@map("fretes")
 }
 
 
@@ -410,21 +432,19 @@ model Notification {
 }
 
 
-model Export {
-  id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  type        ExportType
-  status      ExportStatus  @default(PENDING)
-  fileName    String?       @map("file_name")
-  fileUrl     String?       @map("file_url")
-  filters     Json?
-  totalRows   Int?          @map("total_rows")
-  error       String?       @db.Text
-  startedAt   DateTime?     @map("started_at")
-  completedAt DateTime?     @map("completed_at")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-
-  @@map("exports")
-}
-
+// model Export {
+//   id          String        @id @default(uuid())
+//   userId      String        @map("user_id")
+//   type        ExportType
+//   status      ExportStatus  @default(PENDING)
+//   fileName    String?       @map("file_name")
+//   fileUrl     String?       @map("file_url")
+//   filters     Json?
+//   totalRows   Int?          @map("total_rows")
+//   error       String?       @db.Text
+//   startedAt   DateTime?     @map("started_at")
+//   completedAt DateTime?     @map("completed_at")
+//   createdAt   DateTime      @default(now()) @map("created_at")
+//   updatedAt   DateTime      @updatedAt @map("updated_at")
+//   @@map("exports")
+// }

@@ -39,41 +39,62 @@ describe('Auth API (Integration)', () => {
     })
   })
 
-  describe('POST /api/auth/refresh', () => {
-    it('should return 401 with invalid refresh token', async () => {
-      const res = await ctx.req.post('/api/auth/refresh').send({ refreshToken: 'invalid-token' })
-      expect(res.status).toBe(401)
-    })
+  describe("POST /api/auth/refresh", () => {
+    it("should refresh token successfully", async () => {
+      const email = `refreshuser-${Date.now()}@example.com`;
+      const registerRes = await ctx.req
+        .post("/api/auth/register")
+        .send({ name: "Refresh User", email, password: "password123" });
+      const refreshRes = await ctx.req.post("/api/auth/refresh").send({ refreshToken: registerRes.body.refreshToken });
+      expect(refreshRes.status).toBe(201);
+    });
 
-    it('should return 400 without refresh token', async () => {
-      const res = await ctx.req.post('/api/auth/refresh').send({})
-      expect(res.status).toBe(400)
-    })
-  })
+    it("should return 401 with invalid refresh token", async () => {
+      const res = await ctx.req.post("/api/auth/refresh").send({ refreshToken: "invalid-token" });
+      expect(res.status).toBe(401);
+    });
 
-  describe('POST /api/auth/forgot-password', () => {
-    it('should request password reset successfully', async () => {
-      const res = await ctx.req.post('/api/auth/forgot-password').send({ email: 'test@example.com' })
-      expect(res.status).toBe(201)
-    })
+    it("should return 400 without refresh token", async () => {
+      const res = await ctx.req.post("/api/auth/refresh").send({});
+      expect(res.status).toBe(400);
+    });
+  });
 
-    it('should return 400 with invalid payload', async () => {
-      const res = await ctx.req.post('/api/auth/forgot-password').send({})
-      expect(res.status).toBe(400)
-    })
-  })
+  describe("POST /api/auth/forgot-password", () => {
+    it("should request password reset successfully", async () => {
+      const res = await ctx.req.post("/api/auth/forgot-password").send({ email: "test@example.com" });
+      expect(res.status).toBe(201);
+    });
 
-  describe('POST /api/auth/reset-password', () => {
-    it('should return 400 with invalid token', async () => {
-      const res = await ctx.req.post('/api/auth/reset-password').send({ token: 'invalid-token', password: 'newpassword123' })
-      expect(res.status).toBe(400)
-    })
+    it("should return 400 with invalid payload", async () => {
+      const res = await ctx.req.post("/api/auth/forgot-password").send({});
+      expect(res.status).toBe(400);
+    });
+  });
 
-    it('should return 400 with invalid payload', async () => {
-      const res = await ctx.req.post('/api/auth/reset-password').send({})
-      expect(res.status).toBe(400)
-    })
-  })
+  describe("POST /api/auth/reset-password", () => {
+    it("should reset password successfully", async () => {
+      const email = `resetuser-${Date.now()}@example.com`;
+      await ctx.req.post("/api/auth/register").send({ name: "Reset User", email, password: "password123" });
+      const forgotRes = await ctx.req.post("/api/auth/forgot-password").send({ email });
+      const resetRes = await ctx.req
+        .post("/api/auth/reset-password")
+        .send({ token: forgotRes.body.resetToken, password: "newpassword123" });
+      expect(resetRes.status).toBe(201);
+    });
+
+    it("should return 400 with invalid token", async () => {
+      const res = await ctx.req
+        .post("/api/auth/reset-password")
+        .send({ token: "invalid-token", password: "newpassword123" });
+      expect(res.status).toBe(400);
+    });
+
+    it("should return 400 with invalid payload", async () => {
+      const res = await ctx.req.post("/api/auth/reset-password").send({});
+      expect(res.status).toBe(400);
+    });
+  });
 
   describe('GET /api/auth/verify-email', () => {
     it('should return 400 with invalid token', async () => {
