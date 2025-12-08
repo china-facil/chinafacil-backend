@@ -63,67 +63,107 @@ export class SolicitationResource {
       return 'R$ 0,00'
     }
 
+    const getCNY = await this.getQuotationRate()
+    const total = this.calculateTotal(items, getCNY)
+
+    return `R$ ${this.formatCurrency(total)}`
+  }
+
+  private async getQuotationRate(): Promise<number> {
     let quotation: any = null
 
     if (this.quotationService) {
-      try {
-        const quotationResponse = await this.quotationService.getQuotation()
-        quotation = quotationResponse.data || null
-      } catch (error) {
-        console.warn('Falha ao obter cotação no SolicitationResource, usando valor padrão', {
-          error: (error as Error).message,
-        })
-      }
+      quotation = await this.fetchQuotation()
     }
 
     if (!quotation || !quotation.CNYBRL?.bid) {
-      quotation = { CNYBRL: { bid: 0.7 } }
+      return 0.7
     }
 
-    const getCNY = parseFloat(quotation.CNYBRL.bid?.toString() || '0.7')
+    return parseFloat(quotation.CNYBRL.bid?.toString() || '0.7')
+  }
+
+  private async fetchQuotation(): Promise<any | null> {
+    try {
+      const quotationResponse = await this.quotationService!.getQuotation()
+      return quotationResponse.data || null
+    } catch (error) {
+      console.warn('Falha ao obter cotação no SolicitationResource, usando valor padrão', {
+        error: (error as Error).message,
+      })
+      return null
+    }
+  }
+
+  private calculateTotal(items: any[], getCNY: number): number {
+    const cart = this.solicitation.cart
+    if (!cart || !cart.pricingData) {
+      return this.calculateSimpleTotalForItems(items, getCNY)
+    }
+
+    const pricingData = this.parsePricingData(cart.pricingData)
+    return this.calculateTotalFromPricingData(items, pricingData, getCNY)
+  }
+
+  private parsePricingData(pricingData: any): any {
+    return typeof pricingData === 'string' ? JSON.parse(pricingData) : pricingData
+  }
+
+  private calculateTotalFromPricingData(items: any[], pricingData: any, getCNY: number): number {
+    if (pricingData.custo_individual_por_item) {
+      return this.calculateTotalFromIndividualItems(items, pricingData.custo_individual_por_item, getCNY)
+    }
+
+    if (pricingData.total_venda_produto?.total) {
+      return this.calculateTotalFromProductTotal(pricingData.total_venda_produto.total)
+    }
+
+    return this.calculateSimpleTotalForItems(items, getCNY)
+  }
+
+  private calculateTotalFromIndividualItems(items: any[], custoIndividualPorItem: any, getCNY: number): number {
     let total = 0
 
-    const cart = this.solicitation.cart
-    if (cart && cart.pricingData) {
-      const pricingData =
-        typeof cart.pricingData === 'string'
-          ? JSON.parse(cart.pricingData)
-          : cart.pricingData
+    for (const item of items) {
+      const itemId = item.id
+      const custoItem = custoIndividualPorItem[itemId]
 
-      if (pricingData.custo_individual_por_item) {
-        const custoIndividualPorItem = pricingData.custo_individual_por_item
-
-        for (const item of items) {
-          const itemId = item.id
-
-          if (custoIndividualPorItem[itemId]) {
-            const custoItem = custoIndividualPorItem[itemId]
-
-            if (custoItem.variations) {
-              for (const variation of custoItem.variations) {
-                if (variation.preco_total) {
-                  total += variation.preco_total
-                }
-              }
-            } else {
-              total += custoItem.preco_venda_item || 0
-            }
-          } else {
-            total += this.calculateSimpleTotal(item, getCNY)
-          }
-        }
-      } else if (pricingData.total_venda_produto?.total) {
-        for (const itemTotal of pricingData.total_venda_produto.total) {
-          total += itemTotal
-        }
+      if (custoItem) {
+        total += this.calculateItemTotal(custoItem)
       } else {
-        total = this.calculateSimpleTotalForItems(items, getCNY)
+        total += this.calculateSimpleTotal(item, getCNY)
       }
-    } else {
-      total = this.calculateSimpleTotalForItems(items, getCNY)
     }
 
-    return `R$ ${this.formatCurrency(total)}`
+    return total
+  }
+
+  private calculateItemTotal(custoItem: any): number {
+    if (custoItem.variations) {
+      return this.calculateTotalFromVariations(custoItem.variations)
+    }
+
+    return custoItem.preco_venda_item || 0
+  }
+
+  private calculateTotalFromVariations(variations: any[]): number {
+    let total = 0
+
+    for (const variation of variations) {
+      if (variation.preco_total) {
+        total += variation.preco_total
+      }
+    }
+
+    return total
+  }
+
+  private calculateTotalFromProductTotal(totalArray: number[]): number {
+    let total = 0
+    for (const itemTotal of totalArray) {
+      total += itemTotal
+    }
+    return total
   }
 
   private calculateSimpleTotal(item: any, getCNY: number): number {

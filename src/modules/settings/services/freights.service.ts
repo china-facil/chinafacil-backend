@@ -98,37 +98,69 @@ export class FreightsService {
     }
 
     const weightInKg = weight / 1000;
-    let pricePerKg = 0;
-
-    if (freight) {
-      if (weightInKg <= 10 && freight.peso10) {
-        pricePerKg = Number(freight.peso10);
-      } else if (weightInKg <= 20 && freight.peso20) {
-        pricePerKg = Number(freight.peso20);
-      } else if (weightInKg <= 35 && freight.peso35) {
-        pricePerKg = Number(freight.peso35);
-      } else if (weightInKg <= 50 && freight.peso50) {
-        pricePerKg = Number(freight.peso50);
-      } else if (weightInKg <= 70 && freight.peso70) {
-        pricePerKg = Number(freight.peso70);
-      } else if (weightInKg <= 100 && freight.peso100) {
-        pricePerKg = Number(freight.peso100);
-      } else if (weightInKg <= 300 && freight.peso300) {
-        pricePerKg = Number(freight.peso300);
-      } else if (weightInKg <= 500 && freight.peso500) {
-        pricePerKg = Number(freight.peso500);
-      }
-    }
-
-    if (pricePerKg === 0) {
-      pricePerKg = this.getPricePerKm(weight);
-    }
-
+    const pricePerKg = this.calculatePricePerKg(freight, weightInKg, weight);
     const calculatedDistance = distance || 1000;
     const freightByKm = this.round2(calculatedDistance * pricePerKg * weightInKg);
 
+    const breakdown = this.buildInitialBreakdown(
+      calculatedDistance,
+      weight,
+      weightInKg,
+      pricePerKg,
+      freightByKm,
+      volume,
+    );
+
+    this.addGrisToBreakdown(breakdown, cifValue, freight);
+
+    const total = freightByKm + (breakdown.gris || 0);
+    const resultWithMinimumTax = this.applyMinimumTax(total, freight, breakdown);
+
+    if (resultWithMinimumTax) {
+      return resultWithMinimumTax;
+    }
+
+    return {
+      total: this.round2(total),
+      breakdown,
+    };
+  }
+
+  private calculatePricePerKg(freight: any, weightInKg: number, weight: number): number {
+    if (!freight) {
+      return this.getPricePerKm(weight);
+    }
+
+    const weightPriceMap = [
+      { maxWeight: 10, price: freight.peso10 },
+      { maxWeight: 20, price: freight.peso20 },
+      { maxWeight: 35, price: freight.peso35 },
+      { maxWeight: 50, price: freight.peso50 },
+      { maxWeight: 70, price: freight.peso70 },
+      { maxWeight: 100, price: freight.peso100 },
+      { maxWeight: 300, price: freight.peso300 },
+      { maxWeight: 500, price: freight.peso500 },
+    ];
+
+    for (const weightPrice of weightPriceMap) {
+      if (weightInKg <= weightPrice.maxWeight && weightPrice.price) {
+        return Number(weightPrice.price);
+      }
+    }
+
+    return this.getPricePerKm(weight);
+  }
+
+  private buildInitialBreakdown(
+    distance: number,
+    weight: number,
+    weightInKg: number,
+    pricePerKg: number,
+    freightByKm: number,
+    volume?: number,
+  ): any {
     const breakdown: any = {
-      distance: calculatedDistance,
+      distance,
       weight,
       weightInKg,
       pricePerKg,
@@ -140,38 +172,43 @@ export class FreightsService {
       breakdown.cbm = this.calculateCBM(volume, weight);
     }
 
-    if (cifValue && freight) {
-      const grisRate = freight.gris ? Number(freight.gris) : 0;
-      const grisMin = freight.grisMin ? Number(freight.grisMin) : 0;
-      let gris = this.round2((cifValue * grisRate) / 100);
+    return breakdown;
+  }
 
-      if (grisMin > 0 && gris < grisMin) {
-        gris = grisMin;
-      }
-
-      breakdown.cifValue = cifValue;
-      breakdown.gris = gris;
+  private addGrisToBreakdown(breakdown: any, cifValue?: number, freight?: any): void {
+    if (!cifValue || !freight) {
+      return;
     }
 
-    const total = freightByKm + (breakdown.gris || 0);
+    const grisRate = freight.gris ? Number(freight.gris) : 0;
+    const grisMin = freight.grisMin ? Number(freight.grisMin) : 0;
+    let gris = this.round2((cifValue * grisRate) / 100);
 
-    if (freight?.taxaMin) {
-      const taxaMin = Number(freight.taxaMin);
-      if (total < taxaMin) {
-        breakdown.taxaMin = taxaMin;
-        return {
-          total: taxaMin,
-          breakdown: {
-            ...breakdown,
-            total: taxaMin,
-          },
-        };
-      }
+    if (grisMin > 0 && gris < grisMin) {
+      gris = grisMin;
     }
 
+    breakdown.cifValue = cifValue;
+    breakdown.gris = gris;
+  }
+
+  private applyMinimumTax(total: number, freight: any, breakdown: any): any | null {
+    if (!freight?.taxaMin) {
+      return null;
+    }
+
+    const taxaMin = Number(freight.taxaMin);
+    if (total >= taxaMin) {
+      return null;
+    }
+
+    breakdown.taxaMin = taxaMin;
     return {
-      total: this.round2(total),
-      breakdown,
+      total: taxaMin,
+      breakdown: {
+        ...breakdown,
+        total: taxaMin,
+      },
     };
   }
 
