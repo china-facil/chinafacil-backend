@@ -1,26 +1,31 @@
-import { createTestContext, TestContext } from './test-helper'
+import { createTestContext, TestContext } from "./test-helper";
 
-describe('Leads API (Integration)', () => {
-  let ctx: TestContext
+describe("Leads API (Integration)", () => {
+  let ctx: TestContext;
+
+  const createLeadPayload = () => ({
+    name: "Test Lead",
+    email: `lead-${Date.now()}@example.com`,
+  });
 
   beforeAll(async () => {
-    ctx = await createTestContext()
-  })
+    ctx = await createTestContext();
+  });
 
-  describe('POST /api/leads', () => {
-    it('should create lead successfully', async () => {
-      const res = await ctx.req.post('/api/leads').send({
-        name: 'New Lead',
+  describe("POST /api/leads", () => {
+    it("should create lead successfully", async () => {
+      const res = await ctx.req.post("/api/leads").send({
+        name: "New Lead",
         email: `lead-${Date.now()}@example.com`,
-      })
-      expect(res.status).toBe(201)
-      expect(res.body).toHaveProperty('id')
-    })
+      });
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty("id");
+    });
 
-    it('should return 400 with invalid payload', async () => {
-      await ctx.req.post('/api/leads').send({}).expect(400)
-    })
-  })
+    it("should return 400 with invalid payload", async () => {
+      await ctx.req.post("/api/leads").send({}).expect(400);
+    });
+  });
 
   describe("GET /api/leads", () => {
     it("should list leads successfully", async () => {
@@ -41,10 +46,7 @@ describe('Leads API (Integration)', () => {
 
   describe("GET /api/leads/:id", () => {
     it("should get lead details successfully", async () => {
-      const createRes = await ctx.req.post("/api/leads").send({
-        name: "Test Lead",
-        email: `lead-${Date.now()}@example.com`,
-      });
+      const createRes = await ctx.req.post("/api/leads").send(createLeadPayload());
       const res = await ctx.authReq.get(`/api/leads/${createRes.body.id}`);
       expect(res.status).toBe(200);
     });
@@ -60,10 +62,7 @@ describe('Leads API (Integration)', () => {
 
   describe("PATCH /api/leads/:id", () => {
     it("should update lead successfully", async () => {
-      const createRes = await ctx.req.post("/api/leads").send({
-        name: "Test Lead",
-        email: `lead-${Date.now()}@example.com`,
-      });
+      const createRes = await ctx.req.post("/api/leads").send(createLeadPayload());
       const res = await ctx.authReq.patch(`/api/leads/${createRes.body.id}`).send({ name: "Updated Lead" });
       expect(res.status).toBe(200);
     });
@@ -79,10 +78,7 @@ describe('Leads API (Integration)', () => {
 
   describe("DELETE /api/leads/:id", () => {
     it("should delete lead successfully", async () => {
-      const createRes = await ctx.req.post("/api/leads").send({
-        name: "Test Lead",
-        email: `lead-${Date.now()}@example.com`,
-      });
+      const createRes = await ctx.req.post("/api/leads").send(createLeadPayload());
       const res = await ctx.authReq.delete(`/api/leads/${createRes.body.id}`);
       expect(res.status).toBe(200);
     });
@@ -98,10 +94,7 @@ describe('Leads API (Integration)', () => {
 
   describe("POST /api/leads/:id/convert", () => {
     it("should convert lead successfully", async () => {
-      const createRes = await ctx.req.post("/api/leads").send({
-        name: "Test Lead",
-        email: `lead-${Date.now()}@example.com`,
-      });
+      const createRes = await ctx.req.post("/api/leads").send(createLeadPayload());
       const res = await ctx.authReq.post(`/api/leads/${createRes.body.id}/convert`);
       expect(res.status).toBe(201);
     });
@@ -115,32 +108,22 @@ describe('Leads API (Integration)', () => {
     });
   });
 
-  describe('GET /api/leads/stats/origin', () => {
-    it('should get leads stats by origin successfully', async () => {
-      const res = await ctx.authReq.get('/api/leads/stats/origin')
-      expect(res.status).toBe(200)
-      expect(res.body).toBeDefined()
-    })
+  const statsEndpoints = [
+    { path: "/api/leads/stats/origin", description: "get leads stats by origin" },
+    { path: "/api/leads/stats/status", description: "get leads stats by status" },
+  ];
 
-    it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/leads/stats/origin').expect(401)
-    })
-  })
+  statsEndpoints.forEach(({ path, description }) => {
+    describe(`GET ${path}`, () => {
+      it(`should ${description} successfully`, async () => {
+        const res = await ctx.authReq.get(path);
+        expect(res.status).toBe(200);
+        expect(res.body).toBeDefined();
+      });
 
-  describe('GET /api/leads/stats/status', () => {
-    it('should get leads stats by status successfully', async () => {
-      const res = await ctx.authReq.get('/api/leads/stats/status')
-      expect(res.status).toBe(200)
-      expect(res.body).toBeDefined()
-    })
-
-    it('should return 401 without auth', async () => {
-      await ctx.req.get('/api/leads/stats/status').expect(401)
-    })
-  })
-})
-
-
-
-
-
+      it("should return 401 without auth", async () => {
+        await ctx.req.get(path).expect(401);
+      });
+    });
+  });
+});

@@ -1,28 +1,28 @@
-import { createTestContext, TestContext } from './test-helper'
+import { createTestContext, TestContext } from "./test-helper";
 
-describe('Clients API (Integration)', () => {
-  let ctx: TestContext
+describe("Clients API (Integration)", () => {
+  let ctx: TestContext;
 
   beforeAll(async () => {
-    ctx = await createTestContext()
-  })
+    ctx = await createTestContext();
+  });
 
-  describe('POST /api/clients', () => {
-    it('should create client successfully', async () => {
-      const res = await ctx.authReq.post('/api/clients').send({ name: 'Test Client', price: 100 })
-      expect(res.status).toBe(201)
-    })
+  describe("POST /api/clients", () => {
+    it("should create client successfully", async () => {
+      const res = await ctx.authReq.post("/api/clients").send({ name: "Test Client", price: 100 });
+      expect(res.status).toBe(201);
+    });
 
-    it('should return 400 with invalid payload', async () => {
-      const res = await ctx.authReq.post('/api/clients').send({})
-      expect(res.status).toBe(400)
-    })
+    it("should return 400 with invalid payload", async () => {
+      const res = await ctx.authReq.post("/api/clients").send({});
+      expect(res.status).toBe(400);
+    });
 
-    it('should return 401 without auth', async () => {
-      const res = await ctx.req.post('/api/clients').send({})
-      expect(res.status).toBe(401)
-    })
-  })
+    it("should return 401 without auth", async () => {
+      const res = await ctx.req.post("/api/clients").send({});
+      expect(res.status).toBe(401);
+    });
+  });
 
   describe("GET /api/clients", () => {
     it("should list clients successfully", async () => {
@@ -41,15 +41,19 @@ describe('Clients API (Integration)', () => {
     });
   });
 
-  describe("GET /api/clients/active-plans", () => {
-    it("should list clients with active plans successfully", async () => {
-      const res = await ctx.authReq.get("/api/clients/active-plans");
-      expect(res.status).toBe(200);
-    });
+  const simpleGetEndpoints = [{ path: "/api/clients/active-plans", description: "list clients with active plans" }];
 
-    it("should return 401 without auth", async () => {
-      const res = await ctx.req.get("/api/clients/active-plans");
-      expect(res.status).toBe(401);
+  simpleGetEndpoints.forEach(({ path, description }) => {
+    describe(`GET ${path}`, () => {
+      it(`should ${description} successfully`, async () => {
+        const res = await ctx.authReq.get(path);
+        expect(res.status).toBe(200);
+      });
+
+      it("should return 401 without auth", async () => {
+        const res = await ctx.req.get(path);
+        expect(res.status).toBe(401);
+      });
     });
   });
 
@@ -124,4 +128,4 @@ describe('Clients API (Integration)', () => {
       expect(res.status).toBe(401);
     });
   });
-})
+});
