@@ -1,11 +1,11 @@
-import { createTestContext, TestContext } from './test-helper'
+import { createTestContext, TestContext } from "./test-helper";
 
-describe('Subscriptions API (Integration)', () => {
-  let ctx: TestContext
+describe("Subscriptions API (Integration)", () => {
+  let ctx: TestContext;
 
   beforeAll(async () => {
-    ctx = await createTestContext()
-  })
+    ctx = await createTestContext();
+  });
 
   describe("POST /api/subscriptions", () => {
     it("should create subscription successfully", async () => {
@@ -85,50 +85,49 @@ describe('Subscriptions API (Integration)', () => {
     });
   });
 
-  describe("POST /api/subscriptions/:id/cancel", () => {
-    it("should cancel subscription successfully", async () => {
-      const email = `testuser-${Date.now()}@example.com`;
-      const userRes = await ctx.authReq.post("/api/users").send({ name: "Test User", email, password: "password123" });
-      const clientRes = await ctx.authReq.post("/api/clients").send({ name: "Test Client", price: 100 });
-      const createRes = await ctx.authReq
-        .post("/api/subscriptions")
-        .send({ userId: userRes.body.id, planId: clientRes.body.id });
-      const res = await ctx.authReq.post(`/api/subscriptions/${createRes.body.id}/cancel`);
-      expect(res.status).toBe(201);
-    });
+  const subscriptionActionEndpoints = [
+    {
+      path: "/api/subscriptions/:id/cancel",
+      action: "cancel",
+      successTest: async (subscriptionId: string) => {
+        const res = await ctx.authReq.post(`/api/subscriptions/${subscriptionId}/cancel`);
+        expect(res.status).toBe(201);
+      },
+    },
+    {
+      path: "/api/subscriptions/:id/activate",
+      action: "activate",
+      successTest: async (subscriptionId: string) => {
+        await ctx.authReq.post(`/api/subscriptions/${subscriptionId}/cancel`);
+        const res = await ctx.authReq.post(`/api/subscriptions/${subscriptionId}/activate`);
+        expect(res.status).toBe(201);
+      },
+    },
+  ];
 
-    it("should return 404 for non-existent subscription", async () => {
-      const res = await ctx.authReq.post("/api/subscriptions/99999/cancel");
-      expect(res.status).toBe(404);
-    });
+  subscriptionActionEndpoints.forEach(({ path, action, successTest }) => {
+    describe(`POST ${path}`, () => {
+      it(`should ${action} subscription successfully`, async () => {
+        const email = `testuser-${Date.now()}@example.com`;
+        const userRes = await ctx.authReq
+          .post("/api/users")
+          .send({ name: "Test User", email, password: "password123" });
+        const clientRes = await ctx.authReq.post("/api/clients").send({ name: "Test Client", price: 100 });
+        const createRes = await ctx.authReq
+          .post("/api/subscriptions")
+          .send({ userId: userRes.body.id, planId: clientRes.body.id });
+        await successTest(createRes.body.id);
+      });
 
-    it("should return 401 without auth", async () => {
-      const res = await ctx.req.post("/api/subscriptions/1/cancel");
-      expect(res.status).toBe(401);
+      it("should return 404 for non-existent subscription", async () => {
+        const res = await ctx.authReq.post(`/api/subscriptions/99999/${action}`);
+        expect(res.status).toBe(404);
+      });
+
+      it("should return 401 without auth", async () => {
+        const res = await ctx.req.post(`/api/subscriptions/1/${action}`);
+        expect(res.status).toBe(401);
+      });
     });
   });
-
-  describe("POST /api/subscriptions/:id/activate", () => {
-    it("should activate subscription successfully", async () => {
-      const email = `testuser-${Date.now()}@example.com`;
-      const userRes = await ctx.authReq.post("/api/users").send({ name: "Test User", email, password: "password123" });
-      const clientRes = await ctx.authReq.post("/api/clients").send({ name: "Test Client", price: 100 });
-      const createRes = await ctx.authReq
-        .post("/api/subscriptions")
-        .send({ userId: userRes.body.id, planId: clientRes.body.id });
-      await ctx.authReq.post(`/api/subscriptions/${createRes.body.id}/cancel`);
-      const res = await ctx.authReq.post(`/api/subscriptions/${createRes.body.id}/activate`);
-      expect(res.status).toBe(201);
-    });
-
-    it("should return 404 for non-existent subscription", async () => {
-      const res = await ctx.authReq.post("/api/subscriptions/99999/activate");
-      expect(res.status).toBe(404);
-    });
-
-    it("should return 401 without auth", async () => {
-      const res = await ctx.req.post("/api/subscriptions/1/activate");
-      expect(res.status).toBe(401);
-    });
-  });
-})
+});

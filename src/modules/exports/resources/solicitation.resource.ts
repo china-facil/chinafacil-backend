@@ -1,5 +1,6 @@
 import { Solicitation, Cart } from '@prisma/client'
 import { QuotationService } from '../../settings/services/quotation.service'
+import { DateHelper, CurrencyHelper } from '../../../common/helpers'
 
 export class SolicitationResource {
   constructor(
@@ -26,7 +27,7 @@ export class SolicitationResource {
         : '',
       CNPJ: '',
       TOTAL: await this.getTotal(cartItems),
-      DATA: this.formatDate(this.solicitation.createdAt),
+      DATA: DateHelper.formatBRWithTime(this.solicitation.createdAt),
     }
 
     return data
@@ -66,7 +67,7 @@ export class SolicitationResource {
     const getCNY = await this.getQuotationRate()
     const total = this.calculateTotal(items, getCNY)
 
-    return `R$ ${this.formatCurrency(total)}`
+    return CurrencyHelper.formatBRWithSymbol(total)
   }
 
   private async getQuotationRate(): Promise<number> {
@@ -200,20 +201,6 @@ export class SolicitationResource {
       finished: 'Finalizado',
     }
     return statuses[status] || 'Novo'
-  }
-
-  private formatDate(date: Date): string {
-    const d = new Date(date)
-    const day = String(d.getDate()).padStart(2, '0')
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const year = d.getFullYear()
-    const hours = String(d.getHours()).padStart(2, '0')
-    const minutes = String(d.getMinutes()).padStart(2, '0')
-    return `${day}/${month}/${year} ${hours}:${minutes}`
-  }
-
-  private formatCurrency(value: number): string {
-    return value.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   }
 }
 

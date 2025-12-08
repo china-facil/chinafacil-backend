@@ -1,4 +1,5 @@
 import { User } from '@prisma/client'
+import { DateHelper, CurrencyHelper } from "../../../common/helpers";
 
 export class UserResource {
   constructor(private readonly user: User & { type?: string }) {}
@@ -9,7 +10,7 @@ export class UserResource {
       NOME: this.user.name,
       EMAIL: this.user.email,
       TELEFONE: this.user.phone || "",
-      "CADASTRADO EM": this.formatDate(this.user.createdAt),
+      "CADASTRADO EM": DateHelper.formatBRWithTime(this.user.createdAt),
     };
 
     if (this.user.role === "lead") {
@@ -82,12 +83,12 @@ export class UserResource {
   private addCompanyBasicInfo(data: Record<string, any>, company: any, status: any, companyData: any): void {
     data["NOME EMPRESA"] = company.name || "";
     data.STATUS = status.text || "";
-    data["DATA ABERTURA"] = companyData.founded ? this.formatDate(new Date(companyData.founded)) : "";
+    data["DATA ABERTURA"] = companyData.founded ? DateHelper.formatBRWithTime(new Date(companyData.founded)) : "";
     data["RAZÃO SOCIAL"] = company.name || "";
     data.PORTE = company.size?.text || "";
     data["NATUREZA JURÍDICA"] = company.nature?.text || "";
-    data["CAPITAL SOCIAL"] = company.equity ? `R$ ${this.formatCurrency(company.equity)}` : "";
-    data["ATUALIZADO EM"] = companyData.updated ? this.formatDate(new Date(companyData.updated)) : "";
+    data["CAPITAL SOCIAL"] = company.equity ? CurrencyHelper.formatBRWithSymbol(company.equity) : "";
+    data["ATUALIZADO EM"] = companyData.updated ? DateHelper.formatBRWithTime(new Date(companyData.updated)) : "";
   }
 
   private addCompanyContactInfo(data: Record<string, any>, companyData: any): void {
@@ -142,23 +143,6 @@ export class UserResource {
       sourcer: "Sourcer",
     };
     return roles[role] || "Lead";
-  }
-
-  private formatDate(date: Date): string {
-    const d = new Date(date);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, "0");
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
-  }
-
-  private formatCurrency(value: number): string {
-    return value
-      .toFixed(2)
-      .replace(".", ",")
-      .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   }
 }
 
