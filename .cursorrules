@@ -48,12 +48,39 @@ Este é um projeto backend construído com NestJS (Node.js framework). A estrutu
 
 **Regras de implementação:**
 - EVITE métodos de teste com mais de 10 linhas de código
-- Cada teste deve validar UM ÚNICO status code esperado
-- NUNCA aceitar múltiplos status codes (ex: `expect([200, 400]).toContain(res.status)` é PROIBIDO)
-- Teste de sucesso: esperar exatamente 200, 201 ou 204
-- Teste de bad request: esperar exatamente 400
-- Teste de middleware: esperar exatamente 401 ou 403
 - Validar apenas campos principais da resposta, não toda a estrutura
+
+**⚠️ REGRA CRÍTICA - STATUS CODE ÚNICO:**
+- Cada teste DEVE validar EXATAMENTE UM status code
+- Use SEMPRE `expect(res.status).toBe(XXX)` com um único valor
+- PROIBIDO usar arrays de status: `expect([200, 400, 500]).toContain(res.status)` ❌
+- PROIBIDO aceitar "qualquer sucesso": `expect(res.status).toBeLessThan(400)` ❌
+- Se o endpoint pode retornar diferentes status em cenários diferentes, crie TESTES SEPARADOS para cada cenário
+
+**Status codes esperados por tipo de teste:**
+- Teste de sucesso GET: `expect(res.status).toBe(200)`
+- Teste de sucesso POST: `expect(res.status).toBe(201)`
+- Teste de sucesso DELETE/PATCH/PUT: `expect(res.status).toBe(200)`
+- Teste de bad request: `expect(res.status).toBe(400)`
+- Teste sem autenticação: `expect(res.status).toBe(401)`
+- Teste sem permissão: `expect(res.status).toBe(403)`
+- Teste recurso não encontrado: `expect(res.status).toBe(404)`
+
+**Exemplo CORRETO:**
+```typescript
+it("should create user successfully", async () => {
+  const res = await ctx.authReq.post("/api/users").send(validPayload);
+  expect(res.status).toBe(201);
+});
+```
+
+**Exemplo ERRADO (NUNCA FAÇA ISSO):**
+```typescript
+it("should search products", async () => {
+  const res = await ctx.req.get("/api/products/search?q=test");
+  expect([200, 500, 503]).toContain(res.status); // ❌ PROIBIDO
+});
+```
 
 ### Banco de Dados (Prisma)
 - Nomes de tabelas em snake_case (exemplo: `user_profiles`, `order_items`).

@@ -90,8 +90,8 @@ export class SolicitationsService {
           items: {
             select: {
               id: true,
-              quantity: true,
-              price: true,
+              actionOf: true,
+              message: true,
               status: true,
             },
           },
@@ -214,7 +214,6 @@ export class SolicitationsService {
       openSolicitations,
       totalItems,
       uniqueUsers,
-      totalValue,
     ] = await Promise.all([
       this.prisma.solicitation.count(),
       this.prisma.solicitation.count({
@@ -224,11 +223,6 @@ export class SolicitationsService {
       this.prisma.solicitation.groupBy({
         by: ['userId'],
       }),
-      this.prisma.solicitationItem.aggregate({
-        _sum: {
-          price: true,
-        },
-      }),
     ])
 
     return {
@@ -236,7 +230,6 @@ export class SolicitationsService {
       openSolicitations,
       totalItems,
       uniqueUsers: uniqueUsers.length,
-      totalValue: totalValue._sum.price || 0,
     }
   }
 
@@ -256,8 +249,8 @@ export class SolicitationsService {
         items: {
           select: {
             id: true,
-            quantity: true,
-            price: true,
+            actionOf: true,
+            status: true,
           },
         },
       },
