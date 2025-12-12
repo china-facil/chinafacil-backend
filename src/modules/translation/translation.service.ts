@@ -14,7 +14,9 @@ export class TranslationService {
   ) {}
 
   async translateText(translateTextDto: TranslateTextDto) {
-    const cacheKey = `translation:${translateTextDto.from || 'zh-CN'}:${translateTextDto.to}:${translateTextDto.text}`
+    const from = translateTextDto.from || 'zh-CN'
+    const to = translateTextDto.to || 'pt'
+    const cacheKey = `translation:${from}:${to}:${translateTextDto.text}`
     
     const cached = await this.cacheManager.get(cacheKey)
     if (cached) {
@@ -24,8 +26,8 @@ export class TranslationService {
 
     const result = await this.googleTranslation.translate(
       translateTextDto.text,
-      translateTextDto.to,
-      translateTextDto.from || 'zh-CN',
+      to,
+      from,
     )
 
     await this.cacheManager.set(cacheKey, result, 86400000 * 7)

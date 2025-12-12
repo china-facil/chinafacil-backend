@@ -434,5 +434,89 @@ export class UsersService {
         return []
     }
   }
+
+  async getStatisticsAdminDashboard(startDate?: string, endDate?: string) {
+    const dateFilter: any = {}
+    
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        gte: new Date(`${startDate} 00:00:00`),
+        lte: new Date(`${endDate} 23:59:59`),
+      }
+    }
+
+    const [totalLeads, totalClients, totalUsers, totalSolicitations, solicitationsWithCart] = await Promise.all([
+      this.prisma.user.count({
+        where: {
+          role: UserRole.user,
+          subscription: null,
+          ...dateFilter,
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: UserRole.user,
+          subscription: { isNot: null },
+          ...(startDate && endDate ? {
+            subscription: {
+              createdAt: {
+                gte: new Date(`${startDate} 00:00:00`),
+                lte: new Date(`${endDate} 23:59:59`),
+              },
+            },
+          } : {}),
+        },
+      }),
+      this.prisma.user.count(),
+      this.prisma.solicitation.count({
+        where: dateFilter,
+      }),
+      this.prisma.solicitation.findMany({
+        where: {
+          ...dateFilter,
+          cart: { isNot: null },
+        },
+        include: {
+          cart: true,
+        },
+      }),
+    ])
+
+    const totalMonthValue = this.calculateTotalCartValue(solicitationsWithCart)
+
+    return {
+      status: 'success',
+      data: {
+        totalLeads,
+        totalClients,
+        totalSolicitations,
+        totalUsers,
+        totalMonthValue,
+      },
+    }
+  }
+
+  private calculateTotalCartValue(solicitationsWithCart: any[]): number {
+    let grandTotal = 0
+
+    for (const solicitation of solicitationsWithCart) {
+      if (!solicitation.cart?.items) continue
+
+      const items = solicitation.cart.items as any[]
+      if (!Array.isArray(items)) continue
+
+      for (const item of items) {
+        if (item.variations && Array.isArray(item.variations)) {
+          for (const variation of item.variations) {
+            const price = parseFloat(variation.price || 0)
+            const quantity = parseFloat(variation.quantity || 0)
+            grandTotal += price * quantity
+          }
+        }
+      }
+    }
+
+    return grandTotal
+  }
 }
 

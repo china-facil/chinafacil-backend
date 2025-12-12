@@ -28,18 +28,13 @@ export class StatisticsController {
 
   @Get('monthly-metrics')
   @Roles('admin', 'seller')
-  @ApiOperation({ summary: 'Métricas mensais' })
-  @ApiQuery({ name: 'year', required: false, type: Number })
-  @ApiQuery({ name: 'month', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Métricas do mês' })
+  @ApiOperation({ summary: 'Métricas mensais para gráfico' })
+  @ApiQuery({ name: 'metric', required: false, type: String, description: 'Tipo de métrica: revenue, leads, clients, solicitations' })
+  @ApiResponse({ status: 200, description: 'Métricas por mês' })
   async getMonthlyMetrics(
-    @Query('year') year?: number,
-    @Query('month') month?: number,
+    @Query('metric') metric?: string,
   ) {
-    return this.statisticsService.getMonthlyMetrics(
-      year ? Number(year) : undefined,
-      month ? Number(month) : undefined,
-    )
+    return this.statisticsService.getMonthlyMetricsChart(metric || 'revenue')
   }
 
   @Get('admin-dashboard')

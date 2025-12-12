@@ -42,10 +42,10 @@ export class SolicitationsService {
   }
 
   async findAll(filterDto: FilterSolicitationDto) {
-    const { search, status, userId, clientId, page = 1, limit = 10 } = filterDto
+    const { search, status, userId, clientId, page = 1, limit, items_per_page } = filterDto
+    const take = items_per_page || limit || 10
 
-    const skip = (page - 1) * limit
-    const take = limit
+    const skip = (page - 1) * take
 
     const where: any = {}
 
@@ -110,8 +110,8 @@ export class SolicitationsService {
       meta: {
         total,
         page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        limit: take,
+        totalPages: Math.ceil(total / take),
       },
     }
   }

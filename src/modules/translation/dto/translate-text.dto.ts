@@ -3,24 +3,26 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class TranslateTextDto {
   @ApiProperty({
-    example: 'Hello world',
+    example: '东莞市大岭山欣远胜电子配件商行',
     description: 'Texto a ser traduzido',
   })
   @IsString()
   @IsNotEmpty()
   text: string
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'pt',
-    description: 'Idioma de destino',
+    description: 'Idioma de destino (padrão: pt)',
+    default: 'pt',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  to: string
+  to?: string
 
   @ApiPropertyOptional({
-    example: 'en',
-    description: 'Idioma de origem',
+    example: 'zh-CN',
+    description: 'Idioma de origem (padrão: zh-CN)',
+    default: 'zh-CN',
   })
   @IsOptional()
   @IsString()

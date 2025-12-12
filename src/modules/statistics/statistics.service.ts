@@ -1,41 +1,169 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { SolicitationStatus, SubscriptionStatus } from '@prisma/client'
 import { PrismaService } from '../../database/prisma.service'
 
 @Injectable()
 export class StatisticsService {
+  private readonly logger = new Logger(StatisticsService.name)
+  
   constructor(private readonly prisma: PrismaService) {}
 
   async getTotalClientsByPlan() {
-    const subscriptions = await this.prisma.subscription.groupBy({
-      by: ['planId'],
-      where: {
-        status: SubscriptionStatus.active,
-      },
-      _count: {
-        id: true,
-      },
-    })
+    try {
+      const plans = await this.prisma.$queryRaw<Array<{ plan: string; total: bigint }>>`
+        SELECT 
+          c.name as plan,
+          COUNT(s.id) as total
+        FROM clients c
+        LEFT JOIN subscriptions s ON s.plan_id = c.id AND s.status = 'active'
+        WHERE c.deleted_at IS NULL
+        GROUP BY c.id, c.name
+        ORDER BY CASE 
+          WHEN UPPER(c.name) = 'SILVER' THEN 1
+          WHEN UPPER(c.name) = 'GOLD' THEN 2
+          WHEN UPPER(c.name) = 'BLACK' THEN 3
+          WHEN UPPER(c.name) = 'PLATINUM' THEN 4
+          ELSE 5
+        END
+      `
 
-    const result = await Promise.all(
-      subscriptions.map(async (sub) => {
-        const client = await this.prisma.client.findUnique({
-          where: { id: sub.planId },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-          },
-        })
+      this.logger.log(`Plans found: ${JSON.stringify(plans)}`)
 
+      if (!plans || plans.length === 0) {
         return {
-          client,
-          count: sub._count.id,
+          status: 'success',
+          data: {
+            series: [0, 0, 0, 0],
+            categories: ['Silver', 'Gold', 'Black', 'Platinum'],
+          },
         }
-      }),
-    )
+      }
 
-    return result
+      const response = {
+        series: plans.map(p => Number(p.total)),
+        categories: plans.map(p => p.plan),
+      }
+
+      return {
+        status: 'success',
+        data: response,
+      }
+    } catch (error) {
+      this.logger.error(`Error getting clients by plan: ${error.message}`)
+      return {
+        status: 'success',
+        data: {
+          series: [0, 0, 0, 0],
+          categories: ['Silver', 'Gold', 'Black', 'Platinum'],
+        },
+      }
+    }
+  }
+
+  async getMonthlyMetricsChart(metric: string = 'revenue') {
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth() + 1
+
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+    const series: number[] = []
+    const categories: string[] = []
+
+    for (let month = 1; month <= currentMonth; month++) {
+      const startDate = new Date(currentYear, month - 1, 1)
+      const endDate = new Date(currentYear, month, 0, 23, 59, 59)
+
+      let value = 0
+
+      switch (metric) {
+        case 'revenue':
+          const solicitationsWithCart = await this.prisma.solicitation.findMany({
+            where: {
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+              cart: { isNot: null },
+            },
+            include: {
+              cart: true,
+            },
+          })
+          value = this.calculateCartTotal(solicitationsWithCart)
+          break
+
+        case 'leads':
+          value = await this.prisma.user.count({
+            where: {
+              role: 'user',
+              subscription: null,
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
+          })
+          break
+
+        case 'clients':
+          value = await this.prisma.user.count({
+            where: {
+              role: 'user',
+              subscription: { isNot: null },
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
+          })
+          break
+
+        case 'solicitations':
+          value = await this.prisma.solicitation.count({
+            where: {
+              createdAt: {
+                gte: startDate,
+                lte: endDate,
+              },
+            },
+          })
+          break
+
+        default:
+          value = 0
+      }
+
+      series.push(Math.round(value * 100) / 100)
+      categories.push(monthNames[month - 1])
+    }
+
+    return {
+      status: 'success',
+      data: {
+        series,
+        categories,
+      },
+    }
+  }
+
+  private calculateCartTotal(solicitationsWithCart: any[]): number {
+    let total = 0
+    for (const solicitation of solicitationsWithCart) {
+      if (!solicitation.cart?.items) continue
+      const items = solicitation.cart.items as any[]
+      if (!Array.isArray(items)) continue
+      for (const item of items) {
+        if (item.variations && Array.isArray(item.variations)) {
+          for (const variation of item.variations) {
+            const price = parseFloat(variation.price || 0)
+            const quantity = parseFloat(variation.quantity || 0)
+            total += price * quantity
+          }
+        }
+      }
+    }
+    return total
   }
 
   async getMonthlyMetrics(year?: number, month?: number) {
