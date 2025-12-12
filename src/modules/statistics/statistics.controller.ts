@@ -22,6 +22,8 @@ export class StatisticsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Total de clientes por plano' })
   @ApiResponse({ status: 200, description: 'Estatísticas por plano' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getTotalClientsByPlan() {
     return this.statisticsService.getTotalClientsByPlan()
   }
@@ -32,6 +34,8 @@ export class StatisticsController {
   @ApiQuery({ name: 'year', required: false, type: Number })
   @ApiQuery({ name: 'month', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Métricas do mês' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getMonthlyMetrics(
     @Query('year') year?: number,
     @Query('month') month?: number,
@@ -46,6 +50,8 @@ export class StatisticsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Estatísticas do dashboard admin' })
   @ApiResponse({ status: 200, description: 'Dashboard statistics' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getAdminDashboard() {
     return this.statisticsService.getAdminDashboardStatistics()
   }
@@ -54,6 +60,8 @@ export class StatisticsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Solicitações agrupadas por status' })
   @ApiResponse({ status: 200, description: 'Contagem por status' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getSolicitationsByStatus() {
     return this.statisticsService.getSolicitationsByStatus()
   }
@@ -63,6 +71,8 @@ export class StatisticsController {
   @ApiOperation({ summary: 'Crescimento de usuários' })
   @ApiQuery({ name: 'months', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Crescimento mensal' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getUserGrowth(@Query('months') months?: number) {
     return this.statisticsService.getUserGrowth(
       months ? Number(months) : undefined,

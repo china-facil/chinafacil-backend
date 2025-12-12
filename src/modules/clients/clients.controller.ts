@@ -31,7 +31,21 @@ export class ClientsController {
   @Post()
   @Roles('admin')
   @ApiOperation({ summary: 'Criar novo cliente' })
-  @ApiResponse({ status: 201, description: 'Cliente criado com sucesso' })
+  @ApiResponse({
+    status: 201,
+    description: 'Cliente criado com sucesso',
+    schema: {
+      example: {
+        id: 'client-uuid',
+        name: 'Empresa XYZ LTDA',
+        price: 99.90,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async create(@Body() createClientDto: CreateClientDto) {
     return this.clientsService.create(createClientDto)
   }
@@ -86,6 +100,9 @@ export class ClientsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Vincular usuário ao cliente' })
   @ApiResponse({ status: 200, description: 'Usuário vinculado com sucesso' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Cliente ou usuário não encontrado' })
   async attachUser(
     @Param('clientId') clientId: string,
     @Param('userId') userId: string,
@@ -97,6 +114,9 @@ export class ClientsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Desvincular usuário do cliente' })
   @ApiResponse({ status: 200, description: 'Usuário desvinculado com sucesso' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Cliente ou usuário não encontrado' })
   async detachUser(
     @Param('clientId') clientId: string,
     @Param('userId') userId: string,

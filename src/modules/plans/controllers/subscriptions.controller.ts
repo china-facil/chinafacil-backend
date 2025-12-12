@@ -33,6 +33,8 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Criar nova assinatura' })
   @ApiResponse({ status: 201, description: 'Assinatura criada com sucesso' })
   @ApiResponse({ status: 400, description: 'Usuário já possui assinatura' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async create(@Body() createSubscriptionDto: CreateSubscriptionDto) {
     return this.subscriptionsService.create(createSubscriptionDto)
   }
@@ -41,6 +43,8 @@ export class SubscriptionsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Listar todas as assinaturas' })
   @ApiResponse({ status: 200, description: 'Lista de assinaturas' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async findAll() {
     return this.subscriptionsService.findAll()
   }
@@ -49,6 +53,9 @@ export class SubscriptionsController {
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Obter assinatura de um usuário' })
   @ApiResponse({ status: 200, description: 'Assinatura do usuário' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async findByUser(@Param('userId') userId: string) {
     return this.subscriptionsService.findByUser(userId)
   }
@@ -57,6 +64,8 @@ export class SubscriptionsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Obter detalhes de uma assinatura' })
   @ApiResponse({ status: 200, description: 'Detalhes da assinatura' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionsService.findOne(id)
@@ -66,6 +75,9 @@ export class SubscriptionsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Atualizar assinatura' })
   @ApiResponse({ status: 200, description: 'Assinatura atualizada com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -78,6 +90,8 @@ export class SubscriptionsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Remover assinatura' })
   @ApiResponse({ status: 200, description: 'Assinatura removida com sucesso' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionsService.remove(id)
@@ -87,6 +101,8 @@ export class SubscriptionsController {
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Cancelar assinatura' })
   @ApiResponse({ status: 200, description: 'Assinatura cancelada com sucesso' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async cancel(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionsService.cancel(id)
@@ -96,6 +112,8 @@ export class SubscriptionsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Ativar assinatura' })
   @ApiResponse({ status: 200, description: 'Assinatura ativada com sucesso' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async activate(@Param('id', ParseIntPipe) id: number) {
     return this.subscriptionsService.activate(id)
