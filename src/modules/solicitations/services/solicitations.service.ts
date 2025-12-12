@@ -79,6 +79,7 @@ export class SolicitationsService {
               id: true,
               name: true,
               email: true,
+              role: true,
             },
           },
           client: {
@@ -87,6 +88,7 @@ export class SolicitationsService {
               name: true,
             },
           },
+          cart: true,
           items: {
             select: {
               id: true,
@@ -105,13 +107,48 @@ export class SolicitationsService {
       this.prisma.solicitation.count({ where }),
     ])
 
+    const solicitationsWithTotal = solicitations.map(solicitation => {
+      let cartTotal = 0
+      if (solicitation.cart?.items) {
+        let items: any = solicitation.cart.items
+        
+        if (typeof items === 'string') {
+          try {
+            items = JSON.parse(items)
+          } catch (e) {
+            items = []
+          }
+        }
+        
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            if (item?.variations && Array.isArray(item.variations)) {
+              for (const variation of item.variations) {
+                const price = parseFloat(variation.price || 0)
+                const quantity = parseFloat(variation.quantity || 0)
+                cartTotal += price * quantity
+              }
+            }
+          }
+        }
+      }
+      return {
+        ...solicitation,
+        cart: solicitation.cart ? {
+          ...solicitation.cart,
+          total: cartTotal,
+        } : null,
+      }
+    })
+
     return {
-      data: solicitations,
+      status: 'success',
+      data: solicitationsWithTotal,
       meta: {
         total,
-        page,
-        limit: take,
-        totalPages: Math.ceil(total / take),
+        last_page: Math.ceil(total / take),
+        current_page: page,
+        per_page: take,
       },
     }
   }

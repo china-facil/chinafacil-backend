@@ -96,8 +96,7 @@ export class StatisticsService {
         case 'leads':
           value = await this.prisma.user.count({
             where: {
-              role: 'user',
-              subscription: null,
+              role: 'lead',
               createdAt: {
                 gte: startDate,
                 lte: endDate,
@@ -109,8 +108,7 @@ export class StatisticsService {
         case 'clients':
           value = await this.prisma.user.count({
             where: {
-              role: 'user',
-              subscription: { isNot: null },
+              role: 'client',
               createdAt: {
                 gte: startDate,
                 lte: endDate,
@@ -149,10 +147,30 @@ export class StatisticsService {
 
   private calculateCartTotal(solicitationsWithCart: any[]): number {
     let total = 0
+    this.logger.log(`Processing ${solicitationsWithCart.length} solicitations with cart`)
+    
     for (const solicitation of solicitationsWithCart) {
-      if (!solicitation.cart?.items) continue
-      const items = solicitation.cart.items as any[]
-      if (!Array.isArray(items)) continue
+      if (!solicitation.cart?.items) {
+        this.logger.log(`Solicitation ${solicitation.id} has no cart items`)
+        continue
+      }
+      
+      let items = solicitation.cart.items
+      
+      if (typeof items === 'string') {
+        try {
+          items = JSON.parse(items)
+        } catch (e) {
+          this.logger.error(`Failed to parse items for solicitation ${solicitation.id}`)
+          continue
+        }
+      }
+      
+      if (!Array.isArray(items)) {
+        this.logger.log(`Items is not an array for solicitation ${solicitation.id}, type: ${typeof items}`)
+        continue
+      }
+      
       for (const item of items) {
         if (item.variations && Array.isArray(item.variations)) {
           for (const variation of item.variations) {
@@ -163,6 +181,8 @@ export class StatisticsService {
         }
       }
     }
+    
+    this.logger.log(`Total calculated: ${total}`)
     return total
   }
 
