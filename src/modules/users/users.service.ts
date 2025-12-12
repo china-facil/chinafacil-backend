@@ -57,10 +57,25 @@ export class UsersService {
   }
 
   async findAll(filterDto: FilterUserDto) {
-    const { search, role, status, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = filterDto
+    const { 
+      search, 
+      role, 
+      status, 
+      page = 1, 
+      limit = 10, 
+      items_per_page,
+      phone_verified,
+      date_start,
+      date_end,
+      order,
+      'order-key': orderKey,
+      sortBy = 'createdAt', 
+      sortOrder = 'desc' 
+    } = filterDto
 
-    const skip = (page - 1) * limit
-    const take = limit
+    const perPage = items_per_page || limit
+    const skip = (page - 1) * perPage
+    const take = perPage
 
     const where: any = {}
 
@@ -79,13 +94,27 @@ export class UsersService {
       where.status = status
     }
 
+    if (phone_verified !== undefined) {
+      where.phoneVerified = phone_verified
+    }
+
+    if (date_start && date_end) {
+      where.createdAt = {
+        gte: new Date(`${date_start} 00:00:00`),
+        lte: new Date(`${date_end} 23:59:59`),
+      }
+    }
+
+    const actualSortBy = orderKey || sortBy
+    const actualSortOrder = order || sortOrder
+
     const [users, total] = await Promise.all([
       this.prisma.user.findMany({
         where,
         skip,
         take,
         orderBy: {
-          [sortBy as string]: sortOrder,
+          [actualSortBy as string]: actualSortOrder,
         },
         select: {
           id: true,
@@ -113,12 +142,19 @@ export class UsersService {
     ])
 
     return {
-      data: users,
-      meta: {
+      status: 'success',
+      data: {
+        data: users.map(user => ({
+          ...user,
+          phone_verified: user.phoneVerified,
+          created_at: user.createdAt,
+          updated_at: user.updatedAt,
+          monthly_billing: user.monthlyBilling,
+        })),
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        totalPage: Math.ceil(total / perPage),
+        current_page: page,
+        per_page: perPage,
       },
     }
   }
@@ -433,6 +469,97 @@ export class UsersService {
       default:
         return []
     }
+  }
+
+  async getStatisticsAdminDashboard(startDate?: string, endDate?: string) {
+    const dateFilter: any = {}
+    
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        gte: new Date(`${startDate} 00:00:00`),
+        lte: new Date(`${endDate} 23:59:59`),
+      }
+    }
+
+    const [totalLeads, totalClients, totalUsers, totalSolicitations, solicitationsWithCart] = await Promise.all([
+      this.prisma.user.count({
+        where: {
+          role: UserRole.lead,
+          ...dateFilter,
+        },
+      }),
+      this.prisma.user.count({
+        where: {
+          role: UserRole.client,
+          ...(startDate && endDate ? {
+            subscription: {
+              createdAt: {
+                gte: new Date(`${startDate} 00:00:00`),
+                lte: new Date(`${endDate} 23:59:59`),
+              },
+            },
+          } : {}),
+        },
+      }),
+      this.prisma.user.count(),
+      this.prisma.solicitation.count({
+        where: dateFilter,
+      }),
+      this.prisma.solicitation.findMany({
+        where: {
+          ...dateFilter,
+          cart: { isNot: null },
+        },
+        include: {
+          cart: true,
+        },
+      }),
+    ])
+
+    const totalMonthValue = this.calculateTotalCartValue(solicitationsWithCart)
+
+    return {
+      status: 'success',
+      data: {
+        totalLeads,
+        totalClients,
+        totalSolicitations,
+        totalUsers,
+        totalMonthValue,
+      },
+    }
+  }
+
+  private calculateTotalCartValue(solicitationsWithCart: any[]): number {
+    let grandTotal = 0
+
+    for (const solicitation of solicitationsWithCart) {
+      if (!solicitation.cart?.items) continue
+
+      let items: any = solicitation.cart.items
+      
+      if (typeof items === 'string') {
+        try {
+          items = JSON.parse(items)
+        } catch (e) {
+          continue
+        }
+      }
+      
+      if (!Array.isArray(items)) continue
+
+      for (const item of items) {
+        if (item?.variations && Array.isArray(item.variations)) {
+          for (const variation of item.variations) {
+            const price = parseFloat(variation.price || 0)
+            const quantity = parseFloat(variation.quantity || 0)
+            grandTotal += price * quantity
+          }
+        }
+      }
+    }
+
+    return grandTotal
   }
 }
 

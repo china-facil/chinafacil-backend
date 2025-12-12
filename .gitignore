@@ -74,3 +74,4 @@ md/
 setup-env.sh
 
 .env.docker
+google_credentials.json

@@ -4,13 +4,19 @@ import { NormalizedProduct } from './product.interface'
 @Injectable()
 export class AlibabaIntlNormalizer {
   normalizeSearchItem(item: any): NormalizedProduct {
+    const imageUrl = this.normalizeImageUrl(item.ImageUrl || item.Image)
+    const price = this.extractPrice(item)
+
     return {
       id: item.Id?.toString() || item.ProductId?.toString() || '',
+      item_id: item.Id?.toString() || item.ProductId?.toString() || '',
       title: item.Subject || item.ProductTitle || '',
-      price: this.extractPrice(item),
+      price,
+      float_price: price,
       originalPrice: undefined,
       currency: 'USD',
-      imageUrl: this.normalizeImageUrl(item.ImageUrl || item.Image),
+      imageUrl,
+      img: imageUrl,
       images: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
       supplier: {
         id: item.VendorId?.toString() || '',
@@ -19,8 +25,11 @@ export class AlibabaIntlNormalizer {
       },
       specifications: [],
       minimumOrder: parseInt(item.MinimumOrder || item.MOQ || '1', 10),
+      quantity_begin: parseInt(item.MinimumOrder || item.MOQ || '1', 10),
       salesQuantity: 0,
+      sold_quantity: 0,
       rating: 0,
+      goods_score: 0,
       url: item.ProductUrl || item.Url || '',
       provider: 'alibaba_intl',
     }

@@ -30,7 +30,13 @@ export class TranslationController {
   @ApiOperation({ summary: 'Traduzir texto' })
   @ApiResponse({ status: 201, description: 'Texto traduzido' })
   async translateText(@Body() translateTextDto: TranslateTextDto) {
-    return this.translationService.translateText(translateTextDto)
+    const result = await this.translationService.translateText(translateTextDto)
+    return {
+      status: 'success',
+      data: {
+        translated_text: Array.isArray(result) ? result[0] : result,
+      },
+    }
   }
 
   @Post('titles')
@@ -38,10 +44,16 @@ export class TranslationController {
   @ApiResponse({ status: 201, description: 'Títulos traduzidos' })
   async translateTitles(
     @Body('titles') titles: string[],
-    @Body('from') from: string,
-    @Body('to') to: string,
+    @Body('from') from: string = 'zh-CN',
+    @Body('to') to: string = 'pt',
   ) {
-    return this.translationService.translateTitles(titles, from, to)
+    const translatedTitles = await this.translationService.translateTitles(titles, from, to)
+    return {
+      status: 'success',
+      data: {
+        translated_titles: translatedTitles,
+      },
+    }
   }
 
   @Post('product')

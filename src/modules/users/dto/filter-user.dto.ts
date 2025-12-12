@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger'
 import { UserRole, UserStatus } from '@prisma/client'
-import { Type } from 'class-transformer'
-import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator'
+import { Transform, Type } from 'class-transformer'
+import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator'
 
 export class FilterUserDto {
   @ApiPropertyOptional({
@@ -26,6 +26,14 @@ export class FilterUserDto {
   status?: UserStatus
 
   @ApiPropertyOptional({
+    description: 'Filtrar por telefone verificado',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  phone_verified?: boolean
+
+  @ApiPropertyOptional({
     description: 'Página atual',
     default: 1,
   })
@@ -46,6 +54,16 @@ export class FilterUserDto {
   limit?: number = 10
 
   @ApiPropertyOptional({
+    description: 'Itens por página (alias)',
+    default: 10,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  items_per_page?: number
+
+  @ApiPropertyOptional({
     description: 'Campo para ordenação',
     default: 'createdAt',
   })
@@ -61,6 +79,34 @@ export class FilterUserDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc' = 'desc'
+
+  @ApiPropertyOptional({
+    description: 'Campo de ordenação',
+  })
+  @IsOptional()
+  @IsString()
+  'order-key'?: string
+
+  @ApiPropertyOptional({
+    description: 'Direção de ordenação',
+  })
+  @IsOptional()
+  @IsString()
+  order?: string
+
+  @ApiPropertyOptional({
+    description: 'Data inicial',
+  })
+  @IsOptional()
+  @IsString()
+  date_start?: string
+
+  @ApiPropertyOptional({
+    description: 'Data final',
+  })
+  @IsOptional()
+  @IsString()
+  date_end?: string
 }
 
 

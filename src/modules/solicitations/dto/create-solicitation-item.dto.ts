@@ -1,37 +1,38 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsNotEmpty, IsNumber, IsObject, IsOptional, IsString } from 'class-validator'
+import { IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class CreateSolicitationItemDto {
   @ApiProperty({
-    description: 'Dados do produto (JSON)',
+    example: 'client',
+    description: 'Quem deve tomar a ação (client ou chinafacil)',
   })
-  @IsObject()
+  @IsString()
   @IsNotEmpty()
-  productData: any
-
-  @ApiProperty({
-    example: 10,
-    description: 'Quantidade',
-  })
-  @IsNumber()
-  @IsNotEmpty()
-  quantity: number
+  @IsIn(['client', 'chinafacil'])
+  actionOf: string
 
   @ApiPropertyOptional({
-    example: 99.90,
-    description: 'Preço unitário',
+    example: false,
+    description: 'Se a ação do cliente é necessária',
   })
   @IsOptional()
-  @IsNumber()
-  price?: number
+  @IsBoolean()
+  clientActionRequired?: boolean
+
+  @ApiProperty({
+    example: 'Mensagem do item',
+    description: 'Mensagem/descrição do item',
+  })
+  @IsString()
+  @IsNotEmpty()
+  message: string
 
   @ApiPropertyOptional({
-    example: 'pending',
-    description: 'Status do item',
+    example: 'open',
+    description: 'Status do item (open, pending, in_progress, finished)',
   })
   @IsOptional()
   @IsString()
+  @IsIn(['open', 'pending', 'in_progress', 'finished'])
   status?: string
 }
-
-
