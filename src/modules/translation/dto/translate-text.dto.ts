@@ -28,7 +28,7 @@ export class TranslateTextDto {
 
   @ApiPropertyOptional({
     example: 'google',
-    description: 'Provider (google ou azure)',
+    description: 'Provider de tradução (google)',
   })
   @IsOptional()
   @IsString()
