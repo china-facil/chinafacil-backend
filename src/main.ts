@@ -8,6 +8,7 @@ import { AppModule } from './app.module'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
+import { BullBoardService } from './modules/bull-board/bull-board.service'
 
 // @ts-ignore
 BigInt.prototype.toJSON = function () {
@@ -74,6 +75,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config)
 
   SwaggerModule.setup('api/docs', app, document)
+
+  try {
+    const bullBoardService = app.get(BullBoardService)
+    bullBoardService.setApp(app)
+    bullBoardService.setupBullBoard()
+  } catch (error) {
+    console.warn('⚠️  Bull Board não pôde ser configurado:', error.message)
+  }
 
   const port = configService.get('PORT') || 3000
 

@@ -11,7 +11,14 @@ export class GenericWebhookDto {
   source?: string
 
   @ApiProperty({
-    description: 'Payload da webhook',
+    example: {
+      event: 'user.created',
+      data: {
+        userId: 'user-123',
+        email: 'user@example.com',
+      },
+    },
+    description: 'Payload da webhook (objeto JSON)',
   })
   @IsObject()
   @IsNotEmpty()

@@ -33,6 +33,7 @@ export class TaxCalculationController {
   @Post()
   @ApiOperation({ summary: 'Criar cálculo de impostos' })
   @ApiResponse({ status: 201, description: 'Cálculo criado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
   async create(@Body() createTaxCalculationDto: CreateTaxCalculationDto) {
     return this.taxCalculationService.create(createTaxCalculationDto)
   }
@@ -43,6 +44,8 @@ export class TaxCalculationController {
   @Roles('admin')
   @ApiOperation({ summary: 'Listar cálculos com filtros e paginação (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de cálculos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiQuery({ name: 'userId', required: false, type: String })
   @ApiQuery({ name: 'ncmCode', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
@@ -59,6 +62,9 @@ export class TaxCalculationController {
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Listar cálculos por usuário' })
   @ApiResponse({ status: 200, description: 'Cálculos do usuário' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   async findByUser(@Param('userId') userId: string) {
     return this.taxCalculationService.findByUser(userId)
   }

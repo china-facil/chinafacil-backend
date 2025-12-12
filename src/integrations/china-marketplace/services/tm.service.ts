@@ -70,6 +70,51 @@ export class TmService {
     }
   }
 
+  async convertImageUrl(imageUrl: string): Promise<{ code: number; msg: string; data?: { image_url?: string } | null }> {
+    this.logger.log('TmService::convertImageUrl - Iniciando conversão de imagem', {
+      image_url: imageUrl,
+      endpoint_url: this.baseUrl,
+      has_api_key: !!this.apiKey,
+    })
+
+    const endpoint = `${this.baseUrl}/1688/tools/image/convert_url`
+    const body = {
+      apiToken: this.apiKey,
+      url: imageUrl,
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(endpoint, body, {
+          timeout: 60000,
+        }),
+      )
+
+      this.logger.log('TmService::convertImageUrl - Resposta recebida', {
+        status_code: response.status,
+        response_body: JSON.stringify(response.data).substring(0, 500),
+        is_successful: response.status >= 200 && response.status < 300,
+        has_data_key: !!response.data?.data,
+        has_image_url_key: !!response.data?.data?.image_url,
+      })
+
+      return response.data
+    } catch (error: any) {
+      this.logger.error('TmService::convertImageUrl - Erro na requisição', {
+        error_message: error.message,
+        error_code: error.code,
+        endpoint,
+        body: { ...body, apiToken: '***' },
+      })
+
+      return {
+        code: 500,
+        msg: 'Erro na comunicação com o serviço: ' + error.message,
+        data: null,
+      }
+    }
+  }
+
   async searchProductsByImage(params: {
     imgUrl: string
     page?: number
@@ -79,10 +124,36 @@ export class TmService {
     priceEnd?: number
   }) {
     try {
+      this.logger.log('TmService::searchProductsByImage - Iniciando busca', {
+        originalImageUrl: params.imgUrl,
+      })
+
+      const convertResponse = await this.convertImageUrl(params.imgUrl)
+
+      if (convertResponse.code !== 200 || !convertResponse.data?.image_url) {
+        this.logger.warn('TmService::searchProductsByImage - Falha na conversão da imagem', {
+          convertCode: convertResponse.code,
+          convertMsg: convertResponse.msg,
+        })
+        return {
+          code: convertResponse.code,
+          msg: convertResponse.msg || 'Erro ao converter URL da imagem',
+          data: { items: [], total_count: 0 },
+        }
+      }
+
+      const convertedImageUrl = convertResponse.data.image_url
+
+      this.logger.log('TmService::searchProductsByImage - Imagem convertida', {
+        originalUrl: params.imgUrl,
+        convertedUrl: convertedImageUrl,
+      })
+
       const endpoint = `${this.baseUrl}/1688/search/image`
       const queryParams: any = {
         apiToken: this.apiKey,
-        img_url: params.imgUrl,
+        image_url: convertedImageUrl,
+        img_url: convertedImageUrl,
         page: params.page || 1,
         page_size: params.pageSize || 20,
         sort: params.sort || 'default',
@@ -96,7 +167,10 @@ export class TmService {
         queryParams.price_start = params.priceStart
       }
 
-      this.logger.log('TmService::searchProductsByImage - Iniciando busca')
+      this.logger.log('TmService::searchProductsByImage - Buscando produtos', {
+        endpoint,
+        queryParams: { ...queryParams, apiToken: '***' },
+      })
 
       const response = await firstValueFrom(
         this.httpService.get(endpoint, {
@@ -105,17 +179,36 @@ export class TmService {
         }),
       )
 
-      this.logger.log('TmService::searchProductsByImage - Resposta recebida')
+      this.logger.log('TmService::searchProductsByImage - Resposta recebida', {
+        statusCode: response.status,
+        hasData: !!response.data,
+        responseKeys: response.data ? Object.keys(response.data) : [],
+        hasDataItems: !!response.data?.data,
+        dataKeys: response.data?.data ? Object.keys(response.data.data) : [],
+        itemsCount: response.data?.data?.items?.length || 0,
+        responseSample: JSON.stringify(response.data).substring(0, 500),
+      })
 
-      return this.normalizer.normalize1688SearchResponse(response.data)
-    } catch (error) {
-      this.logger.error('TmService::searchProductsByImage - Erro', error.message)
+      const normalizedResponse = this.normalizer.normalize1688SearchResponse(response.data)
+      
+      this.logger.log('TmService::searchProductsByImage - Resposta normalizada', {
+        code: normalizedResponse.code,
+        msg: normalizedResponse.msg,
+        itemsCount: normalizedResponse.data?.items?.length || 0,
+      })
+
+      return normalizedResponse
+    } catch (error: any) {
+      this.logger.error('TmService::searchProductsByImage - Erro', {
+        message: error.message,
+        code: error.code,
+      })
       
       if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-        return { data: [], msg: 'timeout', code: 408 }
+        return { data: { items: [], total_count: 0 }, msg: 'timeout', code: 408 }
       }
       
-      return { data: [], msg: 'unknown', code: 500 }
+      return { data: { items: [], total_count: 0 }, msg: error.message || 'unknown', code: 500 }
     }
   }
 
