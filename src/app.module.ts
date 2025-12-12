@@ -24,7 +24,7 @@ import { ExportsModule } from './modules/exports/exports.module';
 import { TranslationModule } from './modules/translation/translation.module';
 import { OTPModule } from './modules/otp/otp.module';
 import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.module';
-import { BullBoardModuleConfig } from './modules/bull-board/bull-board.module';
+import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
 
 @Module({
@@ -42,8 +42,7 @@ import { CliModule } from './cli/cli.module';
             username: process.env.DB_USERNAME_NCM_IMPOSTOS || undefined,
             password: process.env.DB_PASSWORD_NCM_IMPOSTOS || undefined,
           },
-        }
-        console.log('[ConfigModule] Loading NCM config:', JSON.stringify(config.ncmDatabase))
+        };
         return config
       }],
     }),
@@ -101,8 +100,8 @@ import { CliModule } from './cli/cli.module';
     // Proxy
     ProxyModule,
 
-    // Bull Board Dashboard
-    BullBoardModuleConfig,
+    // Bull Board
+    BullBoardModule,
 
     // CLI
     CliModule,
