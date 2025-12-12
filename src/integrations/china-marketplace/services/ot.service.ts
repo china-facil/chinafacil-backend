@@ -105,7 +105,7 @@ export class OtService {
     pageSize?: number
   }) {
     try {
-      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/SearchItemsByImage'
+      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/BatchSearchItemsFrame'
       
       const queryParams = {
         ImageUrl: params.imgUrl,
