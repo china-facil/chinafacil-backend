@@ -26,6 +26,7 @@ import { OTPModule } from './modules/otp/otp.module';
 import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.module';
 import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
+import { LogsModule } from './common/logs/logs.module';
 
 @Module({
   imports: [
@@ -105,6 +106,9 @@ import { CliModule } from './cli/cli.module';
 
     // CLI
     CliModule,
+
+    // Logs
+    LogsModule,
   ],
 })
 export class AppModule {}
