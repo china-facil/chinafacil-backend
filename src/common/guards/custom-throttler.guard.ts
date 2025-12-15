@@ -1,6 +1,5 @@
 import { ExecutionContext, Injectable } from '@nestjs/common'
-import { ThrottlerGuard, ThrottlerModuleOptions, ThrottlerStorage } from '@nestjs/throttler'
-import { Reflector } from '@nestjs/core'
+import { ThrottlerGuard } from '@nestjs/throttler'
 
 @Injectable()
 export class CustomThrottlerGuard extends ThrottlerGuard {
@@ -11,18 +10,4 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     }
     return req.ip || req.ips?.[0] || 'unknown'
   }
-
-  protected async handleRequest(
-    context: ExecutionContext,
-    limit: number,
-    ttl: number,
-  ): Promise<boolean> {
-    const request = context.switchToHttp().getRequest()
-    const user = request.user
-
-    const adjustedLimit = user?.id ? 150 : 60
-
-    return super.handleRequest(context, adjustedLimit, ttl)
-  }
 }
-

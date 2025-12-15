@@ -29,6 +29,10 @@ Este é um projeto backend construído com NestJS (Node.js framework). A estrutu
 - NÃO crie testes unitários por padrão. Somente se for EXPLICITAMENTE solicitado teste unitário.
 - O padrão é criar testes de INTEGRAÇÃO simples.
 - Use Jest e Supertest para testes de integração.
+- **SEMPRE execute testes em modo single thread** para evitar sobrecarga do sistema. Use `--runInBand` ou `--maxWorkers=1`:
+  - `npm test -- --runInBand`
+  - `npm run test:int -- --runInBand`
+  - NUNCA execute testes em paralelo sem este flag.
 
 ### Regras de Testes de Integração por Endpoint
 
