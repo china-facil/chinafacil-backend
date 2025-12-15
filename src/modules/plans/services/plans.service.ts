@@ -43,6 +43,30 @@ export class PlansService {
     return plans
   }
 
+  async findActiveClients() {
+    const clients = await this.prisma.client.findMany({
+      where: {
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        supplierSearch: true,
+        viabilityStudy: true,
+      },
+    })
+
+    return {
+      status: 'success',
+      data: clients.map(client => ({
+        id: client.id,
+        name: client.name,
+        supplier_search: client.supplierSearch,
+        viability_study: client.viabilityStudy,
+      })),
+    }
+  }
+
   async findOne(id: string) {
     const planId = BigInt(id)
     const plan = await this.prisma.plan.findUnique({

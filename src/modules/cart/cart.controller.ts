@@ -6,11 +6,13 @@ import {
   NotFoundException,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
@@ -22,13 +24,13 @@ import { CartService } from './cart.service'
 import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
 
 @ApiTags('cart')
-@Controller('cart')
+@Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  @Post()
+  @Post('cart')
   @Roles('user', 'admin')
   @ApiOperation({ summary: 'Criar ou atualizar carrinho' })
   @ApiResponse({ status: 201, description: 'Carrinho criado/atualizado' })
@@ -36,7 +38,7 @@ export class CartController {
     return this.cartService.create(user.id, createCartDto)
   }
 
-  @Get()
+  @Get('cart')
   @Roles('user', 'admin')
   @ApiOperation({ summary: 'Obter carrinho do usuário' })
   @ApiResponse({ status: 200, description: 'Carrinho do usuário' })
@@ -44,7 +46,7 @@ export class CartController {
     return this.cartService.findByUser(user.id)
   }
 
-  @Get('all')
+  @Get('cart/all')
   @Roles('admin')
   @ApiOperation({ summary: 'Listar todos os carrinhos (admin)' })
   @ApiResponse({ status: 200, description: 'Lista de carrinhos' })
@@ -52,7 +54,38 @@ export class CartController {
     return this.cartService.findAll()
   }
 
-  @Patch()
+  @Get('carts')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Listar carrinhos para admin com paginação' })
+  @ApiQuery({ name: 'items_per_page', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'date_start', required: false, type: String })
+  @ApiQuery({ name: 'date_end', required: false, type: String })
+  @ApiQuery({ name: 'order', required: false, type: String })
+  @ApiQuery({ name: 'order-key', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Lista de carrinhos paginada' })
+  async adminList(
+    @Query('items_per_page') itemsPerPage?: string,
+    @Query('page') page?: string,
+    @Query('search') search?: string,
+    @Query('date_start') dateStart?: string,
+    @Query('date_end') dateEnd?: string,
+    @Query('order') order?: string,
+    @Query('order-key') orderKey?: string,
+  ) {
+    return this.cartService.adminList({
+      itemsPerPage: itemsPerPage ? parseInt(itemsPerPage) : 25,
+      page: page ? parseInt(page) : 1,
+      search,
+      dateStart,
+      dateEnd,
+      order: order as 'asc' | 'desc',
+      orderKey,
+    })
+  }
+
+  @Patch('cart')
   @Roles('user', 'admin')
   @ApiOperation({ summary: 'Atualizar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho atualizado' })
@@ -67,7 +100,7 @@ export class CartController {
     return this.cartService.update(cart.id, updateCartDto)
   }
 
-  @Delete('clear')
+  @Delete('cart/clear')
   @Roles('user', 'admin')
   @ApiOperation({ summary: 'Limpar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho limpo' })
@@ -75,7 +108,7 @@ export class CartController {
     return this.cartService.clear(user.id)
   }
 
-  @Post('sync')
+  @Post('cart/sync')
   @Roles('user', 'admin')
   @ApiOperation({ summary: 'Sincronizar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho sincronizado' })

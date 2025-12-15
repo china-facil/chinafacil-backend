@@ -13,6 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { Response } from 'express'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -29,6 +30,7 @@ import {
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
+@Throttle({ default: { limit: 10, ttl: 60000 } })
 export class AIController {
   constructor(private readonly aiService: AIService) {}
 

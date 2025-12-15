@@ -65,25 +65,85 @@ export class SubscriptionsService {
     return subscription
   }
 
-  async findAll() {
-    const subscriptions = await this.prisma.subscription.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-          },
-        },
-        client: true,
-      },
-    })
+  async findAll(params?: {
+    itemsPerPage?: number
+    page?: number
+    search?: string
+    dateStart?: string
+    dateEnd?: string
+    order?: 'asc' | 'desc'
+    orderKey?: string
+  }) {
+    const {
+      itemsPerPage = 10,
+      page = 1,
+      search,
+      dateStart,
+      dateEnd,
+      order = 'desc',
+      orderKey = 'createdAt',
+    } = params || {}
 
-    return subscriptions
+    const skip = (page - 1) * itemsPerPage
+    const take = itemsPerPage
+
+    const where: any = {}
+
+    if (search) {
+      where.OR = [
+        { user: { name: { contains: search } } },
+        { user: { email: { contains: search } } },
+      ]
+    }
+
+    if (dateStart && dateEnd) {
+      where.createdAt = {
+        gte: new Date(`${dateStart} 00:00:00`),
+        lte: new Date(`${dateEnd} 23:59:59`),
+      }
+    }
+
+    const [subscriptions, total] = await Promise.all([
+      this.prisma.subscription.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          [orderKey]: order,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+            },
+          },
+          client: true,
+        },
+      }),
+      this.prisma.subscription.count({ where }),
+    ])
+
+    return {
+      status: 'success',
+      data: {
+        data: subscriptions.map(sub => ({
+          ...sub,
+          created_at: sub.createdAt,
+          updated_at: sub.updatedAt,
+          current_period_start: sub.currentPeriodStart,
+          current_period_end: sub.currentPeriodEnd,
+          plan_id: sub.planId,
+          user_id: sub.userId,
+        })),
+        total,
+        last_page: Math.ceil(total / itemsPerPage),
+        current_page: page,
+        per_page: itemsPerPage,
+      },
+    }
   }
 
   async findOne(id: number) {
