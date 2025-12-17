@@ -7,6 +7,8 @@ export class AlibabaIntlNormalizer {
     const imageUrl = this.normalizeImageUrl(item.ImageUrl || item.Image)
     const price = this.extractPrice(item)
 
+    const minOrder = parseInt(item.MinimumOrder || item.MOQ || '1', 10)
+
     return {
       id: item.Id?.toString() || item.ProductId?.toString() || '',
       item_id: item.Id?.toString() || item.ProductId?.toString() || '',
@@ -17,21 +19,38 @@ export class AlibabaIntlNormalizer {
       currency: 'USD',
       imageUrl,
       img: imageUrl,
+      pic_url: imageUrl,
+      main_img: imageUrl,
       images: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
+      main_imgs: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
+      item_imgs: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
+      pictures: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
       supplier: {
         id: item.VendorId?.toString() || '',
         name: item.VendorName || item.CompanyName || '',
         location: item.VendorCountry || '',
       },
       specifications: [],
-      minimumOrder: parseInt(item.MinimumOrder || item.MOQ || '1', 10),
-      quantity_begin: parseInt(item.MinimumOrder || item.MOQ || '1', 10),
+      minimumOrder: minOrder,
+      quantity_begin: minOrder,
+      minimumOrderQuantity: minOrder,
       salesQuantity: 0,
       sold_quantity: 0,
+      salesVolume: 0,
+      sold_quantity_90days: null,
+      item_repurchase_rate: null,
+      repurchaseRate: null,
       rating: 0,
       goods_score: 0,
       url: item.ProductUrl || item.Url || '',
+      detail_url: item.ProductUrl || item.Url || '',
+      product_url: item.ProductUrl || item.Url || '',
       provider: 'alibaba_intl',
+      shop_info: null,
+      sale_info: null,
+      quantity_prices: this.normalizeQuantityPrices(item),
+      delivery_info: null,
+      location: null,
     }
   }
 
@@ -51,6 +70,19 @@ export class AlibabaIntlNormalizer {
       descriptionHtml: item.Description || '',
       specifications: this.normalizeSpecifications(item.ProductAttributes || []),
     }
+  }
+
+  private normalizeQuantityPrices(item: any): any[] {
+    if (item.QuantityRanges && Array.isArray(item.QuantityRanges)) {
+      return item.QuantityRanges.map((range: any) => ({
+        begin_num: String(range.MinQuantity || 1),
+        quantity: range.MinQuantity || 1,
+        price: String(this.parsePrice(range.Price) || 0),
+        currency: 'USD',
+        beginAmount: range.MinQuantity || 1,
+      }))
+    }
+    return []
   }
 
   private extractPrice(item: any): number {

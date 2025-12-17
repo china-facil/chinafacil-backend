@@ -10,6 +10,8 @@ export class Alibaba1688Normalizer {
     )
     const images = this.normalizeImages(mainImgs.length > 0 ? mainImgs : (item.item_imgs || item.images || item.pic_url || []))
 
+    const salesQty = parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10)
+
     return {
       id: item.item_id?.toString() || item.id?.toString() || '',
       item_id: item.item_id?.toString() || item.id?.toString() || '',
@@ -34,16 +36,26 @@ export class Alibaba1688Normalizer {
       specifications: [],
       minimumOrder: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
       quantity_begin: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
-      salesQuantity: parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10),
-      sold_quantity: parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10),
+      minimumOrderQuantity: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
+      salesQuantity: salesQty,
+      sold_quantity: salesQty,
+      salesVolume: salesQty,
+      sold_quantity_90days: item.sale_info?.sale_quantity_90days || null,
+      item_repurchase_rate: item.item_repurchase_rate || null,
+      repurchaseRate: item.item_repurchase_rate || null,
       rating: item.rate_percentage || item.goods_score || 0,
       goods_score: item.rate_percentage || item.goods_score || 0,
       url: item.detail_url || item.url || item.product_url || '',
+      detail_url: item.detail_url || item.url || item.product_url || '',
+      product_url: item.detail_url || item.url || item.product_url || '',
       provider: 'alibaba_1688',
       skus: item.skus || [],
       sku_props: item.sku_props || [],
       shop_info: item.shop_info || null,
       sale_info: item.sale_info || null,
+      quantity_prices: this.normalizeQuantityPricesFromSearch(item),
+      delivery_info: item.delivery_info || null,
+      location: this.extractLocation(item),
     }
   }
 
@@ -99,6 +111,44 @@ export class Alibaba1688Normalizer {
       }))
     }
     return []
+  }
+
+  private normalizeQuantityPricesFromSearch(item: any): any[] {
+    if (item.quantity_prices && Array.isArray(item.quantity_prices)) {
+      return item.quantity_prices.map((tier: any) => {
+        const quantity = parseInt(
+          String(tier.begin_num || tier.quantity || '1').replace(/[^0-9]/g, ''),
+          10,
+        )
+
+        return {
+          begin_num: String(quantity),
+          quantity: quantity,
+          price: String(tier.price || 0),
+          currency: 'CNY',
+          beginAmount: quantity,
+        }
+      })
+    }
+    return this.normalizeQuantityPrices(item)
+  }
+
+  private extractLocation(item: any): any {
+    if (item.delivery_info?.area_from && Array.isArray(item.delivery_info.area_from)) {
+      return {
+        province: item.delivery_info.area_from[0] || '',
+        city: item.delivery_info.area_from[1] || '',
+      }
+    }
+    if (item.delivery_info?.location) {
+      const locationParts = item.delivery_info.location.split('省')
+
+      return {
+        province: locationParts[0] ? locationParts[0] + '省' : '',
+        city: locationParts[1] || '',
+      }
+    }
+    return null
   }
 
   private parsePrice(price: any): number {
