@@ -20,6 +20,7 @@ type HttpMethod = "get" | "post" | "patch" | "put" | "delete";
 export interface TestContext {
   app: INestApplication;
   prisma: PrismaService;
+  moduleFixture: TestingModule;
   authToken: string;
   adminUserId: string;
   req: {
@@ -97,7 +98,7 @@ function createRequestHelpers(app: INestApplication, authToken?: string) {
 }
 
 export async function createTestContext(options?: { withAuth?: boolean }): Promise<TestContext> {
-  const { app, prisma } = await getOrCreateApp();
+  const { app, prisma, moduleFixture } = await getOrCreateApp();
 
   let authToken = "";
   let adminUserId = "";
@@ -137,7 +138,7 @@ export async function createTestContext(options?: { withAuth?: boolean }): Promi
 
   const { req, authReq } = createRequestHelpers(app, authToken);
 
-  return { app, prisma, authToken, adminUserId, req, authReq };
+  return { app, prisma, moduleFixture, authToken, adminUserId, req, authReq };
 }
 
 export async function closeTestContext(): Promise<void> {

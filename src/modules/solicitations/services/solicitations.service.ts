@@ -42,10 +42,10 @@ export class SolicitationsService {
   }
 
   async findAll(filterDto: FilterSolicitationDto) {
-    const { search, status, userId, clientId, page = 1, limit = 10 } = filterDto
+    const { search, status, userId, clientId, page = 1, limit, items_per_page } = filterDto
+    const take = items_per_page || limit || 10
 
-    const skip = (page - 1) * limit
-    const take = limit
+    const skip = (page - 1) * take
 
     const where: any = {}
 
@@ -79,6 +79,7 @@ export class SolicitationsService {
               id: true,
               name: true,
               email: true,
+              role: true,
             },
           },
           client: {
@@ -87,11 +88,12 @@ export class SolicitationsService {
               name: true,
             },
           },
+          cart: true,
           items: {
             select: {
               id: true,
-              quantity: true,
-              price: true,
+              actionOf: true,
+              message: true,
               status: true,
             },
           },
@@ -105,13 +107,48 @@ export class SolicitationsService {
       this.prisma.solicitation.count({ where }),
     ])
 
+    const solicitationsWithTotal = solicitations.map(solicitation => {
+      let cartTotal = 0
+      if (solicitation.cart?.items) {
+        let items: any = solicitation.cart.items
+        
+        if (typeof items === 'string') {
+          try {
+            items = JSON.parse(items)
+          } catch (e) {
+            items = []
+          }
+        }
+        
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            if (item?.variations && Array.isArray(item.variations)) {
+              for (const variation of item.variations) {
+                const price = parseFloat(variation.price || 0)
+                const quantity = parseFloat(variation.quantity || 0)
+                cartTotal += price * quantity
+              }
+            }
+          }
+        }
+      }
+      return {
+        ...solicitation,
+        cart: solicitation.cart ? {
+          ...solicitation.cart,
+          total: cartTotal,
+        } : null,
+      }
+    })
+
     return {
-      data: solicitations,
+      status: 'success',
+      data: solicitationsWithTotal,
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        last_page: Math.ceil(total / take),
+        current_page: page,
+        per_page: take,
       },
     }
   }
@@ -214,7 +251,6 @@ export class SolicitationsService {
       openSolicitations,
       totalItems,
       uniqueUsers,
-      totalValue,
     ] = await Promise.all([
       this.prisma.solicitation.count(),
       this.prisma.solicitation.count({
@@ -224,11 +260,6 @@ export class SolicitationsService {
       this.prisma.solicitation.groupBy({
         by: ['userId'],
       }),
-      this.prisma.solicitationItem.aggregate({
-        _sum: {
-          price: true,
-        },
-      }),
     ])
 
     return {
@@ -236,7 +267,6 @@ export class SolicitationsService {
       openSolicitations,
       totalItems,
       uniqueUsers: uniqueUsers.length,
-      totalValue: totalValue._sum.price || 0,
     }
   }
 
@@ -256,8 +286,8 @@ export class SolicitationsService {
         items: {
           select: {
             id: true,
-            quantity: true,
-            price: true,
+            actionOf: true,
+            status: true,
           },
         },
       },
