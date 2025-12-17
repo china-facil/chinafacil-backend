@@ -44,15 +44,17 @@ export class ProductNormalizerService {
   }
 
   normalizeAlibabaSearchResponse(response: any): any {
-    if (!response?.Result?.Items || !Array.isArray(response.Result.Items)) {
+    const items = response?.Result?.Items?.Items?.Content
+    
+    if (!items || !Array.isArray(items)) {
       return {
-        code: response.Code || 500,
-        msg: response.Message || 'Error',
+        code: response?.ErrorCode === 'Ok' ? 200 : 500,
+        msg: response?.ErrorCode || 'Error',
         data: { items: [] },
       }
     }
 
-    const normalizedItems = response.Result.Items.map((item: any) =>
+    const normalizedItems = items.map((item: any) =>
       this.alibabaIntlNormalizer.normalizeSearchItem(item),
     )
 
@@ -61,7 +63,7 @@ export class ProductNormalizerService {
       msg: 'success',
       data: {
         items: normalizedItems,
-        total: response.Result.TotalCount || normalizedItems.length,
+        total: response.Result?.Items?.Items?.TotalCount || normalizedItems.length,
       },
     }
   }

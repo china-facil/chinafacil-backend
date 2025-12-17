@@ -4,15 +4,19 @@ import { NormalizedProduct } from './product.interface'
 @Injectable()
 export class AlibabaIntlNormalizer {
   normalizeSearchItem(item: any): NormalizedProduct {
-    const imageUrl = this.normalizeImageUrl(item.ImageUrl || item.Image)
+    const imageUrl = this.normalizeImageUrl(
+      item.MainPictureUrl || item.ImageUrl || item.Image,
+    )
     const price = this.extractPrice(item)
-
-    const minOrder = parseInt(item.MinimumOrder || item.MOQ || '1', 10)
+    const minOrder = this.extractMinOrder(item)
+    const images = this.normalizeImages(
+      item.Pictures || item.ImageUrls || item.Images || [imageUrl],
+    )
 
     return {
       id: item.Id?.toString() || item.ProductId?.toString() || '',
       item_id: item.Id?.toString() || item.ProductId?.toString() || '',
-      title: item.Subject || item.ProductTitle || '',
+      title: item.Title || item.Subject || item.ProductTitle || item.OriginalTitle || '',
       price,
       float_price: price,
       originalPrice: undefined,
@@ -21,36 +25,40 @@ export class AlibabaIntlNormalizer {
       img: imageUrl,
       pic_url: imageUrl,
       main_img: imageUrl,
-      images: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
-      main_imgs: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
-      item_imgs: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
-      pictures: this.normalizeImages(item.ImageUrls || item.Images || [item.ImageUrl]),
+      images,
+      main_imgs: images,
+      item_imgs: images,
+      pictures: images,
       supplier: {
         id: item.VendorId?.toString() || '',
-        name: item.VendorName || item.CompanyName || '',
-        location: item.VendorCountry || '',
+        name: item.VendorName || item.VendorDisplayName || item.CompanyName || '',
+        location: item.Location || item.VendorCountry || '',
       },
       specifications: [],
       minimumOrder: minOrder,
       quantity_begin: minOrder,
       minimumOrderQuantity: minOrder,
-      salesQuantity: 0,
-      sold_quantity: 0,
-      salesVolume: 0,
+      salesQuantity: item.Volume || 0,
+      sold_quantity: item.Volume || 0,
+      salesVolume: item.Volume || 0,
       sold_quantity_90days: null,
       item_repurchase_rate: null,
       repurchaseRate: null,
-      rating: 0,
-      goods_score: 0,
-      url: item.ProductUrl || item.Url || '',
-      detail_url: item.ProductUrl || item.Url || '',
-      product_url: item.ProductUrl || item.Url || '',
+      rating: item.VendorScore || 0,
+      goods_score: item.VendorScore || 0,
+      url: item.ExternalItemUrl || item.TaobaoItemUrl || item.ProductUrl || item.Url || '',
+      detail_url: item.ExternalItemUrl || item.TaobaoItemUrl || item.ProductUrl || '',
+      product_url: item.ExternalItemUrl || item.TaobaoItemUrl || item.ProductUrl || '',
       provider: 'alibaba_intl',
-      shop_info: null,
+      shop_info: {
+        vendor_id: item.VendorId,
+        vendor_name: item.VendorName || item.VendorDisplayName,
+        vendor_score: item.VendorScore,
+      },
       sale_info: null,
       quantity_prices: this.normalizeQuantityPrices(item),
       delivery_info: null,
-      location: null,
+      location: item.Location || null,
     }
   }
 
@@ -77,7 +85,7 @@ export class AlibabaIntlNormalizer {
       return item.QuantityRanges.map((range: any) => ({
         begin_num: String(range.MinQuantity || 1),
         quantity: range.MinQuantity || 1,
-        price: String(this.parsePrice(range.Price) || 0),
+        price: String(this.extractPriceValue(range.Price) || 0),
         currency: 'USD',
         beginAmount: range.MinQuantity || 1,
       }))
@@ -85,33 +93,50 @@ export class AlibabaIntlNormalizer {
     return []
   }
 
+  private extractMinOrder(item: any): number {
+    if (item.QuantityRanges && Array.isArray(item.QuantityRanges) && item.QuantityRanges[0]) {
+      return item.QuantityRanges[0].MinQuantity || 1
+    }
+    if (item.MasterQuantity) {
+      return parseInt(item.MasterQuantity, 10) || 1
+    }
+    if (item.MinimumOrder || item.MOQ) {
+      return parseInt(item.MinimumOrder || item.MOQ, 10) || 1
+    }
+    return 1
+  }
+
   private extractPrice(item: any): number {
-    if (item.MinPrice) {
-      return this.parsePrice(item.MinPrice)
-    }
-    
     if (item.Price) {
-      return this.parsePrice(item.Price)
+      return this.extractPriceValue(item.Price)
     }
     
-    if (item.QuantityRanges && Array.isArray(item.QuantityRanges)) {
-      const firstRange = item.QuantityRanges[0]
-      if (firstRange && firstRange.Price) {
-        return this.parsePrice(firstRange.Price)
-      }
+    if (item.QuantityRanges && Array.isArray(item.QuantityRanges) && item.QuantityRanges[0]) {
+      return this.extractPriceValue(item.QuantityRanges[0].Price)
+    }
+    
+    if (item.MinPrice) {
+      return this.extractPriceValue(item.MinPrice)
     }
     
     return 0
   }
 
-  private parsePrice(price: any): number {
+  private extractPriceValue(price: any): number {
     if (!price) return 0
     if (typeof price === 'number') return price
     if (typeof price === 'string') {
       const cleanPrice = price.replace(/[^0-9.]/g, '')
       return parseFloat(cleanPrice) || 0
     }
+    if (typeof price === 'object') {
+      return price.OriginalPrice || price.MarginPrice || 0
+    }
     return 0
+  }
+
+  private parsePrice(price: any): number {
+    return this.extractPriceValue(price)
   }
 
   private normalizeImageUrl(url: string | any): string {
