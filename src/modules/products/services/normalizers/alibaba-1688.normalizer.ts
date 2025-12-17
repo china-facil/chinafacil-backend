@@ -10,7 +10,7 @@ export class Alibaba1688Normalizer {
     )
     const images = this.normalizeImages(mainImgs.length > 0 ? mainImgs : (item.item_imgs || item.images || item.pic_url || []))
 
-    const salesQty = parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10)
+    const salesQty = this.extractSalesQuantity(item)
 
     return {
       id: item.item_id?.toString() || item.id?.toString() || '',
@@ -37,10 +37,10 @@ export class Alibaba1688Normalizer {
       minimumOrder: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
       quantity_begin: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
       minimumOrderQuantity: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
-      salesQuantity: salesQty,
+      salesQuantity: salesQty ?? undefined,
       sold_quantity: salesQty,
       salesVolume: salesQty,
-      sold_quantity_90days: item.sale_info?.sale_quantity_90days || null,
+      sold_quantity_90days: this.extractNumberFromString(item.sale_info?.sale_quantity_90days),
       item_repurchase_rate: item.item_repurchase_rate || null,
       repurchaseRate: item.item_repurchase_rate || null,
       rating: item.rate_percentage || item.goods_score || 0,
@@ -52,7 +52,11 @@ export class Alibaba1688Normalizer {
       skus: item.skus || [],
       sku_props: item.sku_props || [],
       shop_info: item.shop_info || null,
-      sale_info: item.sale_info || null,
+      sale_info: {
+        ...item.sale_info,
+        sale_quantity_int: salesQty,
+        sale_quantity_90days: this.extractNumberFromString(item.sale_info?.sale_quantity_90days),
+      },
       quantity_prices: this.normalizeQuantityPricesFromSearch(item),
       delivery_info: item.delivery_info || null,
       location: this.extractLocation(item),
@@ -131,6 +135,49 @@ export class Alibaba1688Normalizer {
       })
     }
     return this.normalizeQuantityPrices(item)
+  }
+
+  private extractSalesQuantity(item: any): number | null {
+    if (item.sale_info?.sale_quantity_int) {
+      return this.extractNumberFromString(item.sale_info.sale_quantity_int)
+    }
+    
+    if (item.sale_info?.sale_quantity_90days) {
+      return this.extractNumberFromString(item.sale_info.sale_quantity_90days)
+    }
+    
+    if (item.sale_info?.sale_quantity) {
+      return this.extractNumberFromString(item.sale_info.sale_quantity)
+    }
+
+    if (item.sold_quantity && item.sold_quantity > 0) {
+      return this.extractNumberFromString(item.sold_quantity)
+    }
+    
+    if (item.sales_quantity) {
+      return this.extractNumberFromString(item.sales_quantity)
+    }
+    
+    if (item.sales) {
+      return this.extractNumberFromString(item.sales)
+    }
+
+    if (item.salesVolume) {
+      return this.extractNumberFromString(item.salesVolume)
+    }
+    
+    return null
+  }
+
+  private extractNumberFromString(value: any): number | null {
+    if (value === null || value === undefined) return null
+    if (typeof value === 'number') return value
+    
+    const match = String(value).match(/\d+/)
+    if (match) {
+      return parseInt(match[0], 10)
+    }
+    return null
   }
 
   private extractLocation(item: any): any {
