@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -14,13 +15,15 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express'
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
 import { diskStorage } from 'multer'
-import { extname } from 'path'
+import { existsSync, mkdirSync } from 'fs'
+import { extname, join } from 'path'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -53,7 +56,20 @@ export class UsersController {
 
   @Get('me')
   @ApiOperation({ summary: 'Obter dados do usuário autenticado' })
-  @ApiResponse({ status: 200, description: 'Dados do usuário' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados do usuário',
+    schema: {
+      example: {
+        id: 'user-uuid',
+        email: 'usuario@example.com',
+        name: 'João Silva',
+        phone: '11999999999',
+        role: 'user',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   async me(@CurrentUser() user: any) {
     return this.usersService.getDataUser(user.id)
@@ -62,7 +78,19 @@ export class UsersController {
   @Post('users')
   @Roles('admin')
   @ApiOperation({ summary: 'Criar novo usuário' })
-  @ApiResponse({ status: 201, description: 'Usuário criado com sucesso' })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuário criado com sucesso',
+    schema: {
+      example: {
+        id: 'user-uuid',
+        email: 'usuario@example.com',
+        name: 'João Silva',
+        role: 'user',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Email já cadastrado' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 403, description: 'Sem permissão' })
@@ -117,6 +145,9 @@ export class UsersController {
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Atualizar telefone do usuário' })
   @ApiResponse({ status: 200, description: 'Telefone atualizado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   async updatePhone(
     @Param('id') id: string,
     @Body() updatePhoneDto: UpdatePhoneDto,
@@ -128,6 +159,8 @@ export class UsersController {
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Validar telefone do usuário' })
   @ApiResponse({ status: 200, description: 'Telefone validado com sucesso' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   async validatePhone(@Param('id') id: string) {
     return this.usersService.validatePhone(id)
   }
@@ -136,11 +169,33 @@ export class UsersController {
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Upload de avatar do usuário' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Arquivo de imagem (JPG, JPEG, PNG ou GIF)',
+        },
+      },
+      required: ['file'],
+    },
+  })
   @ApiResponse({ status: 200, description: 'Avatar atualizado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Arquivo inválido, muito grande ou não fornecido' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: './public/uploads/avatars',
+        destination: (req, file, cb) => {
+          const uploadPath = './public/uploads/avatars'
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true })
+          }
+          cb(null, uploadPath)
+        },
         filename: (req, file, cb) => {
           const randomName = Array(32)
             .fill(null)
@@ -150,8 +205,11 @@ export class UsersController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-          return cb(new Error('Apenas imagens são permitidas!'), false)
+        if (!file) {
+          return cb(new BadRequestException('Arquivo não fornecido'), false)
+        }
+        if (!file.originalname || !file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+          return cb(new BadRequestException('Apenas imagens são permitidas (JPG, JPEG, PNG ou GIF)'), false)
         }
         cb(null, true)
       },
@@ -164,6 +222,10 @@ export class UsersController {
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
+    if (!file) {
+      throw new BadRequestException('Arquivo não fornecido. Por favor, envie uma imagem.')
+    }
+
     const avatarUrl = `/uploads/avatars/${file.filename}`
     return this.usersService.updateAvatar(id, avatarUrl)
   }

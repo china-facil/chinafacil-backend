@@ -36,7 +36,21 @@ export class SolicitationsController {
   @Post()
   @Roles('admin', 'user')
   @ApiOperation({ summary: 'Criar nova solicitação' })
-  @ApiResponse({ status: 201, description: 'Solicitação criada com sucesso' })
+  @ApiResponse({
+    status: 201,
+    description: 'Solicitação criada com sucesso',
+    schema: {
+      example: {
+        id: 'solicitation-uuid',
+        userId: 'user-uuid',
+        status: 'open',
+        type: 'cotacao',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   async create(@Body() createSolicitationDto: CreateSolicitationDto) {
     return this.solicitationsService.create(createSolicitationDto)
   }
@@ -78,6 +92,9 @@ export class SolicitationsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Atualizar solicitação' })
   @ApiResponse({ status: 200, description: 'Solicitação atualizada' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Solicitação não encontrada' })
   async update(
     @Param('id') id: string,
     @Body() updateSolicitationDto: UpdateSolicitationDto,
@@ -97,6 +114,9 @@ export class SolicitationsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Atribuir responsável à solicitação' })
   @ApiResponse({ status: 200, description: 'Responsável atribuído' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Solicitação não encontrada' })
   async assignResponsibility(
     @Param('id') id: string,
     @Body() assignDto: AssignResponsibilityDto,

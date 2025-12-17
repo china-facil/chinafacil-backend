@@ -2,35 +2,53 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator'
 
 export class CalculateFreightDto {
-  @ApiProperty({ description: 'Origem do frete' })
+  @ApiProperty({
+    example: 'São Paulo',
+    description: 'Origem do frete (cidade)',
+  })
   @IsNotEmpty()
   @IsString()
   origin: string
 
-  @ApiProperty({ description: 'Destino do frete' })
+  @ApiProperty({
+    example: 'Rio de Janeiro',
+    description: 'Destino do frete (cidade)',
+  })
   @IsNotEmpty()
   @IsString()
   destination: string
 
-  @ApiProperty({ description: 'Peso em gramas' })
+  @ApiProperty({
+    example: 5000,
+    description: 'Peso em gramas',
+  })
   @IsNotEmpty()
   @IsNumber()
   @Min(0)
   weight: number
 
-  @ApiPropertyOptional({ description: 'Volume em cm³' })
+  @ApiPropertyOptional({
+    example: 10000,
+    description: 'Volume em cm³',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   volume?: number
 
-  @ApiPropertyOptional({ description: 'Valor CIF para cálculo de GRIS' })
+  @ApiPropertyOptional({
+    example: 1000.00,
+    description: 'Valor CIF para cálculo de GRIS',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   cifValue?: number
 
-  @ApiPropertyOptional({ description: 'Distância em km (opcional)' })
+  @ApiPropertyOptional({
+    example: 450,
+    description: 'Distância em km (opcional)',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
