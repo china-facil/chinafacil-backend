@@ -74,10 +74,11 @@ export class NcmDatabaseService implements OnModuleInit, OnModuleDestroy {
     }
 
     const cleanCode = codigo.replace(/[^0-9]/g, '')
+    const formattedCode = cleanCode.replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')
 
     const [rows] = await this.connection.execute(
-      'SELECT codigo, nome, ii, ipi, pis, cofins FROM ncm_impostos WHERE codigo = ? LIMIT 1',
-      [cleanCode],
+      'SELECT codigo, nome, ii, ipi, pis, cofins FROM ncm_impostos WHERE codigo = ? OR codigo = ? LIMIT 1',
+      [cleanCode, formattedCode],
     )
 
     const results = rows as NcmRecord[]
