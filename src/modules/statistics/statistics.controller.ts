@@ -37,13 +37,9 @@ export class StatisticsController {
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getMonthlyMetrics(
-    @Query('year') year?: number,
-    @Query('month') month?: number,
+    @Query('metric') metric?: string,
   ) {
-    return this.statisticsService.getMonthlyMetrics(
-      year ? Number(year) : undefined,
-      month ? Number(month) : undefined,
-    )
+    return this.statisticsService.getMonthlyMetricsChart(metric || 'revenue')
   }
 
   @Get('admin-dashboard')

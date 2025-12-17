@@ -51,13 +51,23 @@ export class FilterSolicitationDto {
   @ApiPropertyOptional({
     example: 10,
     default: 10,
-    description: 'Itens por página',
+    description: 'Número de itens por página',
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
   limit?: number = 10
+
+  @ApiPropertyOptional({
+    default: 10,
+    description: 'Alias para limit - número de itens por página',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  items_per_page?: number
 }
 
 

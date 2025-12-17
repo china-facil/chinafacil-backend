@@ -7,11 +7,13 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
@@ -42,11 +44,32 @@ export class SubscriptionsController {
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: 'Listar todas as assinaturas' })
+  @ApiQuery({ name: 'items_per_page', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'date_start', required: false, type: String })
+  @ApiQuery({ name: 'date_end', required: false, type: String })
+  @ApiQuery({ name: 'order', required: false, type: String })
+  @ApiQuery({ name: 'order-key', required: false, type: String })
   @ApiResponse({ status: 200, description: 'Lista de assinaturas' })
-  @ApiResponse({ status: 401, description: 'Não autenticado' })
-  @ApiResponse({ status: 403, description: 'Sem permissão' })
-  async findAll() {
-    return this.subscriptionsService.findAll()
+  async findAll(
+    @Query('items_per_page') itemsPerPage?: string,
+    @Query('page') page?: string,
+    @Query('search') search?: string,
+    @Query('date_start') dateStart?: string,
+    @Query('date_end') dateEnd?: string,
+    @Query('order') order?: string,
+    @Query('order-key') orderKey?: string,
+  ) {
+    return this.subscriptionsService.findAll({
+      itemsPerPage: itemsPerPage ? parseInt(itemsPerPage) : 10,
+      page: page ? parseInt(page) : 1,
+      search,
+      dateStart,
+      dateEnd,
+      order: order as 'asc' | 'desc',
+      orderKey,
+    })
   }
 
   @Get('user/:userId')

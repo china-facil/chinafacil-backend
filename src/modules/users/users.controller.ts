@@ -43,6 +43,17 @@ import { UsersService } from './users.service'
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Get('get-statistics-admin-dashboard')
+  @Roles('admin', 'seller')
+  @ApiOperation({ summary: 'Obter estatísticas do dashboard admin' })
+  @ApiResponse({ status: 200, description: 'Estatísticas do dashboard' })
+  async getStatisticsAdminDashboard(
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+  ) {
+    return this.usersService.getStatisticsAdminDashboard(startDate, endDate)
+  }
+
   @Get('me')
   @ApiOperation({ summary: 'Obter dados do usuário autenticado' })
   @ApiResponse({

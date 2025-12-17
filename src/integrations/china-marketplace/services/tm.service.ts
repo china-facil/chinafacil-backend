@@ -15,11 +15,11 @@ export class TmService {
     private readonly configService: ConfigService,
     private readonly normalizer: ProductNormalizerService,
   ) {
-    this.baseUrl = this.configService.get('TM_API_URL') || ''
-    this.apiKey = this.configService.get('TM_API_KEY') || ''
+    this.baseUrl = this.configService.get('TM_SERVICE_API_URL') || ''
+    this.apiKey = this.configService.get('TM_SERVICE_API_KEY') || ''
     
     if (!this.baseUrl) {
-      this.logger.warn('TM_API_URL não configurado. Endpoints do TmService podem falhar.')
+      this.logger.warn('TM_SERVICE_API_URL não configurado. Endpoints do TmService podem falhar.')
     }
   }
 
@@ -215,8 +215,8 @@ export class TmService {
   async getProductDetails(itemId: string) {
     try {
       if (!this.baseUrl) {
-        this.logger.error('TmService::getProductDetails - TM_API_URL não configurado')
-        return { data: null, msg: 'TM_API_URL não configurado', code: 500 }
+        this.logger.error('TmService::getProductDetails - TM_SERVICE_API_URL não configurado')
+        return { data: null, msg: 'TM_SERVICE_API_URL não configurado', code: 500 }
       }
 
       const endpoint = `${this.baseUrl}/1688/v2/item_detail`
@@ -257,8 +257,8 @@ export class TmService {
   async getProductSkuDetails(itemId: string) {
     try {
       if (!this.baseUrl) {
-        this.logger.error('TmService::getProductSkuDetails - TM_API_URL não configurado')
-        return { data: null, msg: 'TM_API_URL não configurado', code: 500 }
+        this.logger.error('TmService::getProductSkuDetails - TM_SERVICE_API_URL não configurado')
+        return { data: null, msg: 'TM_SERVICE_API_URL não configurado', code: 500 }
       }
 
       const endpoint = `${this.baseUrl}/1688/item/sku`

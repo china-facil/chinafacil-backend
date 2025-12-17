@@ -22,13 +22,13 @@ import { CreatePlanDto, UpdatePlanDto } from '../dto'
 import { PlansService } from '../services/plans.service'
 
 @ApiTags('plans')
-@Controller('plans')
+@Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class PlansController {
   constructor(private readonly plansService: PlansService) {}
 
-  @Post()
+  @Post('plans')
   @Roles('admin')
   @ApiOperation({ summary: 'Criar novo plano' })
   @ApiResponse({
@@ -51,7 +51,7 @@ export class PlansController {
     return this.plansService.create(createPlanDto)
   }
 
-  @Get()
+  @Get('plans')
   @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Listar todos os planos' })
   @ApiResponse({ status: 200, description: 'Lista de planos' })
@@ -61,7 +61,7 @@ export class PlansController {
     return this.plansService.findAll()
   }
 
-  @Get('active')
+  @Get('plans/active')
   @Public()
   @ApiOperation({ summary: 'Listar planos ativos' })
   @ApiResponse({ status: 200, description: 'Lista de planos ativos' })
@@ -69,7 +69,15 @@ export class PlansController {
     return this.plansService.findActive()
   }
 
-  @Get(':id')
+  @Get('plans-active')
+  @Public()
+  @ApiOperation({ summary: 'Listar planos ativos (alias para compatibilidade)' })
+  @ApiResponse({ status: 200, description: 'Lista de planos ativos' })
+  async findActivePlans() {
+    return this.plansService.findActiveClients()
+  }
+
+  @Get('plans/:id')
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter detalhes de um plano' })
   @ApiResponse({ status: 200, description: 'Detalhes do plano' })
@@ -80,7 +88,7 @@ export class PlansController {
     return this.plansService.findOne(id)
   }
 
-  @Patch(':id')
+  @Patch('plans/:id')
   @Roles('admin')
   @ApiOperation({ summary: 'Atualizar plano' })
   @ApiResponse({ status: 200, description: 'Plano atualizado com sucesso' })
@@ -95,7 +103,7 @@ export class PlansController {
     return this.plansService.update(id, updatePlanDto)
   }
 
-  @Delete(':id')
+  @Delete('plans/:id')
   @Roles('admin')
   @ApiOperation({ summary: 'Remover plano' })
   @ApiResponse({

@@ -1,7 +1,9 @@
 import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from "@nestjs/throttler";
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DatabaseModule } from './database/database.module';
 import { JobsModule } from './jobs/jobs.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -48,11 +50,11 @@ import { LogsModule } from './common/logs/logs.module';
       }],
     }),
 
-    // Rate Limiting
+    // Rate Limiting - 60 req/min não logado, 150 req/min logado
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 100,
+        limit: 150,
       },
     ]),
 
@@ -109,6 +111,12 @@ import { LogsModule } from './common/logs/logs.module';
 
     // Logs
     LogsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

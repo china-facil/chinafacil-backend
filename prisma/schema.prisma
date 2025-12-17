@@ -100,14 +100,16 @@ model User {
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  solicitations   Solicitation[]
-  addresses       UserAddress[]
-  favorites       FavoriteProduct[]
-  clientUsers     ClientUser[]
-  subscription    Subscription?
-  sellerLeads     UserSellerLead[] @relation("Seller")
-  leads           UserSellerLead[] @relation("Lead")
-  taxCalculations TaxCalculation[]
+  solicitations     Solicitation[]
+  solicitationItems SolicitationItem[]
+  solicitationTracks SolicitationTrack[]
+  addresses         UserAddress[]
+  favorites         FavoriteProduct[]
+  clientUsers       ClientUser[]
+  subscription      Subscription?
+  sellerLeads       UserSellerLead[] @relation("Seller")
+  leads             UserSellerLead[] @relation("Lead")
+  taxCalculations   TaxCalculation[]
 
   @@map("users")
 }
@@ -167,42 +169,61 @@ model Solicitation {
 }
 
 model SolicitationItem {
-  id             String   @id @default(uuid())
-  solicitationId String   @map("solicitation_id")
-  productData    Json     @map("product_data")
-  quantity       Int
-  price          Decimal?
-  status         String?
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id                   String                       @id @default(uuid())
+  solicitationId       String                       @map("solicitation_id")
+  userId               String                       @map("user_id")
+  actionOf             SolicitationItemActionOf     @map("action_of")
+  clientActionRequired Boolean                      @default(false) @map("client_action_required")
+  message              String                       @db.Text
+  status               SolicitationItemStatus       @default(open)
+  deadline             DateTime?
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
 
-  solicitation Solicitation               @relation(fields: [solicitationId], references: [id], onDelete: Cascade)
+  solicitation Solicitation                 @relation(fields: [solicitationId], references: [id], onDelete: Cascade)
+  user         User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   attachments  SolicitationItemAttachment[]
 
   @@map("solicitation_items")
 }
 
-model SolicitationItemAttachment {
-  id      String @id @default(uuid())
-  itemId  String @map("item_id")
-  fileUrl String @map("file_url")
-  createdAt DateTime @default(now()) @map("created_at")
+enum SolicitationItemActionOf {
+  client
+  chinafacil
+}
 
-  item SolicitationItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+enum SolicitationItemStatus {
+  open
+  pending
+  in_progress
+  finished
+}
+
+model SolicitationItemAttachment {
+  id                 String   @id @default(uuid())
+  solicitationItemId String   @map("solicitation_item_id")
+  name               String   @db.Text
+  attachment         String   @db.Text
+  type               String   @db.VarChar(255)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  item SolicitationItem @relation(fields: [solicitationItemId], references: [id], onDelete: Cascade)
 
   @@map("solicitation_item_attachments")
 }
 
 model SolicitationTrack {
-  id             String   @id @default(uuid())
-  solicitationId String   @map("solicitation_id")
-  status         String
-  description    String?
-  date           DateTime
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id             String    @id @default(uuid())
+  solicitationId String    @map("solicitation_id")
+  userId         String    @map("user_id")
+  status         String    @default("step1:order_received")
+  deadline       DateTime?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
   solicitation Solicitation @relation(fields: [solicitationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("solicitation_tracks")
 }

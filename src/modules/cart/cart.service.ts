@@ -58,6 +58,128 @@ export class CartService {
     return carts
   }
 
+  async adminList(params: {
+    itemsPerPage?: number
+    page?: number
+    search?: string
+    dateStart?: string
+    dateEnd?: string
+    order?: 'asc' | 'desc'
+    orderKey?: string
+  }) {
+    const {
+      itemsPerPage = 25,
+      page = 1,
+      search,
+      dateStart,
+      dateEnd,
+      order = 'desc',
+      orderKey = 'updatedAt',
+    } = params
+
+    const skip = (page - 1) * itemsPerPage
+    const take = itemsPerPage
+
+    let userIds: string[] | undefined
+
+    if (search) {
+      const users = await this.prisma.user.findMany({
+        where: {
+          OR: [
+            { name: { contains: search } },
+            { email: { contains: search } },
+          ],
+        },
+        select: { id: true },
+      })
+      userIds = users.map(u => u.id)
+    }
+
+    const where: any = {
+      solicitationId: null,
+    }
+
+    if (userIds !== undefined) {
+      where.userId = { in: userIds }
+    }
+
+    if (dateStart && dateEnd) {
+      where.updatedAt = {
+        gte: new Date(`${dateStart} 00:00:00`),
+        lte: new Date(`${dateEnd} 23:59:59`),
+      }
+    }
+
+    const [carts, total] = await Promise.all([
+      this.prisma.cart.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          [orderKey]: order,
+        },
+      }),
+      this.prisma.cart.count({ where }),
+    ])
+
+    const userIdsFromCarts = [...new Set(carts.map(c => c.userId))]
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: userIdsFromCarts } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+    })
+    const usersMap = new Map(users.map(u => [u.id, u]))
+
+    const cartsWithCalculations = carts.map(cart => {
+      let items: any = cart.items
+      if (typeof items === 'string') {
+        try {
+          items = JSON.parse(items)
+        } catch {
+          items = []
+        }
+      }
+
+      let itemsCount = 0
+      let totalValue = 0
+
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          if (item?.variations && Array.isArray(item.variations)) {
+            itemsCount += item.variations.length
+            for (const variation of item.variations) {
+              const price = parseFloat(variation.price || 0)
+              const quantity = parseFloat(variation.quantity || 0)
+              totalValue += price * quantity
+            }
+          }
+        }
+      }
+
+      return {
+        ...cart,
+        user: usersMap.get(cart.userId) || null,
+        items_count: itemsCount,
+        total_value: totalValue,
+        created_at: cart.createdAt,
+        updated_at: cart.updatedAt,
+        user_id: cart.userId,
+      }
+    })
+
+    return {
+      data: cartsWithCalculations,
+      current_page: page,
+      last_page: Math.ceil(total / itemsPerPage),
+      per_page: itemsPerPage,
+      total,
+    }
+  }
+
   async update(id: string, updateCartDto: UpdateCartDto) {
     const cart = await this.prisma.cart.findUnique({
       where: { id },
