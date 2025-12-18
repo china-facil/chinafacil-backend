@@ -4,26 +4,63 @@ import { NormalizedProduct } from './product.interface'
 @Injectable()
 export class Alibaba1688Normalizer {
   normalizeSearchItem(item: any): NormalizedProduct {
+    const mainImgs = item.main_imgs || []
+    const imageUrl = this.normalizeImageUrl(
+      mainImgs[0] || item.img || item.pic_url || item.image_url || item.pic,
+    )
+    const images = this.normalizeImages(mainImgs.length > 0 ? mainImgs : (item.item_imgs || item.images || item.pic_url || []))
+
     return {
       id: item.item_id?.toString() || item.id?.toString() || '',
+      item_id: item.item_id?.toString() || item.id?.toString() || '',
       title: item.title || item.item_title || '',
-      price: this.parsePrice(item.price || item.sale_price),
+      price: this.parsePrice(item.price || item.sale_price || this.extractPriceFromTiered(item)),
+      float_price: this.parsePrice(item.price || item.sale_price || this.extractPriceFromTiered(item)),
       originalPrice: this.parsePrice(item.original_price),
       currency: 'CNY',
-      imageUrl: this.normalizeImageUrl(item.pic_url || item.image_url || item.pic),
-      images: this.normalizeImages(item.images || item.pic_url || []),
+      imageUrl,
+      img: imageUrl,
+      pic_url: imageUrl,
+      main_img: imageUrl,
+      images,
+      main_imgs: images,
+      item_imgs: images,
+      pictures: images,
       supplier: {
-        id: item.seller_id?.toString() || '',
-        name: item.shop_name || item.seller_name || '',
+        id: item.seller_id?.toString() || item.shop_info?.seller_member_id?.toString() || '',
+        name: item.shop_name || item.seller_name || item.shop_info?.shop_name || item.shop_info?.company_name || '',
         location: item.location || '',
       },
       specifications: [],
-      minimumOrder: item.moq || item.minimum_order || 1,
-      salesQuantity: parseInt(item.sales_quantity || item.sales || '0', 10),
-      rating: item.rate_percentage || 0,
-      url: item.detail_url || item.url || '',
+      minimumOrder: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
+      quantity_begin: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
+      salesQuantity: parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10),
+      sold_quantity: parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10),
+      rating: item.rate_percentage || item.goods_score || 0,
+      goods_score: item.rate_percentage || item.goods_score || 0,
+      url: item.detail_url || item.url || item.product_url || '',
       provider: 'alibaba_1688',
+      skus: item.skus || [],
+      sku_props: item.sku_props || [],
+      shop_info: item.shop_info || null,
+      sale_info: item.sale_info || null,
     }
+  }
+
+  private extractPriceFromTiered(item: any): number {
+    if (item.tiered_price_info?.prices && Array.isArray(item.tiered_price_info.prices)) {
+      const prices = item.tiered_price_info.prices.map((p: any) => parseFloat(p.price) || 0)
+      if (prices.length > 0) {
+        return Math.min(...prices)
+      }
+    }
+    if (item.price_info?.price_min) {
+      return parseFloat(item.price_info.price_min)
+    }
+    if (item.price_info?.price) {
+      return parseFloat(item.price_info.price)
+    }
+    return 0
   }
 
   normalizeDetailedItem(item: any): NormalizedProduct {
@@ -32,10 +69,36 @@ export class Alibaba1688Normalizer {
     return {
       ...basicProduct,
       descriptionHtml: item.detail_html || item.description || '',
+      description_html: item.detail_html || item.description || '',
+      detail_html: item.detail_html || item.description || '',
       descriptionImages: item.detail_imgs || [],
+      detail_imgs: item.detail_imgs || [],
       specifications: this.normalizeSpecifications(item.product_props || item.specifications || []),
+      product_props: item.product_props || [],
       categoryPath: item.category_path || [],
+      category_path: item.category_path || [],
+      category_id: item.category_id || '',
+      video_url: item.video_url || null,
+      delivery_info: item.delivery_info || null,
+      promotions: item.promotions || null,
+      stock: item.stock || null,
+      is_sold_out: item.is_sold_out || false,
+      tiered_price_info: item.tiered_price_info || null,
+      quantity_prices: this.normalizeQuantityPrices(item),
     }
+  }
+
+  private normalizeQuantityPrices(item: any): any[] {
+    if (item.tiered_price_info?.prices && Array.isArray(item.tiered_price_info.prices)) {
+      return item.tiered_price_info.prices.map((tier: any) => ({
+        begin_num: String(tier.beginAmount || 1),
+        quantity: tier.beginAmount || 1,
+        price: String(tier.price || 0),
+        currency: 'CNY',
+        beginAmount: tier.beginAmount || 1,
+      }))
+    }
+    return []
   }
 
   private parsePrice(price: any): number {

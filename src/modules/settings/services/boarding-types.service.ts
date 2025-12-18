@@ -17,22 +17,19 @@ export class BoardingTypesService {
   async findAll() {
     const boardingTypes = await this.prisma.boardingType.findMany({
       orderBy: {
-        name: 'asc',
+        createdAt: "asc",
       },
-    })
+    });
 
     return boardingTypes
   }
 
   async findActive() {
     const boardingTypes = await this.prisma.boardingType.findMany({
-      where: {
-        isActive: true,
-      },
       orderBy: {
-        name: 'asc',
+        createdAt: "asc",
       },
-    })
+    });
 
     return boardingTypes
   }
@@ -51,13 +48,10 @@ export class BoardingTypesService {
 
   async findDefault() {
     const boardingType = await this.prisma.boardingType.findFirst({
-      where: {
-        isActive: true,
-      },
       orderBy: {
-        createdAt: 'asc',
+        createdAt: "asc",
       },
-    })
+    });
 
     return boardingType
   }

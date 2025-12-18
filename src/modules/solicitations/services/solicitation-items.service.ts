@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
+import { SolicitationItemActionOf, SolicitationItemStatus } from '@prisma/client'
 import { PrismaService } from '../../../database/prisma.service'
 import { CreateSolicitationItemDto } from '../dto'
 
@@ -6,7 +7,11 @@ import { CreateSolicitationItemDto } from '../dto'
 export class SolicitationItemsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async addItem(solicitationId: string, createItemDto: CreateSolicitationItemDto) {
+  async addItem(
+    solicitationId: string,
+    userId: string,
+    createItemDto: CreateSolicitationItemDto,
+  ) {
     const solicitation = await this.prisma.solicitation.findUnique({
       where: { id: solicitationId },
     })
@@ -15,45 +20,59 @@ export class SolicitationItemsService {
       throw new NotFoundException('Solicitação não encontrada')
     }
 
+    const deadline = new Date()
+    deadline.setDate(deadline.getDate() + 3)
+
     const item = await this.prisma.solicitationItem.create({
       data: {
         solicitationId,
-        ...createItemDto,
+        userId,
+        actionOf: createItemDto.actionOf as SolicitationItemActionOf,
+        clientActionRequired: createItemDto.clientActionRequired ?? false,
+        message: createItemDto.message,
+        status: (createItemDto.status as SolicitationItemStatus) || SolicitationItemStatus.open,
+        deadline,
       },
-    })
-
-    await this.prisma.solicitation.update({
-      where: { id: solicitationId },
-      data: {
-        quantity: {
-          increment: createItemDto.quantity,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
+        attachments: true,
       },
     })
 
     return item
   }
 
-  async removeItem(solicitationId: string, itemId: string) {
-    const item = await this.prisma.solicitationItem.findUnique({
-      where: { id: itemId },
+  async removeItem(solicitationId: string, itemId: string, userId: string, userRole: string) {
+    const item = await this.prisma.solicitationItem.findFirst({
+      where: {
+        id: itemId,
+        solicitationId,
+      },
     })
 
-    if (!item || item.solicitationId !== solicitationId) {
+    if (!item) {
       throw new NotFoundException('Item não encontrado')
     }
 
-    await this.prisma.solicitationItem.delete({
-      where: { id: itemId },
-    })
+    if (item.userId !== userId && userRole !== 'admin') {
+      throw new NotFoundException('Você não tem permissão para excluir esse item')
+    }
 
     await this.prisma.solicitation.update({
       where: { id: solicitationId },
       data: {
-        quantity: {
-          decrement: item.quantity,
-        },
+        status: 'pending',
       },
+    })
+
+    await this.prisma.solicitationItem.delete({
+      where: { id: itemId },
     })
 
     return {
@@ -61,5 +80,3 @@ export class SolicitationItemsService {
     }
   }
 }
-
-

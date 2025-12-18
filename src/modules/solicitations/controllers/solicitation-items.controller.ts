@@ -12,6 +12,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { Roles } from '../../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
@@ -33,9 +34,10 @@ export class SolicitationItemsController {
   @ApiResponse({ status: 201, description: 'Item adicionado' })
   async addItem(
     @Param('solicitationId') solicitationId: string,
+    @CurrentUser('id') userId: string,
     @Body() createItemDto: CreateSolicitationItemDto,
   ) {
-    return this.solicitationItemsService.addItem(solicitationId, createItemDto)
+    return this.solicitationItemsService.addItem(solicitationId, userId, createItemDto)
   }
 
   @Delete(':itemId')
@@ -45,9 +47,9 @@ export class SolicitationItemsController {
   async removeItem(
     @Param('solicitationId') solicitationId: string,
     @Param('itemId') itemId: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
   ) {
-    return this.solicitationItemsService.removeItem(solicitationId, itemId)
+    return this.solicitationItemsService.removeItem(solicitationId, itemId, userId, userRole)
   }
 }
-
-

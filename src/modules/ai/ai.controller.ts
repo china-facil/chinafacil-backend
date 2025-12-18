@@ -13,6 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Throttle } from '@nestjs/throttler'
 import { Response } from 'express'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
@@ -21,6 +22,7 @@ import { AIService } from './ai.service'
 import {
   ChatCompletionDto,
   CompletionDto,
+  EmbeddingDto,
   ProductSimilarityDto,
 } from './dto'
 
@@ -28,6 +30,7 @@ import {
 @Controller('ai')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
+@Throttle({ default: { limit: 10, ttl: 60000 } })
 export class AIController {
   constructor(private readonly aiService: AIService) {}
 
@@ -100,8 +103,8 @@ export class AIController {
   @Roles('admin')
   @ApiOperation({ summary: 'Gerar embedding (OpenAI)' })
   @ApiResponse({ status: 201, description: 'Embedding gerado' })
-  async generateEmbedding(@Body('text') text: string) {
-    return this.aiService.generateEmbedding(text)
+  async generateEmbedding(@Body() embeddingDto: EmbeddingDto) {
+    return this.aiService.generateEmbedding(embeddingDto.text)
   }
 
   @Post('product-similarity')

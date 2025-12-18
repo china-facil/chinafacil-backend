@@ -234,6 +234,86 @@ export class TaxCalculationService {
       id: calc.id.toString(),
     }))
   }
+
+  async adminList(params: {
+    itemsPerPage?: number
+    page?: number
+    search?: string
+    dateStart?: string
+    dateEnd?: string
+    order?: 'asc' | 'desc'
+    orderKey?: string
+  }) {
+    const {
+      itemsPerPage = 25,
+      page = 1,
+      search,
+      dateStart,
+      dateEnd,
+      order = 'desc',
+      orderKey = 'createdAt',
+    } = params
+
+    const skip = (page - 1) * itemsPerPage
+    const take = itemsPerPage
+
+    const where: any = {}
+
+    if (search) {
+      where.OR = [
+        { userEmail: { contains: search } },
+        { productName: { contains: search } },
+      ]
+    }
+
+    if (dateStart && dateEnd) {
+      where.createdAt = {
+        gte: new Date(`${dateStart} 00:00:00`),
+        lte: new Date(`${dateEnd} 23:59:59`),
+      }
+    }
+
+    const [calculations, total] = await Promise.all([
+      this.prisma.taxCalculation.findMany({
+        where,
+        skip,
+        take,
+        orderBy: {
+          [orderKey]: order,
+        },
+      }),
+      this.prisma.taxCalculation.count({ where }),
+    ])
+
+    const userIds = [...new Set(calculations.filter(c => c.userId).map(c => c.userId!))]
+    const users = userIds.length > 0 
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : []
+    const usersMap = new Map(users.map(u => [u.id, u]))
+
+    const calculationsWithUsers = calculations.map(calc => ({
+      ...calc,
+      id: calc.id.toString(),
+      user: calc.userId ? usersMap.get(calc.userId) || null : null,
+      created_at: calc.createdAt,
+      updated_at: calc.updatedAt,
+      product_name: calc.productName,
+      user_email: calc.userEmail,
+      total_cost: calc.totalCost,
+      supplier_price: calc.supplierPrice,
+    }))
+
+    return {
+      data: calculationsWithUsers,
+      current_page: page,
+      last_page: Math.ceil(total / itemsPerPage),
+      per_page: itemsPerPage,
+      total,
+    }
+  }
 }
 
 

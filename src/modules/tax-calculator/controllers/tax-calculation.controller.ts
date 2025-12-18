@@ -24,20 +24,20 @@ import {
 import { TaxCalculationService } from '../services/tax-calculation.service'
 
 @ApiTags('tax-calculator')
-@Controller('tax-calculations')
+@Controller()
 export class TaxCalculationController {
   constructor(
     private readonly taxCalculationService: TaxCalculationService,
   ) {}
 
-  @Post()
+  @Post('tax-calculations')
   @ApiOperation({ summary: 'Criar cálculo de impostos' })
   @ApiResponse({ status: 201, description: 'Cálculo criado' })
   async create(@Body() createTaxCalculationDto: CreateTaxCalculationDto) {
     return this.taxCalculationService.create(createTaxCalculationDto)
   }
 
-  @Get()
+  @Get('tax-calculations')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @Roles('admin')
@@ -53,7 +53,40 @@ export class TaxCalculationController {
     return this.taxCalculationService.findAll(filterDto)
   }
 
-  @Get('user/:userId')
+  @Get('tax-calculations-list')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles('admin')
+  @ApiOperation({ summary: 'Listar cálculos para admin com paginação' })
+  @ApiQuery({ name: 'items_per_page', required: false, type: Number })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'date_start', required: false, type: String })
+  @ApiQuery({ name: 'date_end', required: false, type: String })
+  @ApiQuery({ name: 'order', required: false, type: String })
+  @ApiQuery({ name: 'order-key', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Lista de cálculos paginada' })
+  async adminList(
+    @Query('items_per_page') itemsPerPage?: string,
+    @Query('page') page?: string,
+    @Query('search') search?: string,
+    @Query('date_start') dateStart?: string,
+    @Query('date_end') dateEnd?: string,
+    @Query('order') order?: string,
+    @Query('order-key') orderKey?: string,
+  ) {
+    return this.taxCalculationService.adminList({
+      itemsPerPage: itemsPerPage ? parseInt(itemsPerPage) : 25,
+      page: page ? parseInt(page) : 1,
+      search,
+      dateStart,
+      dateEnd,
+      order: order as 'asc' | 'desc',
+      orderKey,
+    })
+  }
+
+  @Get('tax-calculations/user/:userId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @ApiBearerAuth()
   @Roles('admin', 'user')
