@@ -1,9 +1,11 @@
 import { Module, forwardRef } from '@nestjs/common'
 import { HttpModule } from '@nestjs/axios'
 import { CacheModule } from '@nestjs/cache-manager'
+import { ConfigModule } from '@nestjs/config'
 import { DatabaseModule } from '../../database/database.module'
 import { ChinaMarketplaceModule } from '../../integrations/china-marketplace/china-marketplace.module'
 import { MarketplaceModule } from '../../integrations/marketplace/marketplace.module'
+import { OpenAIService } from '../../integrations/ai-providers/openai/openai.service'
 import { AIModule } from '../ai/ai.module'
 import { SettingsModule } from '../settings/settings.module'
 import { ProductsController } from './controllers/products.controller'
@@ -17,6 +19,7 @@ import { ProductNormalizerService } from './services/normalizers/product-normali
   imports: [
     DatabaseModule,
     HttpModule,
+    ConfigModule,
     CacheModule.register(),
     forwardRef(() => ChinaMarketplaceModule),
     MarketplaceModule,
@@ -30,6 +33,7 @@ import { ProductNormalizerService } from './services/normalizers/product-normali
     ProductNormalizerService,
     Alibaba1688Normalizer,
     AlibabaIntlNormalizer,
+    OpenAIService,
   ],
   exports: [ProductsService, ProductNormalizerService],
 })

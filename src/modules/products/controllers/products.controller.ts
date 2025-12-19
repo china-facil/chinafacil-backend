@@ -6,10 +6,15 @@ import {
   Param,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
+import { FileInterceptor } from '@nestjs/platform-express'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
@@ -17,7 +22,7 @@ import {
 } from '@nestjs/swagger'
 import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
-import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
+import { AddFavoriteDto, GetCbmDto, GetCbmIndividualDto, SearchByImageDto, SearchConciergeDto, SearchProductsDto } from '../dto'
 import { ProductsService } from '../services/products.service'
 
 @ApiTags('products')
@@ -44,6 +49,43 @@ export class ProductsController {
   @ApiResponse({ status: 200, description: 'Resultados mesclados' })
   async searchMixed(@Query() searchDto: SearchProductsDto) {
     return this.productsService.searchMixed(searchDto)
+  }
+
+  @Post('search/concierge')
+  @ApiOperation({ summary: 'Buscar produtos via IA Concierge (tradução automática + descrições)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 200, description: 'Resultados da busca com descrição IA' })
+  @UseInterceptors(FileInterceptor('image'))
+  async searchConcierge(
+    @Body() searchDto: SearchConciergeDto,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.productsService.searchConcierge(searchDto.keyword, image)
+  }
+
+  @Get('search/get-freight')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Buscar configuração de frete mais próxima do endereço do usuário' })
+  @ApiResponse({ status: 200, description: 'Configuração de frete encontrada' })
+  async getFreight(@CurrentUser() user: any) {
+    return this.productsService.getFreightByUserAddress(user.id)
+  }
+
+  @Post('search/get-cbm')
+  @ApiOperation({ summary: 'Calcular CBM/Peso de produtos em lote' })
+  @ApiBody({ type: GetCbmDto })
+  @ApiResponse({ status: 200, description: 'Dados de CBM/Peso calculados' })
+  async getCbm(@Body() getCbmDto: GetCbmDto) {
+    return this.productsService.getCbm(getCbmDto.terms, getCbmDto.products)
+  }
+
+  @Post('search/get-cbm-individual')
+  @ApiOperation({ summary: 'Calcular CBM/Peso de um produto individual' })
+  @ApiBody({ type: GetCbmIndividualDto })
+  @ApiResponse({ status: 200, description: 'Dados de CBM/Peso calculados' })
+  async getCbmIndividual(@Body() dto: GetCbmIndividualDto) {
+    return this.productsService.getCbmIndividual(dto.term, dto.product)
   }
 
   @Post('search/image/1688')

@@ -3,10 +3,12 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   NotFoundException,
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common'
 import {
@@ -16,11 +18,14 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Response } from 'express'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
+import { Public } from '../../common/decorators/public.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { CartService } from './cart.service'
+import { PdfGeneratorService } from './services/pdf-generator.service'
 import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
 
 @ApiTags('cart')
@@ -28,7 +33,10 @@ import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth()
 export class CartController {
-  constructor(private readonly cartService: CartService) {}
+  constructor(
+    private readonly cartService: CartService,
+    private readonly pdfGeneratorService: PdfGeneratorService,
+  ) {}
 
   @Post('cart')
   @Roles('user', 'admin')
@@ -114,6 +122,52 @@ export class CartController {
   @ApiResponse({ status: 200, description: 'Carrinho sincronizado' })
   async sync(@CurrentUser() user: any, @Body() syncCartDto: SyncCartDto) {
     return this.cartService.sync(user.id, syncCartDto)
+  }
+
+  @Post('cart/report-tax-calculator')
+  @Public()
+  @ApiOperation({ summary: 'Gerar relatório PDF da calculadora de impostos' })
+  @ApiResponse({ status: 200, description: 'PDF gerado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @Header('Content-Type', 'application/pdf')
+  async generateTaxCalculatorReport(
+    @Body() body: { data: any; detailed?: boolean },
+    @Res() res: Response,
+  ) {
+    const detailed = body.detailed || false
+    const pdfBuffer = detailed
+      ? await this.pdfGeneratorService.generateTaxCalculatorDetailedPdf(body.data)
+      : await this.pdfGeneratorService.generateTaxCalculatorSummaryPdf(body.data)
+
+    const filename = detailed ? 'calculadora-impostos-detalhado.pdf' : 'calculadora-impostos.pdf'
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Length', pdfBuffer.length)
+    res.end(pdfBuffer)
+  }
+
+  @Post('cart/report')
+  @Public()
+  @ApiOperation({ summary: 'Gerar relatório PDF do carrinho' })
+  @ApiResponse({ status: 200, description: 'PDF gerado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @Header('Content-Type', 'application/pdf')
+  async generateCartReport(
+    @Body() body: { data: any; detailed?: boolean },
+    @Res() res: Response,
+  ) {
+    const detailed = body.detailed || false
+    const pdfBuffer = detailed
+      ? await this.pdfGeneratorService.generateTaxCalculatorDetailedPdf(body.data)
+      : await this.pdfGeneratorService.generateTaxCalculatorSummaryPdf(body.data)
+
+    const filename = detailed ? 'relatorio-detalhado.pdf' : 'relatorio.pdf'
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Length', pdfBuffer.length)
+    res.end(pdfBuffer)
   }
 }
 

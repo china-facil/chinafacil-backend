@@ -22,5 +22,3 @@ import { QuotationService } from './services/quotation.service'
   exports: [BoardingTypesService, FreightsService, QuotationService],
 })
 export class SettingsModule {}
-
-
