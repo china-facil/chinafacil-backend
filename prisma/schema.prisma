@@ -302,11 +302,36 @@ model ProductCatalog {
 }
 
 model FavoriteProduct {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id")
-  itemId      String?  @map("item_id")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id                    String    @id @default(uuid())
+  userId                String    @map("user_id")
+  itemId                String?   @map("item_id")
+  externalUrl           String?   @db.Text @map("external_url")
+  title                 String?   @db.VarChar(255)
+  originalTitle         String?   @db.VarChar(255) @map("original_title")
+  price                 Decimal?  @db.Decimal(10, 2)
+  currency              String    @db.VarChar(10)
+  minimumOrderQuantity  Int?      @map("minimum_order_quantity")
+  quantityPrices        Json?     @map("quantity_prices")
+  salesVolume           Int?      @map("sales_volume")
+  salesVolume90Days      Int?      @map("sales_volume_90_days")
+  categoryId            String?   @db.VarChar(255) @map("category_id")
+  vendorId              String?   @db.VarChar(255) @map("vendor_id")
+  vendorName            String?   @db.VarChar(255) @map("vendor_name")
+  vendorInfo            Json?     @map("vendor_info")
+  mainImage             String?   @db.Text @map("main_image")
+  images                Json?     @db.Json
+  videos                Json?     @db.Json
+  variations            Json?     @db.Json
+  skus                  Json?     @db.Json
+  specifications        Json?     @db.Json
+  stock                 Int?
+  isAvailable           Boolean   @default(true) @map("is_available")
+  provider              String    @db.VarChar(50)
+  shippingInfo          Json?     @map("shipping_info")
+  location              Json?     @db.Json
+  promotions            Json?     @db.Json
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
