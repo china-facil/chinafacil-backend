@@ -41,7 +41,7 @@ export class PlansController {
   @ApiOperation({ summary: 'Listar todos os planos' })
   @ApiResponse({ status: 200, description: 'Lista de planos' })
   async findAll() {
-    return this.plansService.findAll()
+    return this.plansService.findClients()
   }
 
   @Get('plans/active')
