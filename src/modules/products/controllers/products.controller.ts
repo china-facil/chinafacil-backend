@@ -103,6 +103,10 @@ export class ProductsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Adicionar produto aos favoritos' })
   @ApiResponse({ status: 201, description: 'Produto adicionado aos favoritos' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (productId obrigatório)' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Produto não encontrado' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
   async addToFavorites(
     @CurrentUser() user: any,
     @Body() addFavoriteDto: AddFavoriteDto,

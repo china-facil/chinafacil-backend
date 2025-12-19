@@ -43,6 +43,16 @@ export class PlansService {
     return plans
   }
 
+  async findClients() {
+    const clients = await this.prisma.client.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    return clients
+  }
+
   async findActiveClients() {
     const clients = await this.prisma.client.findMany({
       where: {

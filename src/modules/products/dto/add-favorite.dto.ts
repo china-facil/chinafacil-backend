@@ -1,21 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger'
-import { IsNotEmpty, IsObject, IsString } from 'class-validator'
+import { IsNotEmpty, IsString } from 'class-validator'
 
 export class AddFavoriteDto {
   @ApiProperty({
-    example: 'product-123',
-    description: 'ID do produto',
+    example: '869816126705',
+    description: 'ID do produto (alb- para Alibaba, numérico para 1688)',
   })
   @IsString()
   @IsNotEmpty()
   productId: string
-
-  @ApiProperty({
-    description: 'Dados do produto (JSON)',
-  })
-  @IsObject()
-  @IsNotEmpty()
-  productData: any
 }
-
-

@@ -53,8 +53,11 @@ export class SolicitationsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter estatísticas de solicitações' })
   @ApiResponse({ status: 200, description: 'Estatísticas' })
-  async getStatistics() {
-    return this.solicitationsService.getStatistics()
+  async getStatistics(
+    @Query('date_start') dateStart?: string,
+    @Query('date_end') dateEnd?: string,
+  ) {
+    return this.solicitationsService.getStatistics(dateStart, dateEnd)
   }
 
   @Get('kanban')
