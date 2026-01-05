@@ -33,6 +33,9 @@ export class NotificationsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Criar notificação (admin)' })
   @ApiResponse({ status: 201, description: 'Notificação criada' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async create(@Body() createNotificationDto: CreateNotificationDto) {
     return this.notificationsService.create(createNotificationDto)
   }
@@ -41,6 +44,8 @@ export class NotificationsController {
   @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Listar notificações do usuário' })
   @ApiResponse({ status: 200, description: 'Lista de notificações' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async findByUser(
     @CurrentUser() user: any,
     @Query() filterDto: FilterNotificationDto,
@@ -52,6 +57,9 @@ export class NotificationsController {
   @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Marcar notificação como lida' })
   @ApiResponse({ status: 200, description: 'Notificação marcada como lida' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Notificação não encontrada' })
   async markAsRead(@Param('id') id: string, @CurrentUser() user: any) {
     return this.notificationsService.markAsRead(id, user.id)
   }
@@ -60,6 +68,8 @@ export class NotificationsController {
   @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Marcar todas as notificações como lidas' })
   @ApiResponse({ status: 200, description: 'Notificações marcadas como lidas' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async markAllAsRead(@CurrentUser() user: any) {
     return this.notificationsService.markAllAsRead(user.id)
   }
@@ -71,6 +81,8 @@ export class NotificationsController {
     status: 200,
     description: 'Notificações marcadas como não lidas',
   })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async markAllAsUnread(@CurrentUser() user: any) {
     return this.notificationsService.markAllAsUnread(user.id)
   }
@@ -79,6 +91,8 @@ export class NotificationsController {
   @Roles('user', 'admin', 'seller')
   @ApiOperation({ summary: 'Remover todas as notificações' })
   @ApiResponse({ status: 200, description: 'Notificações removidas' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async deleteAll(@CurrentUser() user: any) {
     return this.notificationsService.deleteAll(user.id)
   }

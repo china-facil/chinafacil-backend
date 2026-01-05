@@ -3,7 +3,12 @@ import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator'
 
 export class TranslateProductDto {
   @ApiProperty({
-    description: 'Produto a ser traduzido',
+    example: {
+      title: '产品名称',
+      description: '产品描述',
+      price: 99.99,
+    },
+    description: 'Produto a ser traduzido (objeto JSON)',
   })
   @IsObject()
   @IsNotEmpty()

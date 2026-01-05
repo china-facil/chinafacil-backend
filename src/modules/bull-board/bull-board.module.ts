@@ -1,35 +1,11 @@
 import { Module } from '@nestjs/common'
-import { BullBoardModule } from '@bull-board/nestjs'
-import { ExpressAdapter } from '@bull-board/express'
-import { BullAdapter } from '@bull-board/api/bullAdapter'
+import { ConfigModule } from '@nestjs/config'
+import { BullBoardService } from './bull-board.service'
 
 @Module({
-  imports: [
-    BullBoardModule.forRoot({
-      route: '/admin/queues',
-      adapter: ExpressAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: 'email-queue',
-      adapter: BullAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: 'export-queue',
-      adapter: BullAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: 'catalog-queue',
-      adapter: BullAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: 'lead-queue',
-      adapter: BullAdapter,
-    }),
-    BullBoardModule.forFeature({
-      name: 'product-similarity-queue',
-      adapter: BullAdapter,
-    }),
-  ],
+  imports: [ConfigModule],
+  providers: [BullBoardService],
+  exports: [BullBoardService],
 })
-export class BullBoardModuleConfig {}
+export class BullBoardModule {}
 

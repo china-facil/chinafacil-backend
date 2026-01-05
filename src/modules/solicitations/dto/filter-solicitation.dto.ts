@@ -5,7 +5,8 @@ import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator'
 
 export class FilterSolicitationDto {
   @ApiPropertyOptional({
-    description: 'Buscar por código',
+    example: 'SOL-2024-001',
+    description: 'Buscar por código da solicitação',
   })
   @IsOptional()
   @IsString()
@@ -13,27 +14,33 @@ export class FilterSolicitationDto {
 
   @ApiPropertyOptional({
     enum: SolicitationStatus,
+    example: SolicitationStatus.open,
+    description: 'Filtrar por status',
   })
   @IsOptional()
   @IsEnum(SolicitationStatus)
   status?: SolicitationStatus
 
   @ApiPropertyOptional({
-    description: 'Filtrar por usuário',
+    example: 'user-uuid',
+    description: 'Filtrar por ID do usuário',
   })
   @IsOptional()
   @IsString()
   userId?: string
 
   @ApiPropertyOptional({
-    description: 'Filtrar por cliente',
+    example: 'client-uuid',
+    description: 'Filtrar por ID do cliente',
   })
   @IsOptional()
   @IsString()
   clientId?: string
 
   @ApiPropertyOptional({
+    example: 1,
     default: 1,
+    description: 'Número da página',
   })
   @IsOptional()
   @Type(() => Number)
@@ -42,6 +49,7 @@ export class FilterSolicitationDto {
   page?: number = 1
 
   @ApiPropertyOptional({
+    example: 10,
     default: 10,
     description: 'Número de itens por página',
   })

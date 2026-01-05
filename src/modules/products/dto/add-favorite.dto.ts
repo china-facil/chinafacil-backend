@@ -11,7 +11,12 @@ export class AddFavoriteDto {
   productId: string
 
   @ApiProperty({
-    description: 'Dados do produto (JSON)',
+    example: {
+      title: 'Produto exemplo',
+      price: 99.99,
+      image: 'https://example.com/image.jpg',
+    },
+    description: 'Dados do produto (objeto JSON)',
   })
   @IsObject()
   @IsNotEmpty()
