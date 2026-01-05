@@ -365,16 +365,85 @@ export class ProductsService {
       }
     }
 
-    const favorite = await this.prisma.favoriteProduct.create({
-      data: {
-        userId,
-        itemId: addFavoriteDto.productId,
-      },
-    })
+    const provider = this.identifyProvider(addFavoriteDto.productId)
+    let productDetails: any
+
+    try {
+      if (provider === 'alibaba') {
+        productDetails = await this.getDetailsAlibabaIntl(addFavoriteDto.productId)
+      } else {
+        productDetails = await this.getDetails1688(addFavoriteDto.productId)
+      }
+
+      if (!productDetails?.data) {
+        throw new NotFoundException('Produto não encontrado')
+      }
+
+      const normalizedProduct = productDetails.data
+      const favoriteData = this.mapProductToFavorite(normalizedProduct, userId, addFavoriteDto.productId, provider)
+
+      const favorite = await this.prisma.favoriteProduct.create({
+        data: favoriteData,
+      })
+
+      return {
+        message: 'Produto adicionado aos favoritos',
+        data: favorite,
+      }
+    } catch (error: any) {
+      this.logger.error('ProductsService::addToFavorites - Erro ao buscar detalhes do produto', {
+        error: error.message,
+        productId: addFavoriteDto.productId,
+        provider,
+      })
+      throw error
+    }
+  }
+
+  private identifyProvider(productId: string): 'alibaba' | '1688' {
+    if (productId.startsWith('alb-')) {
+      return 'alibaba'
+    }
+    return '1688'
+  }
+
+  private mapProductToFavorite(
+    product: any,
+    userId: string,
+    itemId: string,
+    provider: 'alibaba' | '1688',
+  ): any {
+    const providerValue = provider === 'alibaba' ? 'alibaba' : '1688'
+    const currency = product.currency || (provider === 'alibaba' ? 'USD' : 'CNY')
 
     return {
-      message: 'Produto adicionado aos favoritos',
-      data: favorite,
+      userId,
+      itemId,
+      externalUrl: product.url || null,
+      title: product.title || null,
+      originalTitle: product.originalTitle || product.title || null,
+      price: product.price ? Number(product.price) : null,
+      currency,
+      minimumOrderQuantity: product.minimumOrder || product.firstLotQuantity || null,
+      quantityPrices: product.quantityRanges && product.quantityRanges.length > 0 ? product.quantityRanges : null,
+      salesVolume: product.salesQuantity || null,
+      salesVolume90Days: product.salesVolume90Days || product.salesQuantity || null,
+      categoryId: product.categoryId || null,
+      vendorId: product.supplier?.id || null,
+      vendorName: product.supplier?.name || null,
+      vendorInfo: product.supplier || null,
+      mainImage: product.imageUrl || null,
+      images: product.images && product.images.length > 0 ? product.images : null,
+      videos: product.videos && product.videos.length > 0 ? product.videos : null,
+      variations: product.skuProps && product.skuProps.length > 0 ? product.skuProps : null,
+      skus: product.skus && product.skus.length > 0 ? product.skus : null,
+      specifications: product.specifications && product.specifications.length > 0 ? product.specifications : null,
+      stock: product.stock || null,
+      isAvailable: product.isSoldOut !== undefined ? !product.isSoldOut : true,
+      provider: providerValue,
+      shippingInfo: product.shippingInfo || null,
+      location: product.supplier?.location ? { location: product.supplier.location } : null,
+      promotions: product.promotions || null,
     }
   }
 

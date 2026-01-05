@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Ip,
   Param,
   Patch,
   Post,
@@ -19,7 +20,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
-import { CreateLeadDto, FilterLeadDto, UpdateLeadDto } from './dto'
+import { CreateLeadDto, FilterLeadDto, LandingEkonomiDto, UpdateLeadDto } from './dto'
 import { LeadsService } from './leads.service'
 
 @ApiTags('leads')
@@ -125,6 +126,17 @@ export class LeadsController {
   async remove(@Param('id') id: string) {
     return this.leadsService.remove(id)
   }
+
+  @Post('landing-ekonomi')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Processar lead da landing page eKonomi' })
+  @ApiResponse({ status: 201, description: 'Lead processado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 429, description: 'Muitas requisições. Limite: 10 por minuto' })
+  async storeLandingEkonomi(
+    @Body() landingEkonomiDto: LandingEkonomiDto,
+    @Ip() clientIp: string,
+  ) {
+    return this.leadsService.storeLandingEkonomi(landingEkonomiDto, clientIp)
+  }
 }
-
-

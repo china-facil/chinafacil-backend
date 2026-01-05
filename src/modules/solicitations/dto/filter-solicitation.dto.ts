@@ -68,6 +68,51 @@ export class FilterSolicitationDto {
   @IsNumber()
   @Min(1)
   items_per_page?: number
+
+  @ApiPropertyOptional({
+    description: 'Data inicial',
+  })
+  @IsOptional()
+  @IsString()
+  date_start?: string
+
+  @ApiPropertyOptional({
+    description: 'Data final',
+  })
+  @IsOptional()
+  @IsString()
+  date_end?: string
+
+  @ApiPropertyOptional({
+    description: 'Campo para ordenação',
+    default: 'createdAt',
+  })
+  @IsOptional()
+  @IsString()
+  sortBy?: string = 'createdAt'
+
+  @ApiPropertyOptional({
+    description: 'Direção da ordenação',
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc' = 'desc'
+
+  @ApiPropertyOptional({
+    description: 'Campo de ordenação',
+  })
+  @IsOptional()
+  @IsString()
+  'order-key'?: string
+
+  @ApiPropertyOptional({
+    description: 'Direção de ordenação',
+  })
+  @IsOptional()
+  @IsString()
+  order?: string
 }
 
 

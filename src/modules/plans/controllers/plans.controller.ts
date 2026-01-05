@@ -58,7 +58,7 @@ export class PlansController {
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 403, description: 'Sem permissão' })
   async findAll() {
-    return this.plansService.findAll()
+    return this.plansService.findClients()
   }
 
   @Get('plans/active')

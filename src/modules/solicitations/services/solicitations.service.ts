@@ -42,7 +42,21 @@ export class SolicitationsService {
   }
 
   async findAll(filterDto: FilterSolicitationDto) {
-    const { search, status, userId, clientId, page = 1, limit, items_per_page } = filterDto
+    const { 
+      search, 
+      status, 
+      userId, 
+      clientId, 
+      page = 1, 
+      limit, 
+      items_per_page, 
+      date_start, 
+      date_end,
+      order,
+      'order-key': orderKey,
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = filterDto
     const take = items_per_page || limit || 10
 
     const skip = (page - 1) * take
@@ -50,19 +64,113 @@ export class SolicitationsService {
     const where: any = {}
 
     if (search) {
-      where.code = { contains: search }
+      where.OR = [
+        { code: { contains: search } },
+        { type: { contains: search } },
+        { user: { name: { contains: search } } },
+        { user: { email: { contains: search } } },
+      ]
     }
 
     if (status) {
       where.status = status
     }
 
-    if (userId) {
-      where.userId = userId
+    if (clientId) {
+      where.clientId = clientId;
     }
 
-    if (clientId) {
-      where.clientId = clientId
+    if (date_start && date_end) {
+      where.createdAt = {
+        gte: new Date(`${date_start} 00:00:00`),
+        lte: new Date(`${date_end} 23:59:59`),
+      }
+    }
+
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    });
+
+    const validUserIdArray = validUserIds.map((user) => user.id);
+
+    if (userId) {
+      if (validUserIdArray.includes(userId)) {
+        where.userId = userId;
+      } else {
+        where.userId = {
+          in: [],
+        };
+      }
+    } else {
+      if (validUserIdArray.length > 0) {
+        where.userId = {
+          in: validUserIdArray,
+        };
+      } else {
+        where.userId = {
+          in: [],
+        };
+      }
+    }
+
+    const fieldMapping: Record<string, string> = {
+      'created_at': 'createdAt',
+      'updated_at': 'updatedAt',
+      'user_id': 'userId',
+      'client_id': 'clientId',
+      'responsible_type': 'responsibleType',
+      'responsible_id': 'responsibleId',
+    }
+
+    const actualSortBy = fieldMapping[orderKey || ''] || orderKey || sortBy
+    const actualSortOrder = (order || sortOrder) as 'asc' | 'desc'
+
+    const getOrderBy = () => {
+      const sortField = actualSortBy.toLowerCase()
+      
+      if (sortField === 'solicitante' || sortField === 'user_name' || sortField === 'user.name') {
+        return {
+          user: {
+            name: actualSortOrder,
+          },
+        }
+      }
+      
+      if (sortField === 'user_role' || sortField === 'user.role' || sortField === 'userrole') {
+        return {
+          user: {
+            role: actualSortOrder,
+          },
+        }
+      }
+      
+      if (sortField === 'tipo' || sortField === 'type') {
+        return {
+          type: actualSortOrder,
+        }
+      }
+      
+      const validFields = [
+        'id', 'code', 'status', 'type', 'quantity', 
+        'createdat', 'created_at', 'updatedat', 'updated_at',
+        'userid', 'user_id', 'clientid', 'client_id',
+        'responsibletype', 'responsible_type', 'responsibleid', 'responsible_id',
+        'from'
+      ]
+      
+      const normalizedField = sortField.replace(/_/g, '')
+      if (validFields.some(field => normalizedField === field || sortField === field)) {
+        const prismaField = actualSortBy.includes('_') 
+          ? fieldMapping[actualSortBy] || actualSortBy
+          : actualSortBy
+        return {
+          [prismaField]: actualSortOrder,
+        }
+      }
+      
+      return {
+        createdAt: actualSortOrder,
+      }
     }
 
     const [solicitations, total] = await Promise.all([
@@ -70,9 +178,7 @@ export class SolicitationsService {
         where,
         skip,
         take,
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: getOrderBy(),
         include: {
           user: {
             select: {
@@ -245,29 +351,121 @@ export class SolicitationsService {
     }
   }
 
-  async getStatistics() {
-    const [
-      totalSolicitations,
-      openSolicitations,
-      totalItems,
-      uniqueUsers,
-    ] = await Promise.all([
-      this.prisma.solicitation.count(),
+  async getStatistics(dateStart?: string, dateEnd?: string) {
+    const baseFilter: any = {
+      from: 'chinafacil',
+    }
+
+    if (dateStart) {
+      baseFilter.createdAt = {
+        ...baseFilter.createdAt,
+        gte: new Date(`${dateStart} 00:00:00`),
+      }
+    }
+
+    if (dateEnd) {
+      baseFilter.createdAt = {
+        ...baseFilter.createdAt,
+        lte: new Date(`${dateEnd} 23:59:59`),
+      }
+    }
+
+    const openFilter = {
+      ...baseFilter,
+      status: SolicitationStatus.open,
+    }
+
+    const [totalSolicitations, openSolicitations, solicitationsWithCart, uniqueUsersResult] = await Promise.all([
       this.prisma.solicitation.count({
-        where: { status: SolicitationStatus.open },
+        where: baseFilter,
       }),
-      this.prisma.solicitationItem.count(),
+      this.prisma.solicitation.count({
+        where: openFilter,
+      }),
+      this.prisma.solicitation.findMany({
+        where: {
+          ...baseFilter,
+          cart: { isNot: null },
+        },
+        include: {
+          cart: true,
+        },
+      }),
       this.prisma.solicitation.groupBy({
         by: ['userId'],
+        where: baseFilter,
       }),
     ])
 
+    const totalValue = this.calculateTotalCartValue(solicitationsWithCart)
+    const totalItems = this.calculateTotalCartItems(solicitationsWithCart)
+
     return {
-      totalSolicitations,
-      openSolicitations,
-      totalItems,
-      uniqueUsers: uniqueUsers.length,
+      status: 'success',
+      data: {
+        totalSolicitations,
+        totalValue,
+        uniqueUsers: uniqueUsersResult.length,
+        openSolicitations,
+        totalItems,
+      },
     }
+  }
+
+  private calculateTotalCartValue(solicitationsWithCart: any[]): number {
+    let grandTotal = 0
+
+    for (const solicitation of solicitationsWithCart) {
+      if (!solicitation.cart?.items) continue
+
+      let items: any = solicitation.cart.items
+      
+      if (typeof items === 'string') {
+        try {
+          items = JSON.parse(items)
+        } catch (e) {
+          continue
+        }
+      }
+      
+      if (!Array.isArray(items)) continue
+
+      for (const item of items) {
+        if (item?.variations && Array.isArray(item.variations)) {
+          for (const variation of item.variations) {
+            const price = parseFloat(variation.price || 0)
+            const quantity = parseFloat(variation.quantity || 0)
+            grandTotal += price * quantity
+          }
+        }
+      }
+    }
+
+    return grandTotal
+  }
+
+  private calculateTotalCartItems(solicitationsWithCart: any[]): number {
+    let totalItems = 0
+
+    for (const solicitation of solicitationsWithCart) {
+      if (!solicitation.cart?.items) continue
+
+      let items: any = solicitation.cart.items
+      
+      if (typeof items === 'string') {
+        try {
+          items = JSON.parse(items)
+        } catch (e) {
+          continue
+        }
+      }
+      
+      if (Array.isArray(items)) {
+        totalItems += items.length
+      }
+    }
+
+    return totalItems
   }
 
   async getKanban() {
