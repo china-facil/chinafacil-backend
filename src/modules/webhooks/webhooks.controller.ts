@@ -22,6 +22,7 @@ export class WebhooksController {
   @UseGuards(WebhookSignatureGuard)
   @ApiOperation({ summary: 'Receber webhook do Typeform' })
   @ApiResponse({ status: 201, description: 'Webhook processado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 401, description: 'Assinatura inválida' })
   async handleTypeform(@Body() typeformWebhookDto: TypeformWebhookDto) {
     return this.webhooksService.handleTypeformWebhook(typeformWebhookDto)
@@ -30,6 +31,7 @@ export class WebhooksController {
   @Post('generic')
   @ApiOperation({ summary: 'Receber webhook genérico' })
   @ApiResponse({ status: 201, description: 'Webhook processado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
   async handleGeneric(@Body() genericWebhookDto: GenericWebhookDto) {
     return this.webhooksService.handleGenericWebhook(genericWebhookDto)
   }
@@ -41,6 +43,8 @@ export class WebhooksController {
   @ApiOperation({ summary: 'Obter logs de webhooks' })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Logs de webhooks' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getWebhookLogs(@Query('limit') limit?: number) {
     return this.webhooksService.getWebhookLogs(
       limit ? Number(limit) : undefined,

@@ -31,7 +31,22 @@ export class PlansController {
   @Post('plans')
   @Roles('admin')
   @ApiOperation({ summary: 'Criar novo plano' })
-  @ApiResponse({ status: 201, description: 'Plano criado com sucesso' })
+  @ApiResponse({
+    status: 201,
+    description: 'Plano criado com sucesso',
+    schema: {
+      example: {
+        id: 'plan-uuid',
+        name: 'Plano Premium',
+        price: 99.90,
+        active: true,
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async create(@Body() createPlanDto: CreatePlanDto) {
     return this.plansService.create(createPlanDto)
   }
@@ -40,6 +55,8 @@ export class PlansController {
   @Roles('admin', 'seller', 'user')
   @ApiOperation({ summary: 'Listar todos os planos' })
   @ApiResponse({ status: 200, description: 'Lista de planos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async findAll() {
     return this.plansService.findClients()
   }
@@ -64,6 +81,8 @@ export class PlansController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter detalhes de um plano' })
   @ApiResponse({ status: 200, description: 'Detalhes do plano' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Plano não encontrado' })
   async findOne(@Param('id') id: string) {
     return this.plansService.findOne(id)
@@ -73,6 +92,9 @@ export class PlansController {
   @Roles('admin')
   @ApiOperation({ summary: 'Atualizar plano' })
   @ApiResponse({ status: 200, description: 'Plano atualizado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Plano não encontrado' })
   async update(
     @Param('id') id: string,
@@ -88,6 +110,8 @@ export class PlansController {
     status: 200,
     description: 'Plano removido ou desativado com sucesso',
   })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Plano não encontrado' })
   async remove(@Param('id') id: string) {
     return this.plansService.remove(id)

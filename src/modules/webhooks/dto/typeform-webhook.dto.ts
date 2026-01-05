@@ -3,14 +3,20 @@ import { IsNotEmpty, IsObject, IsString } from 'class-validator'
 
 export class TypeformWebhookDto {
   @ApiProperty({
-    description: 'Event type',
+    example: 'form_response',
+    description: 'Tipo do evento (form_response, etc)',
   })
   @IsString()
   @IsNotEmpty()
   event_type: string
 
   @ApiProperty({
-    description: 'Form response',
+    example: {
+      form_id: 'abc123',
+      token: 'def456',
+      answers: [],
+    },
+    description: 'Resposta do formulário Typeform (objeto JSON)',
   })
   @IsObject()
   @IsNotEmpty()

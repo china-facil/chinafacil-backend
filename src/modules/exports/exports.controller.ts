@@ -1,9 +1,8 @@
-import { Body, Controller, Post, Res, UseGuards, HttpStatus, NotFoundException, HttpCode } from "@nestjs/common";
+import { Body, Controller, Post, Res, UseGuards, HttpStatus, NotFoundException } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
-import * as fs from "fs/promises";
 import * as path from "path";
 import { createReadStream } from "fs";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -25,9 +24,11 @@ export class ExportsController {
   ) {}
 
   @Post("request")
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Solicitar exportação (processamento assíncrono)" })
-  @ApiResponse({ status: 200, description: "Exportação solicitada com sucesso" })
+  @ApiResponse({ status: 201, description: "Exportação solicitada com sucesso" })
+  @ApiResponse({ status: 400, description: "Dados inválidos" })
+  @ApiResponse({ status: 401, description: "Não autenticado" })
+  @ApiResponse({ status: 500, description: "Erro ao criar job de exportação" })
   async requestExport(@CurrentUser() user: any, @Body() requestExportDto: RequestExportDto) {
     const job = await this.exportQueue.add(
       "process-export",
@@ -56,7 +57,10 @@ export class ExportsController {
   @Post("download-direct")
   @ApiOperation({ summary: "Gerar e baixar exportação diretamente" })
   @ApiResponse({ status: 200, description: "Arquivo gerado e disponível para download" })
+  @ApiResponse({ status: 400, description: "Dados inválidos" })
+  @ApiResponse({ status: 401, description: "Não autenticado" })
   @ApiResponse({ status: 404, description: "Nenhum dado encontrado" })
+  @ApiResponse({ status: 500, description: "Erro ao gerar arquivo de exportação" })
   async downloadDirect(@Body() requestExportDto: RequestExportDto, @Res() res: Response) {
     try {
       const { filePath, filename } = await this.exportsService.generateExport(requestExportDto);

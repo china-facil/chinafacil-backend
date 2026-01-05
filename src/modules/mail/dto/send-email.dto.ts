@@ -42,14 +42,24 @@ export class SendEmailDto {
   template?: string
 
   @ApiPropertyOptional({
-    description: 'Contexto para o template',
+    example: {
+      name: 'João Silva',
+      link: 'https://example.com/reset-password',
+    },
+    description: 'Contexto para o template (objeto JSON)',
   })
   @IsOptional()
   @IsObject()
   context?: any
 
   @ApiPropertyOptional({
-    description: 'Anexos',
+    example: [
+      {
+        filename: 'document.pdf',
+        path: '/path/to/file.pdf',
+      },
+    ],
+    description: 'Anexos (array de objetos)',
   })
   @IsOptional()
   @IsArray()

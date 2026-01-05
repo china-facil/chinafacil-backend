@@ -26,7 +26,12 @@ export class RequestExportDto {
   model: string
 
   @ApiPropertyOptional({
-    description: 'Filtros e parâmetros',
+    example: {
+      status: 'active',
+      startDate: '2024-01-01',
+      endDate: '2024-12-31',
+    },
+    description: 'Filtros e parâmetros para a exportação (objeto JSON)',
   })
   @IsOptional()
   @IsObject()

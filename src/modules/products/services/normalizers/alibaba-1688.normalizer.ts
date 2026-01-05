@@ -148,6 +148,25 @@ export class Alibaba1688Normalizer {
       value: spec.value || spec.prop_value || '',
     })).filter(spec => spec.name && spec.value)
   }
+
+  private formatLocation(areaFrom: any): string {
+    if (!areaFrom) return ''
+    if (typeof areaFrom === 'string') return areaFrom
+    if (Array.isArray(areaFrom)) {
+      return areaFrom.filter(Boolean).join(', ')
+    }
+    return ''
+  }
+
+  private parseRating(rating: any): number {
+    if (!rating) return 0
+    if (typeof rating === 'number') return rating
+    if (typeof rating === 'string') {
+      const parsed = parseFloat(rating)
+      return isNaN(parsed) ? 0 : parsed
+    }
+    return 0
+  }
 }
 
 

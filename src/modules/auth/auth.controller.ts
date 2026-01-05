@@ -30,7 +30,21 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({ summary: 'Login de usuário' })
-  @ApiResponse({ status: 200, description: 'Login realizado com sucesso' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login realizado com sucesso',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        user: {
+          id: 'user-uuid',
+          email: 'usuario@example.com',
+          name: 'João Silva',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas' })
   async login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto)
@@ -38,7 +52,18 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Registro de novo usuário' })
-  @ApiResponse({ status: 201, description: 'Usuário criado com sucesso' })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuário criado com sucesso',
+    schema: {
+      example: {
+        id: 'user-uuid',
+        email: 'usuario@example.com',
+        name: 'João Silva',
+        createdAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Email já cadastrado' })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto)

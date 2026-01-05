@@ -15,8 +15,17 @@ export class LogsService {
   private readonly logger = new Logger(LogsService.name);
   private readonly logsDir = path.join(process.cwd(), 'logs');
 
+  private async ensureLogsDirectory(): Promise<void> {
+    try {
+      await fs.access(this.logsDir);
+    } catch {
+      await fs.mkdir(this.logsDir, { recursive: true });
+    }
+  }
+
   async getLogFiles(): Promise<string[]> {
     try {
+      await this.ensureLogsDirectory();
       const files = await fs.readdir(this.logsDir);
       return files.filter((file) => file.endsWith('.log')).sort().reverse();
     } catch (error) {
@@ -27,6 +36,7 @@ export class LogsService {
 
   async getLogContent(filename: string): Promise<LogEntry[]> {
     try {
+      await this.ensureLogsDirectory();
       const filePath = path.join(this.logsDir, filename);
       const content = await fs.readFile(filePath, 'utf-8');
       const lines = content.split('\n').filter((line) => line.trim());
@@ -68,6 +78,7 @@ export class LogsService {
 
   async clearLogs(): Promise<void> {
     try {
+      await this.ensureLogsDirectory();
       const files = await this.getLogFiles();
       await Promise.all(files.map((file) => fs.unlink(path.join(this.logsDir, file))));
       this.logger.log('All logs cleared');
