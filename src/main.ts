@@ -11,6 +11,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor'
 import { TransformInterceptor } from './common/interceptors/transform.interceptor'
 import { ApmInterceptor } from './common/interceptors/apm.interceptor'
+import { ResponseLoggerInterceptor } from './common/interceptors/response-logger.interceptor'
 import { BullBoardService } from './modules/bull-board/bull-board.service'
 
 // @ts-ignore
@@ -74,6 +75,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new LoggingInterceptor())
   app.useGlobalInterceptors(new TransformInterceptor())
   app.useGlobalInterceptors(new ApmInterceptor())
+  app.useGlobalInterceptors(new ResponseLoggerInterceptor())
 
   const doc_config = new DocumentBuilder()
     .setTitle('ChinaFácil API')
