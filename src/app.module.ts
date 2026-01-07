@@ -32,7 +32,6 @@ import { LogsModule } from './common/logs/logs.module';
 
 @Module({
   imports: [
-    // Configuração
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../.env'],
@@ -50,7 +49,6 @@ import { LogsModule } from './common/logs/logs.module';
       }],
     }),
 
-    // Rate Limiting - 60 req/min não logado, 150 req/min logado
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -58,7 +56,6 @@ import { LogsModule } from './common/logs/logs.module';
       },
     ]),
 
-    // Bull/Redis para filas
     BullModule.forRootAsync({
       useFactory: () => ({
         redis: {
@@ -68,14 +65,8 @@ import { LogsModule } from './common/logs/logs.module';
         },
       }),
     }),
-
-    // Database (Prisma)
     DatabaseModule,
-
-    // Health Check
     HealthModule,
-
-    // Módulos de domínio
     AuthModule,
     UsersModule,
     ClientsModule,
@@ -88,28 +79,16 @@ import { LogsModule } from './common/logs/logs.module';
     StatisticsModule,
     WebhooksModule,
     LeadsModule,
-     AIModule,
-     ExportsModule,
-     TranslationModule,
-     OTPModule,
-     TaxCalculatorModule,
-
-    // Jobs
+    AIModule,
+    ExportsModule,
+    TranslationModule,
+    OTPModule,
+    TaxCalculatorModule,
     JobsModule,
-
-    // Mail
     MailModule,
-
-    // Proxy
     ProxyModule,
-
-    // Bull Board
     BullBoardModule,
-
-    // CLI
     CliModule,
-
-    // Logs
     LogsModule,
   ],
   providers: [
