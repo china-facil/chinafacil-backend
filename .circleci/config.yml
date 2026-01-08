@@ -92,7 +92,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "${SSH_FINGERPRINT}"
+            - "SHA256:VeN3Uajq32b6k3pM7ZCaUDjUcXC9DCqXyt7O+nbz6pA"
       - run:
           name: Deploy to AWS EC2
           command: |
