@@ -11,7 +11,7 @@ describe('Health API (Integration)', () => {
     it("should return health status successfully", async () => {
       const res = await ctx.req.get("/api/health");
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("status", "success3");
+      expect(res.body).toHaveProperty("status", "success2");
       expect(res.body).toHaveProperty("timestamp");
       expect(res.body).toHaveProperty("uptime");
       expect(res.body).toHaveProperty("database");
