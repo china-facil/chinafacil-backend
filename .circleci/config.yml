@@ -169,7 +169,6 @@ workflows:
           requires:
             - lint
             - build
-            - test-integration
           filters:
             branches:
               only: main
