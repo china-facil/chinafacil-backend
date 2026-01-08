@@ -111,10 +111,6 @@ jobs:
           name: SSH connectivity test (verbose)
           command: |
             ssh -vvv -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} "echo ok"
-      - run:
-          name: Show SSH target
-          command: |
-            echo "TARGET=${AWS_EC2_USER}@${AWS_EC2_HOST}"
 
       - run:
           name: Deploy to AWS EC2
