@@ -17,6 +17,7 @@ jobs:
       - restore_cache:
           keys:
             - v1-deps-{{ checksum "package-lock.json" }}
+            - v1-deps-{{ checksum "package.json" }}
             - v1-deps-
       - run:
           name: Install dependencies
@@ -90,26 +91,44 @@ jobs:
       - image: cimg/base:2024.01
     steps:
       - checkout
+
       - add_ssh_keys:
           fingerprints:
             - "SHA256:VeN3Uajq32b6k3pM7ZCaUDjUcXC9DCqXyt7O+nbz6pA"
+
+      - run:
+          name: Debug SSH agent
+          command: |
+            which ssh || true
+            ssh -V
+            echo "AWS_EC2_USER=${AWS_EC2_USER}"
+            echo "AWS_EC2_HOST=${AWS_EC2_HOST}"
+            echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK"
+            ssh-add -l || true
+            ls -la ~/.ssh || true
+
+      - run:
+          name: SSH connectivity test (verbose)
+          command: |
+            ssh -vvv -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} "echo ok"
+
       - run:
           name: Deploy to AWS EC2
           command: |
-            ssh -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} \<< 'EOF'
+            ssh -o StrictHostKeyChecking=no ${AWS_EC2_USER}@${AWS_EC2_HOST} << 'EOF'
               set -e
               cd ~/chinafacil-backend
-              
+
               CURRENT_COMMIT=$(git rev-parse HEAD)
-              
+
               git fetch origin main
               git reset --hard origin/main
-              
+
               docker compose -f docker-compose.prod.yml build --no-cache
               docker compose -f docker-compose.prod.yml up -d
-              
+
               sleep 15
-              
+
               if ! curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
                 echo "Health check failed! Rolling back..."
                 git reset --hard $CURRENT_COMMIT
@@ -117,10 +136,11 @@ jobs:
                 docker compose -f docker-compose.prod.yml up -d
                 exit 1
               fi
-              
+
               echo "Deploy successful!"
               docker system prune -f
             EOF
+
       - run:
           name: External health check
           command: |
@@ -178,4 +198,3 @@ workflows:
           filters:
             branches:
               only: main
-
