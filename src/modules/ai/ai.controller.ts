@@ -38,6 +38,9 @@ export class AIController {
   @Roles('admin')
   @ApiOperation({ summary: 'Gerar completion (OpenAI)' })
   @ApiResponse({ status: 201, description: 'Completion gerado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async completion(@Body() completionDto: CompletionDto) {
     return this.aiService.completion(completionDto)
   }
@@ -47,6 +50,9 @@ export class AIController {
   @ApiOperation({ summary: 'Chat completion' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 201, description: 'Resposta gerada' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async chatCompletion(
     @Body() chatCompletionDto: ChatCompletionDto,
     @Query('provider') provider?: 'openai' | 'anthropic',
@@ -59,6 +65,9 @@ export class AIController {
   @ApiOperation({ summary: 'Chat completion com streaming (SSE)' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 200, description: 'Stream de respostas' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async chatCompletionStream(
     @Body() chatCompletionDto: ChatCompletionDto,
     @Query('provider') provider: 'openai' | 'anthropic' = 'openai',
@@ -103,6 +112,9 @@ export class AIController {
   @Roles('admin')
   @ApiOperation({ summary: 'Gerar embedding (OpenAI)' })
   @ApiResponse({ status: 201, description: 'Embedding gerado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async generateEmbedding(@Body() embeddingDto: EmbeddingDto) {
     return this.aiService.generateEmbedding(embeddingDto.text)
   }
@@ -112,6 +124,9 @@ export class AIController {
   @ApiOperation({ summary: 'Analisar similaridade entre produtos' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 201, description: 'Análise concluída' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async analyzeProductSimilarity(
     @Body() productSimilarityDto: ProductSimilarityDto,
     @Query('provider') provider?: 'openai' | 'anthropic',

@@ -481,6 +481,11 @@ export class UsersService {
       }
     }
 
+    const solicitationFilter = {
+      ...dateFilter,
+      from: 'chinafacil',
+    }
+
     const [totalLeads, totalClients, totalUsers, totalSolicitations, solicitationsWithCart] = await Promise.all([
       this.prisma.user.count({
         where: {
@@ -503,11 +508,11 @@ export class UsersService {
       }),
       this.prisma.user.count(),
       this.prisma.solicitation.count({
-        where: dateFilter,
+        where: solicitationFilter,
       }),
       this.prisma.solicitation.findMany({
         where: {
-          ...dateFilter,
+          ...solicitationFilter,
           cart: { isNot: null },
         },
         include: {

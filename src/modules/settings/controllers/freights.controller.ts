@@ -35,6 +35,9 @@ export class FreightsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Criar frete' })
   @ApiResponse({ status: 201, description: 'Frete criado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async create(@Body() createFreightDto: CreateFreightDto) {
     return this.freightsService.create(createFreightDto)
   }
@@ -42,6 +45,8 @@ export class FreightsController {
   @Get('freights')
   @ApiOperation({ summary: 'Listar fretes' })
   @ApiResponse({ status: 200, description: 'Lista de fretes' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async findAll() {
     return this.freightsService.findAll()
   }
@@ -49,6 +54,9 @@ export class FreightsController {
   @Get('freights/:id')
   @ApiOperation({ summary: 'Obter frete específico' })
   @ApiResponse({ status: 200, description: 'Frete encontrado' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Frete não encontrado' })
   async findOne(@Param('id') id: string) {
     return this.freightsService.findOne(id)
   }
@@ -57,6 +65,10 @@ export class FreightsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Atualizar frete' })
   @ApiResponse({ status: 200, description: 'Frete atualizado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Frete não encontrado' })
   async update(
     @Param('id') id: string,
     @Body() updateFreightDto: UpdateFreightDto,
@@ -68,6 +80,9 @@ export class FreightsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Remover frete' })
   @ApiResponse({ status: 200, description: 'Frete removido' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Frete não encontrado' })
   async remove(@Param('id') id: string) {
     return this.freightsService.remove(id)
   }
@@ -75,6 +90,9 @@ export class FreightsController {
   @Post('frete/calcular')
   @ApiOperation({ summary: 'Calcular frete nacional' })
   @ApiResponse({ status: 200, description: 'Cálculo de frete realizado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Frete não encontrado' })
   async calculateFreight(@Body() calculateFreightDto: CalculateFreightDto) {
     return this.freightsService.calculateFreight(calculateFreightDto)

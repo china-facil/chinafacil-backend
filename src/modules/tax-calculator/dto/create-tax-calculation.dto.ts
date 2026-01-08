@@ -3,6 +3,7 @@ import { IsEnum, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, Min } fro
 
 export class CreateTaxCalculationDto {
   @ApiPropertyOptional({
+    example: 'user-uuid',
     description: 'ID do usuário',
   })
   @IsOptional()
@@ -10,6 +11,7 @@ export class CreateTaxCalculationDto {
   userId?: string
 
   @ApiPropertyOptional({
+    example: 'usuario@example.com',
     description: 'Email do usuário',
   })
   @IsOptional()
@@ -17,7 +19,8 @@ export class CreateTaxCalculationDto {
   userEmail?: string
 
   @ApiPropertyOptional({
-    description: 'ID temporário do usuário',
+    example: 'temp-user-123',
+    description: 'ID temporário do usuário (para usuários não cadastrados)',
   })
   @IsOptional()
   @IsString()

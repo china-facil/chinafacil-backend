@@ -4,7 +4,8 @@ import { IsBoolean, IsNumber, IsOptional, Min } from 'class-validator'
 
 export class FilterNotificationDto {
   @ApiPropertyOptional({
-    description: 'Filtrar por lidas/não lidas',
+    example: false,
+    description: 'Filtrar por lidas (true) ou não lidas (false)',
   })
   @IsOptional()
   @IsBoolean()
@@ -12,7 +13,9 @@ export class FilterNotificationDto {
   read?: boolean
 
   @ApiPropertyOptional({
+    example: 1,
     default: 1,
+    description: 'Número da página',
   })
   @IsOptional()
   @Type(() => Number)
@@ -21,7 +24,9 @@ export class FilterNotificationDto {
   page?: number = 1
 
   @ApiPropertyOptional({
+    example: 20,
     default: 20,
+    description: 'Itens por página',
   })
   @IsOptional()
   @Type(() => Number)

@@ -47,15 +47,55 @@ export class OtService {
         }),
       )
 
-      return this.normalizer.normalizeAlibabaSearchResponse(response.data)
-    } catch (error) {
-      this.logger.error('OtService::searchProductsByKeywordAlibaba - Erro', error.message)
+      this.logger.log('OtService::searchProductsByKeywordAlibaba - Resposta recebida', {
+        statusCode: response.status,
+        hasData: !!response.data,
+        responseCode: response.data?.Code,
+        responseMessage: response.data?.Message,
+        responseDataKeys: response.data ? Object.keys(response.data) : [],
+        responseDataSample: JSON.stringify(response.data).substring(0, 500),
+      })
+
+      if (!response.data) {
+        this.logger.error('OtService::searchProductsByKeywordAlibaba - Resposta sem dados')
+        return { data: { items: [] }, msg: 'Resposta da API sem dados', code: 500 }
+      }
+
+      const normalizedResponse = this.normalizer.normalizeAlibabaSearchResponse(response.data)
+      
+      this.logger.log('OtService::searchProductsByKeywordAlibaba - Resposta normalizada', {
+        code: normalizedResponse.code,
+        msg: normalizedResponse.msg,
+        itemsCount: normalizedResponse.data?.items?.length || 0,
+      })
+
+      return normalizedResponse
+    } catch (error: any) {
+      this.logger.error('OtService::searchProductsByKeywordAlibaba - Erro', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      })
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return { 
+          data: { items: [] }, 
+          msg: 'RAPIDAPI_KEY inválido ou sem permissão', 
+          code: 401 
+        }
+      }
       
       if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
         return { data: { items: [] }, msg: 'timeout', code: 408 }
       }
       
-      return { data: { items: [] }, msg: 'unknown', code: 500 }
+      if (error.response?.data) {
+        return this.normalizer.normalizeAlibabaSearchResponse(error.response.data)
+      }
+      
+      return { data: { items: [] }, msg: error.message || 'Erro desconhecido', code: 500 }
     }
   }
 
@@ -65,13 +105,15 @@ export class OtService {
     pageSize?: number
   }) {
     try {
-      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/SearchItemsByImage'
+      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/BatchSearchItemsFrame'
       
       const queryParams = {
         ImageUrl: params.imgUrl,
         framePosition: ((params.page || 1) - 1) * (params.pageSize || 20),
         frameSize: params.pageSize || 20,
       }
+
+      this.logger.log('OtService::searchProductsByImageAlibaba - Parâmetros', queryParams)
 
       const response = await firstValueFrom(
         this.httpService.get(endpoint, {
@@ -84,11 +126,61 @@ export class OtService {
         }),
       )
 
-      return this.normalizer.normalizeAlibabaSearchResponse(response.data)
-    } catch (error) {
-      this.logger.error('OtService::searchProductsByImageAlibaba - Erro', error.message)
+      this.logger.log('OtService::searchProductsByImageAlibaba - Resposta recebida', {
+        statusCode: response.status,
+        hasData: !!response.data,
+        responseCode: response.data?.Code,
+        responseMessage: response.data?.Message,
+      })
+
+      if (!response.data) {
+        this.logger.error('OtService::searchProductsByImageAlibaba - Resposta sem dados')
+        return { data: { items: [] }, msg: 'Resposta da API sem dados', code: 500 }
+      }
+
+      const normalizedResponse = this.normalizer.normalizeAlibabaSearchResponse(response.data)
       
-      return { data: { items: [] }, msg: 'error', code: 500 }
+      this.logger.log('OtService::searchProductsByImageAlibaba - Resposta normalizada', {
+        code: normalizedResponse.code,
+        msg: normalizedResponse.msg,
+        itemsCount: normalizedResponse.data?.items?.length || 0,
+      })
+
+      return normalizedResponse
+    } catch (error: any) {
+      this.logger.error('OtService::searchProductsByImageAlibaba - Erro', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+      })
+      
+      if (error.response?.status === 404) {
+        return { 
+          data: { items: [] }, 
+          msg: 'Endpoint de busca por imagem não disponível na API', 
+          code: 404 
+        }
+      }
+      
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return { 
+          data: { items: [] }, 
+          msg: 'RAPIDAPI_KEY inválido ou sem permissão', 
+          code: 401 
+        }
+      }
+      
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return { data: { items: [] }, msg: 'timeout', code: 408 }
+      }
+      
+      if (error.response?.data) {
+        return this.normalizer.normalizeAlibabaSearchResponse(error.response.data)
+      }
+      
+      return { data: { items: [] }, msg: error.message || 'Erro desconhecido', code: 500 }
     }
   }
 
@@ -112,10 +204,26 @@ export class OtService {
       )
 
       return this.normalizer.normalizeAlibabaDetailResponse(response.data)
-    } catch (error) {
-      this.logger.error('OtService::getProductDetailsAlibaba - Erro', error.message)
+    } catch (error: any) {
+      this.logger.error('OtService::getProductDetailsAlibaba - Erro', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+      })
       
-      return { data: null, msg: 'error', code: 500 }
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        return { 
+          data: null, 
+          msg: 'RAPIDAPI_KEY inválido ou sem permissão', 
+          code: 401 
+        }
+      }
+      
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return { data: null, msg: 'timeout', code: 408 }
+      }
+      
+      return { data: null, msg: error.message || "Erro desconhecido", code: 500 };
     }
   }
 

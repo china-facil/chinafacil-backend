@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
+import * as Sentry from '@sentry/node';
+import { RequestWithUser } from '../interfaces/request-with-user.interface';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -16,7 +18,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest<Request>();
+    const request = ctx.getRequest<RequestWithUser>();
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | object = 'Internal server error';
@@ -91,6 +93,58 @@ export class AllExceptionsFilter implements ExceptionFilter {
       JSON.stringify(errorResponse),
       exception instanceof Error ? exception.stack : '',
     );
+
+    const user = request.user;
+    const userContext = user ? {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    } : null;
+
+    Sentry.captureException(exception, {
+      user: userContext ? {
+        id: userContext.id.toString(),
+        email: userContext.email,
+        username: userContext.name,
+      } : undefined,
+      tags: {
+        endpoint: `${request.method} ${request.url}`,
+        statusCode: status,
+        'user.id': userContext?.id?.toString(),
+        'user.role': userContext?.role,
+      },
+      extra: {
+        request: {
+          url: request.url,
+          method: request.method,
+          query: request.query,
+          body: request.body,
+        },
+        user_context: userContext,
+        response: {
+          statusCode: status,
+          errorResponse: errorResponse,
+        },
+      },
+    });
+
+    if (typeof (global as any).newrelic !== 'undefined') {
+      (global as any).newrelic.noticeError(exception, {
+        request: {
+          url: request.url,
+          method: request.method,
+          headers: request.headers,
+          query: request.query,
+          body: request.body,
+        },
+        response: {
+          statusCode: status,
+          errorResponse: errorResponse,
+        },
+        user: userContext,
+      });
+    }
 
     response.status(status).json(errorResponse);
   }

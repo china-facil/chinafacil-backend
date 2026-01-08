@@ -2,37 +2,59 @@ import { ApiProperty } from '@nestjs/swagger'
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class CreateUserAddressDto {
-  @ApiProperty({ description: 'Rua' })
+  @ApiProperty({
+    example: 'Rua das Flores',
+    description: 'Rua',
+  })
   @IsNotEmpty({ message: 'Rua é obrigatório' })
   @IsString()
   street: string
 
-  @ApiProperty({ description: 'Número' })
+  @ApiProperty({
+    example: '123',
+    description: 'Número',
+  })
   @IsNotEmpty({ message: 'Número é obrigatório' })
   @IsString()
   number: string
 
-  @ApiProperty({ description: 'Complemento', required: false })
+  @ApiProperty({
+    example: 'Apto 45',
+    description: 'Complemento',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   complement?: string
 
-  @ApiProperty({ description: 'Bairro' })
+  @ApiProperty({
+    example: 'Centro',
+    description: 'Bairro',
+  })
   @IsNotEmpty({ message: 'Bairro é obrigatório' })
   @IsString()
   neighborhood: string
 
-  @ApiProperty({ description: 'Cidade' })
+  @ApiProperty({
+    example: 'São Paulo',
+    description: 'Cidade',
+  })
   @IsNotEmpty({ message: 'Cidade é obrigatório' })
   @IsString()
   city: string
 
-  @ApiProperty({ description: 'Estado' })
+  @ApiProperty({
+    example: 'SP',
+    description: 'Estado',
+  })
   @IsNotEmpty({ message: 'Estado é obrigatório' })
   @IsString()
   state: string
 
-  @ApiProperty({ description: 'CEP' })
+  @ApiProperty({
+    example: '01234-567',
+    description: 'CEP',
+  })
   @IsNotEmpty({ message: 'CEP é obrigatório' })
   @IsString()
   postalCode: string

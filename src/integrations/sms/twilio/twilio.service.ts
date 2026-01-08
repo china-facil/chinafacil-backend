@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import * as crypto from 'crypto'
 import * as twilio from 'twilio'
@@ -28,6 +28,43 @@ export class TwilioService {
     return crypto.randomInt(100000, 999999).toString()
   }
 
+  private formatPhoneNumber(phone: string): string {
+    const cleaned = phone.replace(/\D/g, '')
+    
+    if (cleaned.startsWith('55') && cleaned.length >= 4) {
+      const countryCode = cleaned.substring(0, 2)
+      const ddd = cleaned.substring(2, 4)
+      
+      if (cleaned.length >= 11) {
+        const firstPart = cleaned.substring(4, 9)
+        const secondPart = cleaned.substring(9, 13)
+        return `+${countryCode} (${ddd}) ${firstPart}-${secondPart}`
+      } else if (cleaned.length >= 9) {
+        const firstPart = cleaned.substring(4, 9)
+        return `+${countryCode} (${ddd}) ${firstPart}`
+      } else if (cleaned.length >= 4) {
+        return `+${countryCode} (${ddd})`
+      }
+    }
+    
+    if (phone.includes('+')) {
+      return phone
+    }
+    
+    return `+${cleaned}`
+  }
+
+  private handleTwilioError(error: any, phone: string): never {
+    if (error.message && error.message.includes('not a valid mobile number')) {
+      const formattedPhone = this.formatPhoneNumber(phone)
+      throw new BadRequestException(
+        `O número '${formattedPhone}' não é um número de telefone válido.`
+      )
+    }
+    
+    throw error
+  }
+
   async sendOTP(phone: string) {
     try {
       const otp = this.generateOTP()
@@ -50,7 +87,7 @@ export class TwilioService {
       }
     } catch (error) {
       this.logger.error(`Twilio send OTP error: ${error.message}`)
-      throw error
+      return this.handleTwilioError(error, phone)
     }
   }
 
@@ -99,7 +136,7 @@ export class TwilioService {
       }
     } catch (error) {
       this.logger.error(`Twilio send SMS error: ${error.message}`)
-      throw error
+      return this.handleTwilioError(error, phone)
     }
   }
 }

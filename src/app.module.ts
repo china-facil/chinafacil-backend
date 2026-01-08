@@ -26,12 +26,12 @@ import { ExportsModule } from './modules/exports/exports.module';
 import { TranslationModule } from './modules/translation/translation.module';
 import { OTPModule } from './modules/otp/otp.module';
 import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.module';
-import { BullBoardModuleConfig } from './modules/bull-board/bull-board.module';
+import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
+import { LogsModule } from './common/logs/logs.module';
 
 @Module({
   imports: [
-    // Configuração
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../.env'],
@@ -44,13 +44,11 @@ import { CliModule } from './cli/cli.module';
             username: process.env.DB_USERNAME_NCM_IMPOSTOS || undefined,
             password: process.env.DB_PASSWORD_NCM_IMPOSTOS || undefined,
           },
-        }
-        console.log('[ConfigModule] Loading NCM config:', JSON.stringify(config.ncmDatabase))
+        };
         return config
       }],
     }),
 
-    // Rate Limiting - 60 req/min não logado, 150 req/min logado
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
@@ -58,7 +56,6 @@ import { CliModule } from './cli/cli.module';
       },
     ]),
 
-    // Bull/Redis para filas
     BullModule.forRootAsync({
       useFactory: () => ({
         redis: {
@@ -66,16 +63,19 @@ import { CliModule } from './cli/cli.module';
           port: parseInt(process.env.REDIS_PORT || '6379', 10),
           password: process.env.REDIS_PASSWORD || undefined,
         },
+        defaultJobOptions: {
+          removeOnComplete: 100,
+          removeOnFail: 1000,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+        },
       }),
     }),
-
-    // Database (Prisma)
     DatabaseModule,
-
-    // Health Check
     HealthModule,
-
-    // Módulos de domínio
     AuthModule,
     UsersModule,
     ClientsModule,
@@ -88,26 +88,17 @@ import { CliModule } from './cli/cli.module';
     StatisticsModule,
     WebhooksModule,
     LeadsModule,
-     AIModule,
-     ExportsModule,
-     TranslationModule,
-     OTPModule,
-     TaxCalculatorModule,
-
-    // Jobs
+    AIModule,
+    ExportsModule,
+    TranslationModule,
+    OTPModule,
+    TaxCalculatorModule,
     JobsModule,
-
-    // Mail
     MailModule,
-
-    // Proxy
     ProxyModule,
-
-    // Bull Board Dashboard
-    BullBoardModuleConfig,
-
-    // CLI
+    BullBoardModule,
     CliModule,
+    LogsModule,
   ],
   providers: [
     {

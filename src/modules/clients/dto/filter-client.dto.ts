@@ -4,14 +4,16 @@ import { IsNumber, IsOptional, IsString, Min } from 'class-validator'
 
 export class FilterClientDto {
   @ApiPropertyOptional({
-    description: 'Buscar por nome',
+    example: 'Empresa XYZ',
+    description: 'Buscar por nome do cliente',
   })
   @IsOptional()
   @IsString()
   search?: string
 
   @ApiPropertyOptional({
-    description: 'Filtrar por status do plano',
+    example: 'active',
+    description: 'Filtrar por status do plano (active, inactive, etc)',
   })
   @IsOptional()
   @IsString()

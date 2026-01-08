@@ -22,6 +22,9 @@ export class MailController {
   @Roles('admin')
   @ApiOperation({ summary: 'Enviar email' })
   @ApiResponse({ status: 201, description: 'Email enviado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async sendEmail(@Body() sendEmailDto: SendEmailDto) {
     return this.mailService.sendEmail(sendEmailDto)
   }

@@ -1,23 +1,44 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator'
+import {
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator'
 
 export class CreateCartDto {
   @ApiProperty({
-    description: 'Itens do carrinho (JSON)',
+    example: [
+      {
+        productId: 'prod-123',
+        quantity: 2,
+        price: 99.99,
+      },
+    ],
+    description: 'Itens do carrinho (array de objetos)',
   })
-  @IsObject()
+  @IsArray()
+  @ArrayMinSize(1)
   @IsNotEmpty()
-  items: any
+  items: any[]
 
   @ApiPropertyOptional({
-    description: 'Dados de precificação (JSON)',
+    example: {
+      subtotal: 199.98,
+      shipping: 50.00,
+      total: 249.98,
+    },
+    description: 'Dados de precificação (objeto JSON)',
   })
   @IsOptional()
   @IsObject()
   pricingData?: any
 
   @ApiPropertyOptional({
-    description: 'ID da solicitação',
+    example: 'solicitation-uuid',
+    description: 'ID da solicitação relacionada',
   })
   @IsOptional()
   @IsString()

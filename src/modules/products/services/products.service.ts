@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common'
+import { Injectable, NotFoundException, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { Inject } from '@nestjs/common'
@@ -66,15 +66,51 @@ export class ProductsService {
   }
 
   async getDetails1688(itemId: string) {
-    return this.tmService.getProductDetails(itemId)
+    const response = await this.tmService.getProductDetails(itemId)
+    
+    if (response?.code && response.code !== 200) {
+      if (response.code === 404) {
+        throw new NotFoundException(response.msg || 'Produto não encontrado')
+      }
+      if (response.code >= 400 && response.code < 500) {
+        throw new BadRequestException(response.msg || 'Erro na requisição')
+      }
+      throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+    }
+    
+    return response
   }
 
   async getDetailsAlibabaIntl(productId: string) {
-    return this.otService.getProductDetailsAlibaba(productId)
+    const response = await this.otService.getProductDetailsAlibaba(productId)
+    
+    if (response?.code && response.code !== 200) {
+      if (response.code === 404) {
+        throw new NotFoundException(response.msg || 'Produto não encontrado')
+      }
+      if (response.code >= 400 && response.code < 500) {
+        throw new BadRequestException(response.msg || 'Erro na requisição')
+      }
+      throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+    }
+    
+    return response
   }
 
   async getSku1688(itemId: string) {
-    return this.tmService.getProductSkuDetails(itemId)
+    const response = await this.tmService.getProductSkuDetails(itemId)
+    
+    if (response?.code && response.code !== 200) {
+      if (response.code === 404) {
+        throw new NotFoundException(response.msg || 'Produto não encontrado')
+      }
+      if (response.code >= 400 && response.code < 500) {
+        throw new BadRequestException(response.msg || 'Erro na requisição')
+      }
+      throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+    }
+    
+    return response
   }
 
   async getShipping1688(params: {
@@ -83,7 +119,19 @@ export class ProductsService {
     province?: string
     city?: string
   }) {
-    return this.tmService.getProductShipping(params)
+    const response = await this.tmService.getProductShipping(params)
+    
+    if (response?.code && response.code !== 200) {
+      if (response.code === 404) {
+        throw new NotFoundException(response.msg || 'Produto não encontrado')
+      }
+      if (response.code >= 400 && response.code < 500) {
+        throw new BadRequestException(response.msg || 'Erro na requisição')
+      }
+      throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+    }
+    
+    return response
   }
 
   async show(id: string) {
@@ -113,20 +161,26 @@ export class ProductsService {
 
     if (localProduct) {
       this.logger.log(`ProductsService::show - Produto encontrado no banco local: ${id}`)
-      try {
-        const response = await this.tmService.getProductDetails(id)
+      const response = await this.tmService.getProductDetails(id)
 
-        if (response?.data && Object.keys(response.data).length > 0) {
-          const productData = response.data
-          await this.cacheManager.set(cacheKey, productData, 24 * 60 * 60 * 1000)
-          return {
-            status: 'success',
-            data: productData,
-            source: 'tmservice_from_catalog',
-          }
+      if (response?.code && response.code !== 200) {
+        if (response.code === 404) {
+          throw new NotFoundException(response.msg || 'Produto não encontrado')
         }
-      } catch (error) {
-        this.logger.error(`ProductsService::show - Erro ao buscar dados via TmService: ${id}`, error.message)
+        if (response.code >= 400 && response.code < 500) {
+          throw new BadRequestException(response.msg || 'Erro ao buscar detalhes do produto')
+        }
+        throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+      }
+
+      if (response?.data && Object.keys(response.data).length > 0) {
+        const productData = response.data
+        await this.cacheManager.set(cacheKey, productData, 24 * 60 * 60 * 1000)
+        return {
+          status: 'success',
+          data: productData,
+          source: 'tmservice_from_catalog',
+        }
       }
     }
 
@@ -136,20 +190,18 @@ export class ProductsService {
       const response = await this.tmService.getProductDetails(id)
 
       if (response?.code && response.code !== 200) {
-        return {
-          status: 'error',
-          message: response.msg || 'Erro ao buscar detalhes do produto',
-          code: response.code,
+        if (response.code === 404) {
+          throw new NotFoundException(response.msg || 'Produto não encontrado')
         }
+        if (response.code >= 400 && response.code < 500) {
+          throw new BadRequestException(response.msg || 'Erro ao buscar detalhes do produto')
+        }
+        throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
       }
 
       if (!response?.data || Object.keys(response.data).length === 0) {
         await this.cacheManager.set(cacheKey, { removed: true, removedAt: new Date() }, 24 * 60 * 60 * 1000)
-        return {
-          status: 'error',
-          message: 'Este produto não está mais disponível no fornecedor',
-          code: 404,
-        }
+        throw new NotFoundException('Este produto não está mais disponível no fornecedor')
       }
 
       const product = response.data
@@ -160,12 +212,11 @@ export class ProductsService {
         source: 'external',
       }
     } catch (error) {
-      this.logger.error(`ProductsService::show - Erro no tmService: ${id}`, error.message)
-      return {
-        status: 'error',
-        message: 'Erro interno do servidor ao buscar produto',
-        code: 500,
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) {
+        throw error
       }
+      this.logger.error(`ProductsService::show - Erro no tmService: ${id}`, error.message)
+      throw new InternalServerErrorException('Erro interno do servidor ao buscar produto')
     }
   }
 
@@ -181,6 +232,17 @@ export class ProductsService {
     }
 
     const response = await this.tmService.getProductDetails(id)
+    
+    if (response?.code && response.code !== 200) {
+      if (response.code === 404) {
+        throw new NotFoundException(response.msg || 'Produto não encontrado')
+      }
+      if (response.code >= 400 && response.code < 500) {
+        throw new BadRequestException(response.msg || 'Erro ao buscar detalhes do produto')
+      }
+      throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+    }
+    
     const product = response?.data
     if (product?.product_props) {
       await this.cacheManager.set(cacheKey, product.product_props, 24 * 60 * 60 * 1000)
@@ -190,11 +252,7 @@ export class ProductsService {
       }
     }
 
-    return {
-      status: 'error',
-      message: 'Erro ao buscar detalhes do produto',
-      code: 500,
-    }
+    throw new NotFoundException('Propriedades do produto não encontradas')
   }
 
   async getProductSkuDetails(id: string) {
@@ -209,6 +267,17 @@ export class ProductsService {
     }
 
     const response = await this.tmService.getProductDetails(id)
+    
+    if (response?.code && response.code !== 200) {
+      if (response.code === 404) {
+        throw new NotFoundException(response.msg || 'Produto não encontrado')
+      }
+      if (response.code >= 400 && response.code < 500) {
+        throw new BadRequestException(response.msg || 'Erro ao buscar SKUs do produto')
+      }
+      throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
+    }
+    
     const product = response?.data
     if (product?.skus) {
       await this.cacheManager.set(cacheKey, product.skus, 24 * 60 * 60 * 1000)
@@ -218,54 +287,53 @@ export class ProductsService {
       }
     }
 
-    return {
-      status: 'error',
-      message: 'Erro ao buscar SKUs do produto',
-      code: 500,
-    }
+    throw new NotFoundException('SKUs do produto não encontrados')
   }
 
   async getProductStatistics(itemId: string) {
-    try {
-      const result = await this.tmService.getProductStatistics(itemId)
-      return result
-    } catch (error) {
-      this.logger.error(`ProductsService::getProductStatistics - Erro: ${itemId}`, error.message)
-      return {
-        code: 500,
-        msg: 'Erro interno do servidor',
-        data: null,
+    const result = await this.tmService.getProductStatistics(itemId)
+    
+    if (result?.code && result.code !== 200) {
+      if (result.code === 404) {
+        throw new NotFoundException(result.msg || 'Produto não encontrado')
       }
+      if (result.code >= 400 && result.code < 500) {
+        throw new BadRequestException(result.msg || 'Erro ao buscar estatísticas do produto')
+      }
+      throw new InternalServerErrorException(result.msg || 'Erro interno do servidor')
     }
+    
+    return result
   }
 
   async getProductDescription(itemId: string) {
-    try {
-      const cacheKey = `product_description::${itemId}`
-      const cachedDescription = await this.cacheManager.get(cacheKey)
-      if (cachedDescription) {
-        return {
-          status: 'success',
-          cached: true,
-          data: cachedDescription,
-        }
-      }
-
-      const result = await this.tmService.getProductDescription(itemId)
-
-      if (result && result.code === 200 && result.data) {
-        await this.cacheManager.set(cacheKey, result.data, 24 * 60 * 60 * 1000)
-      }
-
-      return result
-    } catch (error) {
-      this.logger.error(`ProductsService::getProductDescription - Erro: ${itemId}`, error.message)
+    const cacheKey = `product_description::${itemId}`
+    const cachedDescription = await this.cacheManager.get(cacheKey)
+    if (cachedDescription) {
       return {
-        code: 500,
-        msg: 'Erro interno do servidor',
-        data: null,
+        status: 'success',
+        cached: true,
+        data: cachedDescription,
       }
     }
+
+    const result = await this.tmService.getProductDescription(itemId)
+
+    if (result?.code && result.code !== 200) {
+      if (result.code === 404) {
+        throw new NotFoundException(result.msg || 'Produto não encontrado')
+      }
+      if (result.code >= 400 && result.code < 500) {
+        throw new BadRequestException(result.msg || 'Erro ao buscar descrição do produto')
+      }
+      throw new InternalServerErrorException(result.msg || 'Erro interno do servidor')
+    }
+
+    if (result && result.code === 200 && result.data) {
+      await this.cacheManager.set(cacheKey, result.data, 24 * 60 * 60 * 1000)
+    }
+
+    return result
   }
 
   async getCategoryInfo(categoryId: string) {
@@ -297,16 +365,85 @@ export class ProductsService {
       }
     }
 
-    const favorite = await this.prisma.favoriteProduct.create({
-      data: {
-        userId,
-        itemId: addFavoriteDto.productId,
-      },
-    })
+    const provider = this.identifyProvider(addFavoriteDto.productId)
+    let productDetails: any
+
+    try {
+      if (provider === 'alibaba') {
+        productDetails = await this.getDetailsAlibabaIntl(addFavoriteDto.productId)
+      } else {
+        productDetails = await this.getDetails1688(addFavoriteDto.productId)
+      }
+
+      if (!productDetails?.data) {
+        throw new NotFoundException('Produto não encontrado')
+      }
+
+      const normalizedProduct = productDetails.data
+      const favoriteData = this.mapProductToFavorite(normalizedProduct, userId, addFavoriteDto.productId, provider)
+
+      const favorite = await this.prisma.favoriteProduct.create({
+        data: favoriteData,
+      })
+
+      return {
+        message: 'Produto adicionado aos favoritos',
+        data: favorite,
+      }
+    } catch (error: any) {
+      this.logger.error('ProductsService::addToFavorites - Erro ao buscar detalhes do produto', {
+        error: error.message,
+        productId: addFavoriteDto.productId,
+        provider,
+      })
+      throw error
+    }
+  }
+
+  private identifyProvider(productId: string): 'alibaba' | '1688' {
+    if (productId.startsWith('alb-')) {
+      return 'alibaba'
+    }
+    return '1688'
+  }
+
+  private mapProductToFavorite(
+    product: any,
+    userId: string,
+    itemId: string,
+    provider: 'alibaba' | '1688',
+  ): any {
+    const providerValue = provider === 'alibaba' ? 'alibaba' : '1688'
+    const currency = product.currency || (provider === 'alibaba' ? 'USD' : 'CNY')
 
     return {
-      message: 'Produto adicionado aos favoritos',
-      data: favorite,
+      userId,
+      itemId,
+      externalUrl: product.url || null,
+      title: product.title || null,
+      originalTitle: product.originalTitle || product.title || null,
+      price: product.price ? Number(product.price) : null,
+      currency,
+      minimumOrderQuantity: product.minimumOrder || product.firstLotQuantity || null,
+      quantityPrices: product.quantityRanges && product.quantityRanges.length > 0 ? product.quantityRanges : null,
+      salesVolume: product.salesQuantity || null,
+      salesVolume90Days: product.salesVolume90Days || product.salesQuantity || null,
+      categoryId: product.categoryId || null,
+      vendorId: product.supplier?.id || null,
+      vendorName: product.supplier?.name || null,
+      vendorInfo: product.supplier || null,
+      mainImage: product.imageUrl || null,
+      images: product.images && product.images.length > 0 ? product.images : null,
+      videos: product.videos && product.videos.length > 0 ? product.videos : null,
+      variations: product.skuProps && product.skuProps.length > 0 ? product.skuProps : null,
+      skus: product.skus && product.skus.length > 0 ? product.skus : null,
+      specifications: product.specifications && product.specifications.length > 0 ? product.specifications : null,
+      stock: product.stock || null,
+      isAvailable: product.isSoldOut !== undefined ? !product.isSoldOut : true,
+      provider: providerValue,
+      shippingInfo: product.shippingInfo || null,
+      location: product.supplier?.location ? { location: product.supplier.location } : null,
+      promotions: product.promotions || null,
     }
   }
 
