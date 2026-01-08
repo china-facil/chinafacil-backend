@@ -63,6 +63,15 @@ import { LogsModule } from './common/logs/logs.module';
           port: parseInt(process.env.REDIS_PORT || '6379', 10),
           password: process.env.REDIS_PASSWORD || undefined,
         },
+        defaultJobOptions: {
+          removeOnComplete: 100,
+          removeOnFail: 1000,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 1000,
+          },
+        },
       }),
     }),
     DatabaseModule,
