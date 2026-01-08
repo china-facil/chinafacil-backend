@@ -170,7 +170,7 @@ jobs:
       - run:
           name: Push Changelog and Tags
           command: |
-            git push --follow-tags origin main
+            git push --follow-tags origin homolog
 
 workflows:
   build-test-deploy:
