@@ -9,7 +9,15 @@ describe('Cart API (Integration)', () => {
 
   describe('POST /api/cart', () => {
     it('should create cart successfully', async () => {
-      const res = await ctx.authReq.post('/api/cart').send({ items: {} })
+      const res = await ctx.authReq.post('/api/cart').send({
+        items: [
+          {
+            productId: 'test-product-id',
+            quantity: 1,
+            price: 10.0,
+          },
+        ],
+      })
       expect(res.status).toBe(201)
     })
 
@@ -50,7 +58,24 @@ describe('Cart API (Integration)', () => {
 
   describe('PATCH /api/cart', () => {
     it('should update cart successfully', async () => {
-      const res = await ctx.authReq.patch('/api/cart').send({ items: {} })
+      await ctx.authReq.post('/api/cart').send({
+        items: [
+          {
+            productId: 'test-product-id',
+            quantity: 1,
+            price: 10.0,
+          },
+        ],
+      })
+      const res = await ctx.authReq.patch('/api/cart').send({
+        items: [
+          {
+            productId: 'test-product-id-updated',
+            quantity: 2,
+            price: 20.0,
+          },
+        ],
+      })
       expect(res.status).toBe(200)
     })
 
@@ -67,6 +92,15 @@ describe('Cart API (Integration)', () => {
 
   describe('DELETE /api/cart/clear', () => {
     it('should clear cart successfully', async () => {
+      await ctx.authReq.post('/api/cart').send({
+        items: [
+          {
+            productId: 'test-product-id',
+            quantity: 1,
+            price: 10.0,
+          },
+        ],
+      })
       const res = await ctx.authReq.delete('/api/cart/clear')
       expect(res.status).toBe(200)
     })

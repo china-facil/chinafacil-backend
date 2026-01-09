@@ -469,7 +469,17 @@ export class SolicitationsService {
   }
 
   async getKanban() {
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    });
+    const validUserIdArray = validUserIds.map((user) => user.id);
+
     const solicitations = await this.prisma.solicitation.findMany({
+      where: {
+        userId: {
+          in: validUserIdArray.length > 0 ? validUserIdArray : [],
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
