@@ -18,17 +18,32 @@ export class TranslationService {
     const to = translateTextDto.to || 'pt'
     const cacheKey = `translation:${from}:${to}:${translateTextDto.text}`
     
-    const cached = await this.cacheManager.get(cacheKey)
-    if (cached) {
+    const cached = await this.cacheManager.get<any>(cacheKey)
+    
+    if (cached && cached.status === 'success' && cached.data?.translated_text) {
       this.logger.log(`Using cached translation for: ${translateTextDto.text.substring(0, 50)}...`)
       return cached
     }
 
-    const result = await this.googleTranslation.translate(
+    const translationResults = await this.googleTranslation.translate(
       translateTextDto.text,
       to,
       from,
     )
+
+    const translatedText = Array.isArray(translationResults) 
+      ? translationResults[0] 
+      : translationResults
+
+    const result = {
+      status: 'success',
+      data: {
+        translated_text: translatedText,
+        original_text: translateTextDto.text,
+        from,
+        to,
+      },
+    }
 
     await this.cacheManager.set(cacheKey, result, 86400000 * 7)
 
@@ -37,70 +52,91 @@ export class TranslationService {
 
   async translateTitles(titles: string[], from: string = 'zh-CN', to: string = 'pt') {
     if (!titles || titles.length === 0) {
-      return []
+      return {
+        translated_titles: [],
+        original_titles: [],
+        from,
+        to,
+      }
     }
 
-    const results: string[] = []
+    const translatedTitles: string[] = []
+    const originalTitles: string[] = []
     const toTranslate: string[] = []
     const indexMapping: Map<number, number> = new Map()
 
     for (let i = 0; i < titles.length; i++) {
       const title = titles[i]
+      originalTitles[i] = title || ''
+
       if (!title || title.trim() === '') {
-        results[i] = title
+        translatedTitles[i] = title || ''
         continue
       }
 
       const cacheKey = `translation:${from}:${to}:${title}`
-      const cached = await this.cacheManager.get<string>(cacheKey)
+      const cached = await this.cacheManager.get<any>(cacheKey)
 
-      if (cached) {
-        results[i] = cached
+      if (cached && cached.status === 'success' && cached.data?.translated_text) {
+        translatedTitles[i] = cached.data.translated_text
       } else {
         indexMapping.set(toTranslate.length, i)
         toTranslate.push(title)
       }
     }
 
-    if (toTranslate.length === 0) {
-      return results
-    }
+    if (toTranslate.length > 0) {
+      try {
+        const translations = await this.googleTranslation.translate(toTranslate, to, from)
 
-    try {
-      const translations = await this.googleTranslation.translate(toTranslate, to, from)
-
-      for (let i = 0; i < translations.length; i++) {
-        const originalIndex = indexMapping.get(i)
-        if (originalIndex !== undefined) {
-          results[originalIndex] = translations[i]
-          
-          const cacheKey = `translation:${from}:${to}:${toTranslate[i]}`
-          await this.cacheManager.set(cacheKey, translations[i], 86400000 * 7)
+        for (let i = 0; i < translations.length; i++) {
+          const originalIndex = indexMapping.get(i)
+          if (originalIndex !== undefined) {
+            const translatedText = translations[i]
+            translatedTitles[originalIndex] = translatedText
+            
+            const cacheKey = `translation:${from}:${to}:${toTranslate[i]}`
+            const cacheValue = {
+              status: 'success',
+              data: {
+                translated_text: translatedText,
+                original_text: toTranslate[i],
+                from,
+                to,
+              },
+            }
+            await this.cacheManager.set(cacheKey, cacheValue, 86400000 * 7)
+          }
+        }
+      } catch (error) {
+        this.logger.error(`Error translating titles: ${error.message}`)
+        for (let i = 0; i < toTranslate.length; i++) {
+          const originalIndex = indexMapping.get(i)
+          if (originalIndex !== undefined) {
+            translatedTitles[originalIndex] = toTranslate[i]
+          }
         }
       }
-    } catch (error) {
-      this.logger.error(`Error translating titles: ${error.message}`)
-      for (let i = 0; i < toTranslate.length; i++) {
-        const originalIndex = indexMapping.get(i)
-        if (originalIndex !== undefined) {
-          results[originalIndex] = toTranslate[i]
-        }
-      }
     }
 
-    return results
+    return {
+      translated_titles: translatedTitles,
+      original_titles: originalTitles,
+      from,
+      to,
+    }
   }
 
   async translateProduct(translateProductDto: TranslateProductDto) {
     const { product, from = 'zh-CN', to = 'pt' } = translateProductDto
     
-    const titleTranslation = await this.translateText({
+    const titleTranslationResult = await this.translateText({
       text: product.title || '',
       from,
       to,
     })
 
-    const descriptionTranslation = product.description
+    const descriptionTranslationResult = product.description
       ? await this.translateText({
           text: product.description,
           from,
@@ -110,14 +146,8 @@ export class TranslationService {
 
     return {
       ...product,
-      titleTranslated: Array.isArray(titleTranslation)
-        ? titleTranslation[0]
-        : titleTranslation,
-      descriptionTranslated: descriptionTranslation
-        ? Array.isArray(descriptionTranslation)
-          ? descriptionTranslation[0]
-          : descriptionTranslation
-        : null,
+      titleTranslated: titleTranslationResult.data?.translated_text || null,
+      descriptionTranslated: descriptionTranslationResult?.data?.translated_text || null,
     }
   }
 

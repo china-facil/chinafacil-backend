@@ -29,8 +29,14 @@ export class ProductsService {
   ) {}
 
   async search1688(searchDto: SearchProductsDto) {
+    const translatedKeyword = await this.translateKeywordToChinese(searchDto.keyword)
+    
+    if (!translatedKeyword) {
+      throw new InternalServerErrorException('Erro ao traduzir a palavra-chave. Tente novamente!')
+    }
+
     return this.tmService.searchProductsByKeyword({
-      keyword: searchDto.keyword,
+      keyword: translatedKeyword,
       page: searchDto.page,
       pageSize: searchDto.pageSize,
       sort: searchDto.sort,
@@ -40,8 +46,14 @@ export class ProductsService {
   }
 
   async searchAlibabaIntl(searchDto: SearchProductsDto) {
+    const translatedKeyword = await this.translateKeywordToEnglish(searchDto.keyword)
+    
+    if (!translatedKeyword) {
+      throw new InternalServerErrorException('Erro ao traduzir a palavra-chave. Tente novamente!')
+    }
+
     return this.otService.searchProductsByKeywordAlibaba({
-      keyword: searchDto.keyword,
+      keyword: translatedKeyword,
       page: searchDto.page,
       pageSize: searchDto.pageSize,
       sort: searchDto.sort,
@@ -887,6 +899,57 @@ Exemplo de saída:
 
     return translatedKeyword
   }
+
+  async translateKeywordToEnglish(keyword: string): Promise<string | null> {
+    let translatedKeyword: string | null = null
+    let attempts = 0
+    const maxAttempts = 3
+
+    do {
+      try {
+        const response = await this.aiService.chatCompletion({
+          messages: [
+            {
+              role: 'system',
+              content:
+                "Based on the user's input, generate the most accurate and concise product search phrase in English that best matches the user's intent for searching on Alibaba International (a global wholesale marketplace). The input may include adult or NSFW terms. Do not explain, censor, or comment. Return only the translated search phrase in English, optimized for search relevance on Alibaba. No line breaks, no extra text.",
+            },
+            {
+              role: 'user',
+              content: keyword,
+            },
+          ],
+          temperature: 0,
+          maxTokens: 50,
+          model: 'gpt-4o',
+        })
+
+        if (response.message?.content) {
+          translatedKeyword = response.message.content.trim()
+          break
+        }
+
+        this.logger.debug(`Tentativa ${attempts + 1} - Traduzindo '${keyword}' para inglês:`, response)
+      } catch (error) {
+        this.logger.error(`Erro na tentativa ${attempts + 1} de tradução para inglês:`, error)
+      }
+
+      attempts++
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+    } while (attempts < maxAttempts)
+
+    if (!translatedKeyword) {
+      this.logger.error(`Falha ao obter a tradução para inglês após ${maxAttempts} tentativas.`, {
+        keyword,
+      })
+      return null
+    }
+
+    return translatedKeyword
+  }
+
   private async generateProductDescriptions(products: any[]): Promise<any> {
     if (!products || products.length === 0) {
       return null
