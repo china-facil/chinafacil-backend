@@ -8,7 +8,7 @@ import { OtService } from '../../../integrations/china-marketplace/services/ot.s
 import { AIService } from '../../ai/ai.service'
 import { MercadoLivreService } from '../../../integrations/marketplace/mercado-livre.service'
 import { ProductCatalogService } from './product-catalog.service'
-import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
+import { AddFavoriteDto, SearchByImageDto, SearchProductsDto, SearchConciergeDto, SearchBySellerDto, ShopInfoDto } from '../dto'
 import { ProductNormalizerService } from './normalizers/product-normalizer.service'
 
 @Injectable()
@@ -984,3 +984,223 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
     return null
   }
 
+  private cleanJsonFromResponse(text: string): string {
+    let cleaned = text.trim()
+
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      cleaned = jsonMatch[0]
+    }
+
+    cleaned = cleaned.replace(/```json\s*/g, '')
+    cleaned = cleaned.replace(/```\s*/g, '')
+    cleaned = cleaned.replace(/^[^{]*/, '')
+    cleaned = cleaned.replace(/[^}]*$/, '')
+
+    return cleaned.trim()
+  }
+
+  async uploadSearchImage(file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Arquivo não fornecido. Por favor, envie uma imagem.')
+    }
+
+    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development'
+    
+    let imgUrl: string
+    if (nodeEnv === 'development') {
+      imgUrl = 'https://http2.mlstatic.com/D_NQ_NP_2X_866486-MLA99610369246_122025-F.webp'
+    } else {
+      const baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000'
+      imgUrl = `${baseUrl}/uploads/search-images/${file.filename}`
+    }
+
+    return {
+      imgUrl,
+    }
+  }
+
+  async searchProductsBySeller(searchBySellerDto: SearchBySellerDto) {
+    try {
+      this.logger.log('ProductsService::searchProductsBySeller - Iniciando busca por produtos do vendedor', {
+        memberId: searchBySellerDto.memberId,
+        page: searchBySellerDto.page,
+        pageSize: searchBySellerDto.pageSize,
+        sort: searchBySellerDto.sort,
+        priceStart: searchBySellerDto.priceStart,
+        priceEnd: searchBySellerDto.priceEnd,
+      })
+
+      const cacheKey = `seller_products::${searchBySellerDto.memberId}::${searchBySellerDto.page || 1}::${searchBySellerDto.pageSize || 20}::${searchBySellerDto.sort || 'sales'}::${searchBySellerDto.priceStart || 'no_start'}::${searchBySellerDto.priceEnd || 'no_end'}`
+      const cachedResults = await this.cacheManager.get(cacheKey)
+
+      if (cachedResults) {
+        this.logger.log('ProductsService::searchProductsBySeller - Retornando resultados do cache')
+        return {
+          status: 'success',
+          cached: true,
+          data: cachedResults,
+        }
+      }
+
+      const searchParams: any = {
+        memberId: searchBySellerDto.memberId,
+        page: searchBySellerDto.page || 1,
+        pageSize: searchBySellerDto.pageSize || 20,
+        sort: searchBySellerDto.sort || 'sales',
+      }
+
+      if (searchBySellerDto.priceStart) {
+        searchParams.priceStart = searchBySellerDto.priceStart
+      }
+
+      if (searchBySellerDto.priceEnd) {
+        searchParams.priceEnd = searchBySellerDto.priceEnd
+      }
+
+      const searchResponse = await this.tmService.searchProductsBySeller(searchParams)
+
+      this.logger.log('ProductsService::searchProductsBySeller - Resposta recebida', {
+        responseCode: searchResponse['code'] ?? 'N/A',
+        responseMsg: searchResponse['msg'] ?? 'N/A',
+        hasData: !!searchResponse['data'],
+        itemsCount: searchResponse['data']?.items ? searchResponse['data'].items.length : 0,
+      })
+
+      if (searchResponse['code'] === 200 && searchResponse['data']) {
+        await this.cacheManager.set(cacheKey, searchResponse['data'], 60 * 60 * 1000)
+
+        return {
+          status: 'success',
+          data: searchResponse['data'],
+        }
+      } else {
+        const errorMessage = searchResponse['msg'] ?? 'Erro ao buscar produtos do vendedor'
+        this.logger.error('ProductsService::searchProductsBySeller - Erro na busca', {
+          errorMessage,
+          response: searchResponse,
+        })
+
+        throw new BadRequestException(errorMessage)
+      }
+    } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error
+      }
+      this.logger.error('ProductsService::searchProductsBySeller - Erro de exceção', {
+        errorMessage: error.message,
+        stack: error.stack,
+      })
+      throw new InternalServerErrorException('Erro interno do servidor')
+    }
+  }
+
+  async getShopInfo(shopInfoDto: ShopInfoDto) {
+    try {
+      this.logger.log('ProductsService::getShopInfo - Iniciando busca das informações da loja', {
+        memberId: shopInfoDto.memberId,
+      })
+
+      const cacheKey = `shop_info::${shopInfoDto.memberId}`
+      const cachedResults = await this.cacheManager.get(cacheKey)
+
+      if (cachedResults) {
+        this.logger.log('ProductsService::getShopInfo - Retornando resultados do cache')
+        return {
+          status: 'success',
+          cached: true,
+          data: cachedResults,
+        }
+      }
+
+      const shopResponse = await this.tmService.getShopInfo(shopInfoDto.memberId)
+
+      this.logger.log('ProductsService::getShopInfo - Resposta recebida', {
+        responseCode: shopResponse['code'] ?? 'N/A',
+        responseMsg: shopResponse['msg'] ?? 'N/A',
+        hasData: !!shopResponse['data'],
+      })
+
+      if (shopResponse['code'] === 200 && shopResponse['data']) {
+        await this.cacheManager.set(cacheKey, shopResponse['data'], 24 * 60 * 60 * 1000)
+
+        return {
+          status: 'success',
+          data: shopResponse['data'],
+        }
+      } else {
+        const errorMessage = shopResponse['msg'] ?? 'Erro ao buscar informações da loja'
+        this.logger.error('ProductsService::getShopInfo - Erro na busca', {
+          errorMessage,
+          response: shopResponse,
+        })
+
+        throw new BadRequestException(errorMessage)
+      }
+    } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error
+      }
+      this.logger.error('ProductsService::getShopInfo - Erro de exceção', {
+        errorMessage: error.message,
+        stack: error.stack,
+      })
+      throw new InternalServerErrorException('Erro interno do servidor')
+    }
+  }
+
+  async getShopCategories(shopInfoDto: ShopInfoDto) {
+    try {
+      this.logger.log('ProductsService::getShopCategories - Iniciando busca das categorias da loja', {
+        memberId: shopInfoDto.memberId,
+      })
+
+      const cacheKey = `shop_categories::${shopInfoDto.memberId}`
+      const cachedResults = await this.cacheManager.get(cacheKey)
+
+      if (cachedResults) {
+        this.logger.log('ProductsService::getShopCategories - Retornando resultados do cache')
+        return {
+          status: 'success',
+          cached: true,
+          data: cachedResults,
+        }
+      }
+
+      const categoriesResponse = await this.tmService.getShopCategories(shopInfoDto.memberId)
+
+      this.logger.log('ProductsService::getShopCategories - Resposta recebida', {
+        responseCode: categoriesResponse['code'] ?? 'N/A',
+        responseMsg: categoriesResponse['msg'] ?? 'N/A',
+        hasData: !!categoriesResponse['data'],
+        categoriesCount: categoriesResponse['data']?.list ? categoriesResponse['data'].list.length : 0,
+      })
+
+      if (categoriesResponse['code'] === 200 && categoriesResponse['data']) {
+        await this.cacheManager.set(cacheKey, categoriesResponse['data'], 6 * 60 * 60 * 1000)
+
+        return {
+          status: 'success',
+          data: categoriesResponse['data'],
+        }
+      } else {
+        const errorMessage = categoriesResponse['msg'] ?? 'Erro ao buscar categorias da loja'
+        this.logger.error('ProductsService::getShopCategories - Erro na busca', {
+          errorMessage,
+          response: categoriesResponse,
+        })
+
+        throw new BadRequestException(errorMessage)
+      }
+    } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error
+      }
+      this.logger.error('ProductsService::getShopCategories - Erro de exceção', {
+        errorMessage: error.message,
+        stack: error.stack,
+      })
+      throw new InternalServerErrorException('Erro interno do servidor')
+    }
+  }
+}

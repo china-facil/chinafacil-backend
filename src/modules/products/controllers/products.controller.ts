@@ -17,7 +17,7 @@ import {
 } from '@nestjs/swagger'
 import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
-import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
+import { AddFavoriteDto, SearchByImageDto, SearchProductsDto, SearchBySellerDto, ShopInfoDto } from '../dto'
 import { ProductsService } from '../services/products.service'
 
 @ApiTags('products')
@@ -355,6 +355,65 @@ export class ProductsController {
   ) {
     return this.productsService.searchConcierge(keyword || undefined, image)
   }
+
+  @Get('shop/info')
+  @ApiOperation({ summary: 'Obter informações da loja' })
+  @ApiQuery({ name: 'member_id', required: true, type: String, description: 'ID do vendedor' })
+  @ApiResponse({ status: 200, description: 'Informações da loja' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (member_id obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getShopInfo(@Query('member_id') memberId: string) {
+    if (!memberId) {
+      throw new BadRequestException('O campo member_id é obrigatório!')
+    }
+    return this.productsService.getShopInfo({ memberId })
+  }
+
+  @Get('shop/categories')
+  @ApiOperation({ summary: 'Obter categorias da loja' })
+  @ApiQuery({ name: 'member_id', required: true, type: String, description: 'ID do vendedor' })
+  @ApiResponse({ status: 200, description: 'Categorias da loja' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (member_id obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getShopCategories(@Query('member_id') memberId: string) {
+    if (!memberId) {
+      throw new BadRequestException('O campo member_id é obrigatório!')
+    }
+    return this.productsService.getShopCategories({ memberId })
+  }
+
+  @Get('seller')
+  @ApiOperation({ summary: 'Buscar produtos por vendedor' })
+  @ApiQuery({ name: 'member_id', required: true, type: String, description: 'ID do vendedor' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página', example: 1 })
+  @ApiQuery({ name: 'page_size', required: false, type: Number, description: 'Itens por página', example: 20 })
+  @ApiQuery({ name: 'sort', required: false, type: String, description: 'Ordenação (sales, price_up, price_down)', example: 'sales' })
+  @ApiQuery({ name: 'price_start', required: false, type: Number, description: 'Preço mínimo' })
+  @ApiQuery({ name: 'price_end', required: false, type: Number, description: 'Preço máximo' })
+  @ApiResponse({ status: 200, description: 'Produtos do vendedor' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (member_id obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async searchProductsBySeller(
+    @Query('member_id') memberId: string,
+    @Query('page') page?: number,
+    @Query('page_size') pageSize?: number,
+    @Query('sort') sort?: string,
+    @Query('price_start') priceStart?: number,
+    @Query('price_end') priceEnd?: number,
+  ) {
+    if (!memberId) {
+      throw new BadRequestException('O campo member_id é obrigatório!')
+    }
+    return this.productsService.searchProductsBySeller({
+      memberId,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+      sort: sort as any,
+      priceStart: priceStart ? Number(priceStart) : undefined,
+      priceEnd: priceEnd ? Number(priceEnd) : undefined,
+    })
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obter detalhes completos de um produto' })
   @ApiResponse({ status: 200, description: 'Detalhes do produto' })

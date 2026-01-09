@@ -413,6 +413,157 @@ export class TmService {
       return { data: null, msg: 'Erro na comunicação com o serviço: ' + error.message, code: 500 }
     }
   }
+
+  async searchProductsBySeller(params: {
+    memberId: string
+    page?: number
+    pageSize?: number
+    sort?: string
+    priceStart?: number
+    priceEnd?: number
+  }) {
+    try {
+      const endpoint = `${this.baseUrl}/1688/shop/items`
+      const queryParams: any = {
+        apiToken: this.apiKey,
+        member_id: params.memberId,
+        page: params.page || 1,
+        page_size: params.pageSize || 20,
+        sort: params.sort || 'sales',
+      }
+
+      if (params.priceEnd) {
+        queryParams.price_end = params.priceEnd
+      }
+
+      if (params.priceStart) {
+        queryParams.price_start = params.priceStart
+      }
+
+      this.logger.log('TmService::searchProductsBySeller - Iniciando busca por produtos do vendedor', {
+        requestParams: queryParams,
+      })
+
+      const response = await firstValueFrom(
+        this.httpService.get(endpoint, {
+          params: queryParams,
+          timeout: 60000,
+        }),
+      )
+
+      this.logger.log('TmService::searchProductsBySeller - Resposta recebida', {
+        statusCode: response.status,
+        isSuccessful: response.status >= 200 && response.status < 300,
+        responseSize: JSON.stringify(response.data).length,
+        endpoint,
+      })
+
+      const jsonResponse = response.data
+
+      this.logger.log('TmService::searchProductsBySeller - JSON decodificado', {
+        responseCode: jsonResponse['code'] ?? 'N/A',
+        responseMsg: jsonResponse['msg'] ?? 'N/A',
+        hasData: !!jsonResponse['data'],
+        itemsCount: jsonResponse['data']?.items ? jsonResponse['data'].items.length : 0,
+      })
+
+      return jsonResponse
+    } catch (error: any) {
+      this.logger.error('TmService::searchProductsBySeller - Erro na requisição', {
+        errorMessage: error.message,
+        errorCode: error.code,
+        endpoint: `${this.baseUrl}/1688/shop/items`,
+      })
+      
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return { data: { items: [] }, msg: 'timeout', code: 408 }
+      }
+      
+      return { data: { items: [] }, msg: 'Erro na comunicação com o serviço: ' + error.message, code: 500 }
+    }
+  }
+
+  async getShopInfo(memberId: string) {
+    try {
+      const endpoint = `${this.baseUrl}/1688/shop/shop_info`
+      const queryParams = {
+        apiToken: this.apiKey,
+        member_id: memberId,
+      }
+
+      this.logger.log('TmService::getShopInfo - Iniciando busca das informações da loja', {
+        memberId,
+        endpoint,
+      })
+
+      const response = await firstValueFrom(
+        this.httpService.get(endpoint, {
+          params: queryParams,
+          timeout: 60000,
+        }),
+      )
+
+      this.logger.log('TmService::getShopInfo - Resposta recebida', {
+        statusCode: response.status,
+        isSuccessful: response.status >= 200 && response.status < 300,
+        responseSize: JSON.stringify(response.data).length,
+      })
+
+      return response.data
+    } catch (error: any) {
+      this.logger.error('TmService::getShopInfo - Erro na requisição', {
+        errorMessage: error.message,
+        errorCode: error.code,
+        memberId,
+      })
+      
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return { data: null, msg: 'timeout', code: 408 }
+      }
+      
+      return { data: null, msg: 'Erro na comunicação com o serviço: ' + error.message, code: 500 }
+    }
+  }
+
+  async getShopCategories(memberId: string) {
+    try {
+      const endpoint = `${this.baseUrl}/1688/shop/category`
+      const queryParams = {
+        apiToken: this.apiKey,
+        member_id: memberId,
+      }
+
+      this.logger.log('TmService::getShopCategories - Iniciando busca das categorias da loja', {
+        memberId,
+        endpoint,
+      })
+
+      const response = await firstValueFrom(
+        this.httpService.get(endpoint, {
+          params: queryParams,
+          timeout: 60000,
+        }),
+      )
+
+      this.logger.log('TmService::getShopCategories - Resposta recebida', {
+        statusCode: response.status,
+        isSuccessful: response.status >= 200 && response.status < 300,
+        responseSize: JSON.stringify(response.data).length,
+      })
+
+      return response.data
+    } catch (error: any) {
+      this.logger.error('TmService::getShopCategories - Erro na requisição', {
+        errorMessage: error.message,
+        errorCode: error.code,
+        memberId,
+      })
+      
+      if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+        return { data: null, msg: 'timeout', code: 408 }
+      }
+      
+      return { data: null, msg: 'Erro na comunicação com o serviço: ' + error.message, code: 500 }
+    }
+  }
 }
-
-
