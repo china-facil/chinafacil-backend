@@ -186,10 +186,11 @@ export class OtService {
 
   async getProductDetailsAlibaba(productId: string) {
     try {
-      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/GetProductDetails'
+      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/BatchGetItemFullInfo'
       
       const queryParams = {
-        ProductId: productId,
+        itemId: productId,
+        language: 'en',
       }
 
       const response = await firstValueFrom(
@@ -230,9 +231,9 @@ export class OtService {
   private mapSortToAlibaba(sort: string): string {
     const sortMap: { [key: string]: string } = {
       default: '',
-      sales: 'TotalSales',
-      price_up: 'PriceAsc',
-      price_down: 'PriceDesc',
+      sales: 'TotalSales:Desc',
+      price_up: 'Price:Asc',
+      price_down: 'Price:Desc',
     }
 
     return sortMap[sort] || ''

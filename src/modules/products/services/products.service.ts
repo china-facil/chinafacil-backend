@@ -155,7 +155,7 @@ export class ProductsService {
 
     if (isAlibabaProduct) {
       this.logger.log(`ProductsService::show - Produto identificado como Alibaba: ${id}`)
-      return this.getDetailsAlibabaIntl(id.replace('alb-', ''))
+      return this.getDetailsAlibabaIntl(id)
     }
 
     const cacheKey = `product_options::${id}`
