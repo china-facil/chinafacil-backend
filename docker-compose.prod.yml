@@ -24,6 +24,9 @@ services:
       - NODE_ENV=production
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME:-ChinaFacil Backend}
+      - NEW_RELIC_LOG_LEVEL=${NEW_RELIC_LOG_LEVEL:-warn}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

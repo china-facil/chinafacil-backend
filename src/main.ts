@@ -1,3 +1,7 @@
+if (process.env.NEW_RELIC_LICENSE_KEY) {
+  require('newrelic');
+}
+
 import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { NestFactory } from '@nestjs/core'
@@ -28,9 +32,9 @@ async function bootstrap() {
     ],
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
     beforeSend(event) {
-      // Remove dados sensíveis se necessário
+
       if (event.request?.data) {
-        // Remove senhas e dados sensíveis dos logs
+
         if (typeof event.request.data === 'object' && event.request.data !== null) {
           const data = { ...event.request.data } as any;
           if (data.password) delete data.password;
