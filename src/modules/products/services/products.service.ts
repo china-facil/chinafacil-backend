@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Logger, BadRequestException, InternalSer
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { Inject } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../../../database/prisma.service'
 import { TmService } from '../../../integrations/china-marketplace/services/tm.service'
 import { OtService } from '../../../integrations/china-marketplace/services/ot.service'
@@ -23,6 +24,7 @@ export class ProductsService {
     private readonly aiService: AIService,
     private readonly mercadoLivreService: MercadoLivreService,
     private readonly productCatalogService: ProductCatalogService,
+    private readonly configService: ConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -651,9 +653,6 @@ Exemplo de saída:
     }
   }
 
-  private cleanJsonFromResponse(response: string): string {
-    return response.replace(/```(?:json)?\s*(.*?)```/s, '$1').trim()
-  }
 
   async getCategories(parentCategoryId?: string, forceRefresh = false) {
     if (parentCategoryId) {
@@ -760,7 +759,6 @@ Exemplo de saída:
   }) {
     return this.productCatalogService.getProductsByCategory(options)
   }
-}
 
   async searchConcierge(keyword?: string, imageFile?: Express.Multer.File) {
     if (!keyword && !imageFile) {

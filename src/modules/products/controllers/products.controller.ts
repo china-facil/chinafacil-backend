@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,15 +7,23 @@ import {
   Param,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { diskStorage } from 'multer'
+import { existsSync, mkdirSync } from 'fs'
+import { extname } from 'path'
 import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { AddFavoriteDto, SearchByImageDto, SearchProductsDto, SearchBySellerDto, ShopInfoDto } from '../dto'
@@ -23,7 +32,9 @@ import { ProductsService } from '../services/products.service'
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+  ) {}
 
   @Get('search/1688')
   @ApiOperation({ summary: 'Buscar produtos no Alibaba 1688 por keyword' })
@@ -86,6 +97,69 @@ export class ProductsController {
   @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
   async searchByImageAlibaba(@Body() searchDto: SearchByImageDto) {
     return this.productsService.searchByImageAlibabaIntl(searchDto)
+  }
+
+  @Post('search/image/upload')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload de imagem para busca de produtos' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Arquivo de imagem (JPG, JPEG, PNG, GIF ou WEBP)',
+        },
+      },
+      required: ['image'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Imagem enviada com sucesso',
+    schema: {
+      example: {
+        imgUrl: 'http://localhost:3000/uploads/search-images/abc123def456.jpg',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Arquivo inválido, muito grande ou não fornecido' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './public/uploads/search-images'
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true })
+          }
+          cb(null, uploadPath)
+        },
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('')
+          cb(null, `${randomName}${extname(file.originalname)}`)
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file) {
+          return cb(new BadRequestException('Arquivo não fornecido'), false)
+        }
+        if (!file.originalname || !file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          return cb(new BadRequestException('Apenas imagens são permitidas (JPG, JPEG, PNG, GIF ou WEBP)'), false)
+        }
+        cb(null, true)
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  async uploadSearchImage(@UploadedFile() file: Express.Multer.File) {
+    return this.productsService.uploadSearchImage(file)
   }
 
   @Get('details/1688/:itemId')
