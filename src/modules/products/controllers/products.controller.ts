@@ -325,6 +325,36 @@ export class ProductsController {
     return this.productsService.getProductDescription(itemId)
   }
 
+  @Post('search/concierge')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Buscar produtos via concierge (keyword ou imagem)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        keyword: {
+          type: 'string',
+          description: 'Palavra-chave para busca (obrigatório se image não for fornecido)',
+          example: 'procure produtos de limpeza para mim',
+        },
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagem para busca (obrigatório se keyword não for fornecido)',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Resultados da busca com descrições' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (keyword ou image obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  @UseInterceptors(FileInterceptor('image'))
+  async searchConcierge(
+    @Body('keyword') keyword?: string,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.productsService.searchConcierge(keyword || undefined, image)
+  }
   @Get(':id')
   @ApiOperation({ summary: 'Obter detalhes completos de um produto' })
   @ApiResponse({ status: 200, description: 'Detalhes do produto' })

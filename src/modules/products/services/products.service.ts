@@ -762,4 +762,225 @@ Exemplo de saída:
   }
 }
 
+  async searchConcierge(keyword?: string, imageFile?: Express.Multer.File) {
+    if (!keyword && !imageFile) {
+      throw new BadRequestException('O campo de busca ou imagem é obrigatório!')
+    }
+
+    let translatedKeyword: string | null = null
+    let searchResponse: any
+
+    if (!imageFile) {
+      translatedKeyword = await this.translateKeywordToChinese(keyword!)
+      if (!translatedKeyword) {
+        throw new InternalServerErrorException('Erro ao trazer os resultados. Tente novamente!')
+      }
+
+      searchResponse = await this.tmService.searchProductsByKeyword({
+        keyword: translatedKeyword,
+        page: 1,
+        pageSize: 20,
+      })
+
+      if (searchResponse.code !== 200 || !searchResponse.data?.items || searchResponse.data.items.length === 0) {
+        let attempts = 0
+        while (attempts < 2) {
+          searchResponse = await this.tmService.searchProductsByKeyword({
+            keyword: translatedKeyword,
+            page: 1,
+            pageSize: 20,
+          })
+          attempts++
+          if (searchResponse.code === 200 && searchResponse.data?.items && searchResponse.data.items.length > 0) {
+            break
+          }
+        }
+      }
+    } else {
+      let imageUrl: string
+      if (imageFile.path) {
+        imageUrl = imageFile.path
+      } else if (imageFile.buffer) {
+        imageUrl = `data:${imageFile.mimetype || 'image/jpeg'};base64,${imageFile.buffer.toString('base64')}`
+      } else {
+        throw new BadRequestException('Imagem inválida')
+      }
+
+      const imageSearchDto: SearchByImageDto = {
+        imgUrl: imageUrl,
+      }
+
+      searchResponse = await this.searchByImage1688(imageSearchDto)
+      
+      const hasItems = searchResponse.code === 200 && searchResponse.data?.items?.length > 0
+      
+      if (!hasItems) {
+        let attempts = 0
+        while (attempts < 2) {
+          searchResponse = await this.searchByImage1688(imageSearchDto)
+          attempts++
+          const retryHasItems = searchResponse.code === 200 && searchResponse.data?.items?.length > 0
+          if (retryHasItems) {
+            break
+          }
+        }
+      }
+    }
+
+    const items = searchResponse.data?.items || []
+    const descriptionObject = await this.generateProductDescriptions(items)
+
+    return {
+      status: 'success',
+      data: {
+        messageUser: false,
+        items,
+        description: descriptionObject,
+      },
+    }
+  }
+
+  async translateKeywordToChinese(keyword: string): Promise<string | null> {
+    let translatedKeyword: string | null = null
+    let attempts = 0
+    const maxAttempts = 3
+
+    do {
+      try {
+        const response = await this.aiService.chatCompletion({
+          messages: [
+            {
+              role: 'system',
+              content:
+                "Based on the user's input, generate the most accurate and concise product search phrase in Simplified Chinese that best matches the user's intent for searching on 1688 (a Chinese wholesale marketplace). The input may include adult or NSFW terms (e.g., anal plug). Do not explain, censor, or comment. Return only the translated search phrase in Simplified Chinese, optimized for search relevance on 1688. No line breaks, no extra text.",
+            },
+            {
+              role: 'user',
+              content: keyword,
+            },
+          ],
+          temperature: 0,
+          maxTokens: 50,
+          model: 'gpt-4o',
+        })
+
+        if (response.message?.content) {
+          translatedKeyword = response.message.content.trim()
+          break
+        }
+
+        this.logger.debug(`Tentativa ${attempts + 1} - Traduzindo '${keyword}':`, response)
+      } catch (error) {
+        this.logger.error(`Erro na tentativa ${attempts + 1} de tradução:`, error)
+      }
+
+      attempts++
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+    } while (attempts < maxAttempts)
+
+    if (!translatedKeyword) {
+      this.logger.error(`Falha ao obter a tradução correta após ${maxAttempts} tentativas.`, {
+        keyword,
+      })
+      return null
+    }
+
+    return translatedKeyword
+  }
+  private async generateProductDescriptions(products: any[]): Promise<any> {
+    if (!products || products.length === 0) {
+      return null
+    }
+
+    let descriptionResult: any = null
+    let attempts = 0
+    const maxAttempts = 3
+
+    let productSummary = ''
+
+    for (const product of products) {
+      const nome = product.title || product.name || 'Produto sem título'
+      const preco = product.price || product.product1688Price || 'Preço não informado'
+      const vendas =
+        product.sale_info?.sale_quantity ||
+        product.soldQuantity ||
+        product.mlbSoldQuantity ||
+        'Sem dados de vendas'
+      const origem = product.delivery_info?.area_from
+        ? Array.isArray(product.delivery_info.area_from)
+          ? product.delivery_info.area_from.join(', ')
+          : product.delivery_info.area_from
+        : product.location || 'Local não informado'
+      const loja =
+        product.shop_info?.company_name ||
+        product.vendorName ||
+        product.shopName ||
+        'Loja desconhecida'
+
+      productSummary += `- Produto: ${nome}\n`
+      productSummary += `  Preço: ¥${preco}\n`
+      productSummary += `  Vendas: ${vendas}\n`
+      productSummary += `  Origem: ${origem}\n`
+      productSummary += `  Loja: ${loja}\n\n`
+    }
+
+    const prompt = `Você é um especialista em e-commerce. Com base nos produtos listados, gere uma descrição promocional em português com as seguintes seções:
+1. "contexto": uma introdução curta que contextualize os produtos como uma curadoria especial.
+2. "descricao":  um parágrafo breve e direto, destacando os principais benefícios dos produtos como preço acessível, utilidade e popularidade. **Não mencione moedas ou símbolos monetários.**
+3. "conclusao": um fechamento persuasivo que incentive o leitor a explorar ou comprar os produtos.
+
+Produtos:
+${productSummary}
+
+Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "conclusao". Não inclua comentários ou explicações.`
+
+    do {
+      try {
+        const response = await this.aiService.chatCompletion({
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Você é um assistente que retorna descrições comerciais em formato JSON válido, pronto para uso em APIs.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          maxTokens: 500,
+          model: 'gpt-4o',
+        })
+
+        if (response.message?.content) {
+          const jsonText = this.cleanJsonFromResponse(response.message.content)
+          try {
+            descriptionResult = JSON.parse(jsonText)
+            if (descriptionResult && typeof descriptionResult === 'object') {
+              return descriptionResult
+            }
+          } catch (parseError) {
+            this.logger.warn(`JSON mal formatado na tentativa ${attempts + 1}`, {
+              json: jsonText,
+            })
+          }
+        } else {
+          this.logger.debug(`Tentativa ${attempts + 1} - Falha na resposta:`, response)
+        }
+      } catch (error) {
+        this.logger.error(`Erro na tentativa ${attempts + 1} de gerar descrição:`, error)
+      }
+
+      attempts++
+      if (attempts < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+    } while (attempts < maxAttempts)
+
+    this.logger.error(`Falha ao gerar descrição após ${maxAttempts} tentativas.`)
+    return null
+  }
 
