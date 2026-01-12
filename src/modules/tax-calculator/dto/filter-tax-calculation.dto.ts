@@ -20,6 +20,14 @@ export class FilterTaxCalculationDto {
   ncmCode?: string
 
   @ApiPropertyOptional({
+    example: 'notebook',
+    description: 'Busca por termo (busca parcial em productName e userEmail)',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string
+
+  @ApiPropertyOptional({
     example: '2024-01-01T00:00:00.000Z',
     description: 'Data inicial (ISO 8601)',
   })
