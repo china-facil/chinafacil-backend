@@ -352,6 +352,12 @@ export class SolicitationsService {
   }
 
   async getStatistics(dateStart?: string, dateEnd?: string) {
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    })
+
+    const validUserIdArray = validUserIds.map((user) => user.id).filter((id) => id !== null && id !== undefined)
+
     const baseFilter: any = {
       from: 'chinafacil',
     }
@@ -367,6 +373,16 @@ export class SolicitationsService {
       baseFilter.createdAt = {
         ...baseFilter.createdAt,
         lte: new Date(`${dateEnd} 23:59:59`),
+      }
+    }
+
+    if (validUserIdArray.length > 0) {
+      baseFilter.userId = {
+        in: validUserIdArray,
+      }
+    } else {
+      baseFilter.userId = {
+        in: [],
       }
     }
 
