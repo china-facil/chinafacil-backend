@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { SubscriptionStatus } from '@prisma/client'
+import { SubscriptionStatus, UserRole } from '@prisma/client'
 import { PrismaService } from '../../../database/prisma.service'
 import { CreateSubscriptionDto, UpdateSubscriptionDto } from '../dto'
 
@@ -37,19 +37,38 @@ export class SubscriptionsService {
       throw new NotFoundException('Plano não encontrado')
     }
 
-    const subscription = await this.prisma.subscription.create({
-      data: {
-        userId: createSubscriptionDto.userId,
-        planId: planId,
-        price: createSubscriptionDto.price || Number(client.price || 0),
-        status: createSubscriptionDto.status || SubscriptionStatus.active,
-        currentPeriodStart: createSubscriptionDto.currentPeriodStart
-          ? new Date(createSubscriptionDto.currentPeriodStart)
-          : new Date(),
-        currentPeriodEnd: createSubscriptionDto.currentPeriodEnd
-          ? new Date(createSubscriptionDto.currentPeriodEnd)
-          : new Date(),
-      },
+    const subscription = await this.prisma.$transaction(async (tx) => {
+      const createdSubscription = await tx.subscription.create({
+        data: {
+          userId: createSubscriptionDto.userId,
+          planId: planId,
+          price: createSubscriptionDto.price || Number(client.price || 0),
+          status: createSubscriptionDto.status || SubscriptionStatus.active,
+          currentPeriodStart: createSubscriptionDto.currentPeriodStart
+            ? new Date(createSubscriptionDto.currentPeriodStart)
+            : new Date(),
+          currentPeriodEnd: createSubscriptionDto.currentPeriodEnd
+            ? new Date(createSubscriptionDto.currentPeriodEnd)
+            : new Date(),
+          supplierSearch: createSubscriptionDto.supplierSearch ?? 0,
+          viabilityStudy: createSubscriptionDto.viabilityStudy ?? null,
+        },
+      })
+
+      if (user.role !== UserRole.client) {
+        await tx.user.update({
+          where: { id: createSubscriptionDto.userId },
+          data: {
+            role: UserRole.client,
+          },
+        })
+      }
+
+      return createdSubscription
+    })
+
+    const subscriptionWithRelations = await this.prisma.subscription.findUnique({
+      where: { id: subscription.id },
       include: {
         user: {
           select: {
@@ -62,7 +81,7 @@ export class SubscriptionsService {
       },
     })
 
-    return subscription
+    return subscriptionWithRelations
   }
 
   async findAll(params?: {
@@ -192,16 +211,15 @@ export class SubscriptionsService {
     const updateData: any = {}
 
     if (updateSubscriptionDto.planId) {
-      const planId = BigInt(updateSubscriptionDto.planId)
-      const plan = await this.prisma.plan.findUnique({
-        where: { id: planId },
+      const client = await this.prisma.client.findUnique({
+        where: { id: updateSubscriptionDto.planId },
       })
 
-      if (!plan) {
+      if (!client) {
         throw new NotFoundException('Plano não encontrado')
       }
 
-      updateData.planId = planId
+      updateData.planId = updateSubscriptionDto.planId
     }
 
     if (updateSubscriptionDto.status) {
@@ -218,6 +236,14 @@ export class SubscriptionsService {
 
     if (updateSubscriptionDto.price !== undefined) {
       updateData.price = updateSubscriptionDto.price
+    }
+
+    if (updateSubscriptionDto.supplierSearch !== undefined) {
+      updateData.supplierSearch = Number(updateSubscriptionDto.supplierSearch)
+    }
+
+    if (updateSubscriptionDto.viabilityStudy !== undefined) {
+      updateData.viabilityStudy = Number(updateSubscriptionDto.viabilityStudy)
     }
 
     const updatedSubscription = await this.prisma.subscription.update({
@@ -241,14 +267,33 @@ export class SubscriptionsService {
   async remove(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            role: true,
+          },
+        },
+      },
     })
 
     if (!subscription) {
       throw new NotFoundException('Assinatura não encontrada')
     }
 
-    await this.prisma.subscription.delete({
-      where: { id },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.subscription.delete({
+        where: { id },
+      })
+
+      if (subscription.user && subscription.user.role === UserRole.client) {
+        await tx.user.update({
+          where: { id: subscription.userId },
+          data: {
+            role: UserRole.user,
+          },
+        })
+      }
     })
 
     return {
@@ -259,17 +304,44 @@ export class SubscriptionsService {
   async cancel(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
     })
 
     if (!subscription) {
       throw new NotFoundException('Assinatura não encontrada')
     }
 
-    const updatedSubscription = await this.prisma.subscription.update({
+    const updatedSubscription = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.subscription.update({
+        where: { id },
+        data: {
+          status: SubscriptionStatus.inactive,
+        },
+      })
+
+      if (subscription.user && subscription.user.role === UserRole.client) {
+        await tx.user.update({
+          where: { id: subscription.userId },
+          data: {
+            role: UserRole.user,
+          },
+        })
+      }
+
+      return updated
+    })
+
+    const subscriptionWithRelations = await this.prisma.subscription.findUnique({
       where: { id },
-      data: {
-        status: SubscriptionStatus.inactive,
-      },
       include: {
         user: {
           select: {
@@ -282,24 +354,51 @@ export class SubscriptionsService {
       },
     })
 
-    return updatedSubscription
+    return subscriptionWithRelations
   }
 
   async activate(id: number) {
     const subscription = await this.prisma.subscription.findUnique({
       where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
     })
 
     if (!subscription) {
       throw new NotFoundException('Assinatura não encontrada')
     }
 
-    const updatedSubscription = await this.prisma.subscription.update({
+    const updatedSubscription = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.subscription.update({
+        where: { id },
+        data: {
+          status: SubscriptionStatus.active,
+          currentPeriodStart: subscription.currentPeriodStart || new Date(),
+        },
+      })
+
+      if (subscription.user && subscription.user.role !== UserRole.client) {
+        await tx.user.update({
+          where: { id: subscription.userId },
+          data: {
+            role: UserRole.client,
+          },
+        })
+      }
+
+      return updated
+    })
+
+    const subscriptionWithRelations = await this.prisma.subscription.findUnique({
       where: { id },
-      data: {
-        status: SubscriptionStatus.active,
-        currentPeriodStart: subscription.currentPeriodStart || new Date(),
-      },
       include: {
         user: {
           select: {
@@ -312,7 +411,7 @@ export class SubscriptionsService {
       },
     })
 
-    return updatedSubscription
+    return subscriptionWithRelations
   }
 }
 

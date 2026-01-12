@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common'
@@ -96,13 +97,28 @@ export class SubscriptionsController {
 
   @Patch(':id')
   @Roles('admin')
-  @ApiOperation({ summary: 'Atualizar assinatura' })
+  @ApiOperation({ summary: 'Atualizar assinatura (parcial)' })
   @ApiResponse({ status: 200, description: 'Assinatura atualizada com sucesso' })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
   async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateSubscriptionDto: UpdateSubscriptionDto,
+  ) {
+    return this.subscriptionsService.update(id, updateSubscriptionDto)
+  }
+
+  @Put(':id')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Atualizar assinatura (completo)' })
+  @ApiResponse({ status: 200, description: 'Assinatura atualizada com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Assinatura não encontrada' })
+  async updatePut(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateSubscriptionDto: UpdateSubscriptionDto,
   ) {
