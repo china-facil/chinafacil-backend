@@ -127,4 +127,47 @@ describe('Cart API (Integration)', () => {
       expect(res.status).toBe(401)
     })
   })
+
+  describe('POST /api/cart/report', () => {
+    it('should generate PDF report successfully', async () => {
+      const res = await ctx.req.post('/api/cart/report').send({
+        data: {
+          produtos: [
+            {
+              id: 'test-product-1',
+              name: 'Produto Teste',
+              variations: [
+                {
+                  quantity: 10,
+                  price: 50,
+                },
+              ],
+            },
+          ],
+          bid: 0.7,
+          totalSolicitacao: {
+            totalProdutos: 350,
+          },
+          totalDespesas: {
+            totalFloat: 100,
+          },
+          custoIndividualPorItem: {
+            'test-product-1': {
+              preco_venda_item: 500,
+            },
+          },
+        },
+        detailed: false,
+      })
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toContain('application/pdf')
+    })
+
+    it('should return 400 with invalid payload', async () => {
+      const res = await ctx.req.post('/api/cart/report').send({
+        data: {},
+      })
+      expect(res.status).toBe(400)
+    })
+  })
 })
