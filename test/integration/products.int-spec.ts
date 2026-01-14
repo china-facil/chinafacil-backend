@@ -26,6 +26,18 @@ describe("Products API (Integration)", () => {
       },
     };
 
+    const mockSearchResponse = {
+      code: 200,
+      data: {
+        items: [],
+        total_count: 0,
+      },
+    };
+
+    jest.spyOn(productsService, "translateKeywordToChinese" as any).mockResolvedValue("笔记本电脑");
+    jest.spyOn(productsService, "translateKeywordToEnglish" as any).mockResolvedValue("laptop");
+    jest.spyOn(tmService, "searchProductsByKeyword").mockResolvedValue(mockSearchResponse);
+    jest.spyOn(otService, "searchProductsByKeywordAlibaba").mockResolvedValue(mockSearchResponse);
     jest.spyOn(tmService, "getProductDetails").mockResolvedValue(mockProductData);
     jest.spyOn(tmService, "getProductSkuDetails").mockResolvedValue(mockProductData);
     jest.spyOn(tmService, "getProductShipping").mockResolvedValue({
