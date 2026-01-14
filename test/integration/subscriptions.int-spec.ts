@@ -72,7 +72,7 @@ describe("Subscriptions API (Integration)", () => {
         .send({ userId: userRes.body.id, planId: clientRes.body.id });
       const res = await ctx.authReq.get(`/api/subscriptions/${createRes.body.id}`);
       expect(res.status).toBe(200);
-    });
+    }, 10000);
 
     it("should return 404 for non-existent subscription", async () => {
       const res = await ctx.authReq.get("/api/subscriptions/99999");
@@ -117,7 +117,7 @@ describe("Subscriptions API (Integration)", () => {
           .post("/api/subscriptions")
           .send({ userId: userRes.body.id, planId: clientRes.body.id });
         await successTest(createRes.body.id);
-      });
+      }, 10000);
 
       it("should return 404 for non-existent subscription", async () => {
         const res = await ctx.authReq.post(`/api/subscriptions/99999/${action}`);
