@@ -488,6 +488,15 @@ export class ProductsController {
     })
   }
 
+  @Post('search/get-cbm-individual')
+  @ApiOperation({ summary: 'Obter CBM e peso individual de um produto' })
+  @ApiResponse({ status: 200, description: 'Dados de CBM e peso do produto' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getCbmIndividual(@Body() body: { term: string; product: any }) {
+    return this.productsService.getCbmIndividual(body.term, body.product)
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obter detalhes completos de um produto' })
   @ApiResponse({ status: 200, description: 'Detalhes do produto' })

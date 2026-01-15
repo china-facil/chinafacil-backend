@@ -3,6 +3,8 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import { HttpService } from '@nestjs/axios'
+import { firstValueFrom } from 'rxjs'
 import { PrismaService } from '../../../database/prisma.service'
 import { TmService } from '../../../integrations/china-marketplace/services/tm.service'
 import { OtService } from '../../../integrations/china-marketplace/services/ot.service'
@@ -25,6 +27,7 @@ export class ProductsService {
     private readonly mercadoLivreService: MercadoLivreService,
     private readonly productCatalogService: ProductCatalogService,
     private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -136,10 +139,25 @@ export class ProductsService {
     const response = await this.tmService.getProductShipping(params)
     
     if (response?.code && response.code !== 200) {
-      if (response.code === 404) {
-        throw new NotFoundException(response.msg || 'Produto não encontrado')
-      }
       if (response.code >= 400 && response.code < 500) {
+        const catalogProduct = await this.prisma.productCatalog.findFirst({
+          where: { product1688Id: params.itemId },
+        })
+
+        if (catalogProduct) {
+          this.logger.warn(
+            `ProductsService::getShipping1688 - Produto ${params.itemId} retornou erro ${response.code}, removendo do catálogo`,
+            { catalogProductId: catalogProduct.id, responseCode: response.code }
+          )
+          
+          await this.prisma.productCatalog.delete({
+            where: { id: catalogProduct.id },
+          })
+        }
+
+        if (response.code === 404) {
+          throw new NotFoundException(response.msg || 'Produto não encontrado')
+        }
         throw new BadRequestException(response.msg || 'Erro na requisição')
       }
       throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
@@ -178,10 +196,19 @@ export class ProductsService {
       const response = await this.tmService.getProductDetails(id)
 
       if (response?.code && response.code !== 200) {
-        if (response.code === 404) {
-          throw new NotFoundException(response.msg || 'Produto não encontrado')
-        }
         if (response.code >= 400 && response.code < 500) {
+          this.logger.warn(
+            `ProductsService::show - Produto ${id} retornou erro ${response.code}, removendo do catálogo`,
+            { localProductId: localProduct.id, responseCode: response.code, responseMsg: response.msg }
+          )
+          
+          await this.prisma.productCatalog.delete({
+            where: { id: localProduct.id },
+          })
+
+          if (response.code === 404) {
+            throw new NotFoundException(response.msg || 'Produto não encontrado')
+          }
           throw new BadRequestException(response.msg || 'Erro ao buscar detalhes do produto')
         }
         throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
@@ -248,10 +275,25 @@ export class ProductsService {
     const response = await this.tmService.getProductDetails(id)
     
     if (response?.code && response.code !== 200) {
-      if (response.code === 404) {
-        throw new NotFoundException(response.msg || 'Produto não encontrado')
-      }
       if (response.code >= 400 && response.code < 500) {
+        const catalogProduct = await this.prisma.productCatalog.findFirst({
+          where: { product1688Id: id },
+        })
+
+        if (catalogProduct) {
+          this.logger.warn(
+            `ProductsService::getProductDetails - Produto ${id} retornou erro ${response.code}, removendo do catálogo`,
+            { catalogProductId: catalogProduct.id, responseCode: response.code }
+          )
+          
+          await this.prisma.productCatalog.delete({
+            where: { id: catalogProduct.id },
+          })
+        }
+
+        if (response.code === 404) {
+          throw new NotFoundException(response.msg || 'Produto não encontrado')
+        }
         throw new BadRequestException(response.msg || 'Erro ao buscar detalhes do produto')
       }
       throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
@@ -283,10 +325,25 @@ export class ProductsService {
     const response = await this.tmService.getProductDetails(id)
     
     if (response?.code && response.code !== 200) {
-      if (response.code === 404) {
-        throw new NotFoundException(response.msg || 'Produto não encontrado')
-      }
       if (response.code >= 400 && response.code < 500) {
+        const catalogProduct = await this.prisma.productCatalog.findFirst({
+          where: { product1688Id: id },
+        })
+
+        if (catalogProduct) {
+          this.logger.warn(
+            `ProductsService::getProductSkuDetails - Produto ${id} retornou erro ${response.code}, removendo do catálogo`,
+            { catalogProductId: catalogProduct.id, responseCode: response.code }
+          )
+          
+          await this.prisma.productCatalog.delete({
+            where: { id: catalogProduct.id },
+          })
+        }
+
+        if (response.code === 404) {
+          throw new NotFoundException(response.msg || 'Produto não encontrado')
+        }
         throw new BadRequestException(response.msg || 'Erro ao buscar SKUs do produto')
       }
       throw new InternalServerErrorException(response.msg || 'Erro interno do servidor')
@@ -1262,6 +1319,392 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
         stack: error.stack,
       })
       throw new InternalServerErrorException('Erro interno do servidor')
+    }
+  }
+
+  async getCbmIndividual(term: string, product: any) {
+    try {
+      if (!term) {
+        return {
+          success: false,
+          message: 'Termo de busca é obrigatório',
+          data: {
+            search_term: term || '',
+            dimensions: {
+              CBM: { DisplayValue: null },
+              Weight: { DisplayValue: null },
+            },
+          },
+        }
+      }
+
+      const crypto = require('crypto')
+      const cacheKey = `cbm_peso_individual_hybrid_${crypto.createHash('md5').update(term).digest('hex')}`
+      const cached = await this.cacheManager.get(cacheKey)
+      
+      if (cached) {
+        return {
+          success: true,
+          data: cached,
+        }
+      }
+
+      let productResult: any
+
+      // NOVA ABORDAGEM: Primeiro tentar extrair volume e peso do próprio produto
+      if (product && typeof product === 'object' && !Array.isArray(product)) {
+        const dataFromProduct = this.extractVolumeAndWeightFromProduct(product)
+
+        // Se temos QUALQUER dado válido do produto, usar e buscar apenas o que falta
+        if (dataFromProduct.found_in_product) {
+          // Se status é 'complete', temos ambos dados - não precisamos do endpoint externo
+          if (dataFromProduct.extraction_status === 'complete') {
+            productResult = {
+              search_term: term,
+              dimensions: {
+                CBM: { DisplayValue: dataFromProduct.volume_m3 },
+                Weight: { DisplayValue: dataFromProduct.weight_kg },
+              },
+              source: 'product_object_complete',
+              volume_cm3: dataFromProduct.volume_cm3,
+              weight_kg: dataFromProduct.weight_kg,
+              has_volume: dataFromProduct.has_volume,
+              has_weight: dataFromProduct.has_weight,
+            }
+          } else {
+            // Se status é 'partial', temos alguns dados - buscar apenas o que falta externamente
+            const productTitle = term
+            const productDescription = product.description || ''
+
+            const dataFromExternal = await this.getVolumeAndWeightFromExternalEndpoint(productTitle, productDescription)
+
+            // Combinar dados do produto com dados externos (híbrido inteligente)
+            if (dataFromExternal.external_success) {
+              // Priorizar dados do produto quando disponíveis, usar endpoint externo apenas para dados faltantes
+              const finalVolume = dataFromProduct.has_volume ? dataFromProduct.volume_cm3 : dataFromExternal.volume_cm3
+              const finalWeight = dataFromProduct.has_weight ? dataFromProduct.weight_kg : dataFromExternal.weight_kg
+              const finalVolumeM3 = finalVolume ? finalVolume / 1000000 : null
+
+              productResult = {
+                search_term: term,
+                dimensions: {
+                  CBM: { DisplayValue: finalVolumeM3 },
+                  Weight: { DisplayValue: finalWeight },
+                },
+                source: 'hybrid_product_external',
+                method: dataFromExternal.method || null,
+                inferred: dataFromExternal.inferred || false,
+                volume_cm3: finalVolume,
+                weight_kg: finalWeight,
+                has_volume: finalVolume !== null,
+                has_weight: finalWeight !== null,
+                hybrid_details: {
+                  volume_from: dataFromProduct.has_volume ? 'product' : 'external',
+                  weight_from: dataFromProduct.has_weight ? 'product' : 'external',
+                },
+              }
+            } else {
+              // Endpoint externo falhou - usar apenas dados do produto que temos
+              productResult = {
+                search_term: term,
+                dimensions: {
+                  CBM: { DisplayValue: dataFromProduct.volume_m3 },
+                  Weight: { DisplayValue: dataFromProduct.weight_kg },
+                },
+                source: 'product_object_partial',
+                method: null,
+                inferred: false,
+                volume_cm3: dataFromProduct.volume_cm3,
+                weight_kg: dataFromProduct.weight_kg,
+                has_volume: dataFromProduct.has_volume,
+                has_weight: dataFromProduct.has_weight,
+              }
+            }
+          }
+        }
+      }
+
+      // Se não encontrou no produto, tentar endpoint externo
+      if (!productResult) {
+        const productTitle = term
+        const productDescription = product?.description || ''
+
+        const dataFromExternal = await this.getVolumeAndWeightFromExternalEndpoint(productTitle, productDescription)
+
+        if (dataFromExternal.external_success) {
+          productResult = {
+            search_term: term,
+            dimensions: {
+              CBM: { DisplayValue: dataFromExternal.volume_m3 },
+              Weight: { DisplayValue: dataFromExternal.weight_kg },
+            },
+            source: 'external_endpoint',
+            method: dataFromExternal.method,
+            inferred: dataFromExternal.inferred,
+            volume_cm3: dataFromExternal.volume_cm3,
+            weight_kg: dataFromExternal.weight_kg,
+            has_volume: dataFromExternal.has_volume,
+            has_weight: dataFromExternal.has_weight,
+          }
+        } else {
+          // Se falhou, tentar o endpoint antigo como fallback
+          try {
+            const response = await firstValueFrom(
+              this.httpService.post(
+                'https://amazon-scraper.chinafacil.com/api/batch',
+                { terms: [term] },
+                {
+                  headers: {
+                    Authorization: 'Bearer 76c5c607-da44-4885-a450-02fc80d17d6e',
+                    'Content-Type': 'application/json',
+                  },
+                  timeout: 8000,
+                },
+              ),
+            )
+
+            const data = response.data
+            const result = data.results?.[0] || null
+
+            if (result) {
+              productResult = {
+                search_term: term,
+                dimensions: {
+                  CBM: { DisplayValue: result.dimensions?.CBM?.DisplayValue || null },
+                  Weight: { DisplayValue: result.dimensions?.Weight?.DisplayValue || null },
+                },
+                source: 'legacy_endpoint',
+              }
+            }
+          } catch (legacyError: any) {
+            this.logger.warn('Endpoint legacy também falhou:', legacyError.message)
+          }
+        }
+      }
+
+      // Se ainda não tem resultado, retornar valores nulos
+      if (!productResult) {
+        productResult = {
+          search_term: term,
+          dimensions: {
+            CBM: { DisplayValue: null },
+            Weight: { DisplayValue: null },
+          },
+          source: 'no_data',
+        }
+      }
+
+      // Cachear resultado por 1 semana
+      await this.cacheManager.set(cacheKey, productResult, 604800000)
+
+      return {
+        success: true,
+        data: productResult,
+      }
+    } catch (error: any) {
+      this.logger.error('Erro ao calcular CBM individual:', error)
+      
+      return {
+        success: false,
+        message: error.message || 'Erro interno do servidor',
+        data: {
+          search_term: term || '',
+          dimensions: {
+            CBM: { DisplayValue: null },
+            Weight: { DisplayValue: null },
+          },
+        },
+      }
+    }
+  }
+
+  private extractVolumeAndWeightFromProduct(productData: any): {
+    volume_cm3: number | null
+    volume_m3: number | null
+    weight_kg: number | null
+    found_in_product: boolean
+    has_volume: boolean
+    has_weight: boolean
+    needs_volume_from_external: boolean
+    needs_weight_from_external: boolean
+    extraction_status: 'complete' | 'partial' | 'empty' | 'error'
+  } {
+    try {
+      let volume: number | null = null
+      let weight: number | null = null
+      let foundInProduct = false
+      let validVolume = false
+      let validWeight = false
+
+      // Verificar se existe a estrutura skus[0].package_info
+      if (productData?.skus?.[0]?.package_info) {
+        const packageInfo = productData.skus[0].package_info
+
+        // Extrair volume se existir e for válido (maior que zero)
+        if (packageInfo.volume !== undefined && packageInfo.volume !== null) {
+          const volumeValue = Number(packageInfo.volume)
+          if (!isNaN(volumeValue) && volumeValue > 0) {
+            volume = volumeValue
+            validVolume = true
+          }
+        }
+
+        // Extrair peso se existir e for válido (maior que zero)
+        if (packageInfo.weight !== undefined && packageInfo.weight !== null) {
+          const weightValue = Number(packageInfo.weight)
+          if (!isNaN(weightValue) && weightValue > 0) {
+            weight = weightValue
+            validWeight = true
+          }
+        }
+
+        foundInProduct = validVolume || validWeight
+      }
+
+      // Também verificar estrutura alternativa data.skus[0].package_info
+      if (!foundInProduct && productData?.data?.skus?.[0]?.package_info) {
+        const packageInfo = productData.data.skus[0].package_info
+
+        // Extrair volume se existir e for válido (maior que zero)
+        if (packageInfo.volume !== undefined && packageInfo.volume !== null) {
+          const volumeValue = Number(packageInfo.volume)
+          if (!isNaN(volumeValue) && volumeValue > 0) {
+            volume = volumeValue
+            validVolume = true
+          }
+        }
+
+        // Extrair peso se existir e for válido (maior que zero)
+        if (packageInfo.weight !== undefined && packageInfo.weight !== null) {
+          const weightValue = Number(packageInfo.weight)
+          if (!isNaN(weightValue) && weightValue > 0) {
+            weight = weightValue
+            validWeight = true
+          }
+        }
+
+        foundInProduct = validVolume || validWeight
+      }
+
+      return {
+        volume_cm3: volume,
+        volume_m3: volume ? volume / 1000000 : null,
+        weight_kg: weight,
+        found_in_product: foundInProduct,
+        has_volume: validVolume,
+        has_weight: validWeight,
+        needs_volume_from_external: !validVolume,
+        needs_weight_from_external: !validWeight,
+        extraction_status: foundInProduct
+          ? validVolume && validWeight
+            ? 'complete'
+            : 'partial'
+          : 'empty',
+      }
+    } catch (error: any) {
+      this.logger.error('Erro ao extrair volume e peso do produto:', error)
+      return {
+        volume_cm3: null,
+        volume_m3: null,
+        weight_kg: null,
+        found_in_product: false,
+        has_volume: false,
+        has_weight: false,
+        needs_volume_from_external: true,
+        needs_weight_from_external: true,
+        extraction_status: 'error',
+      }
+    }
+  }
+
+  private async getVolumeAndWeightFromExternalEndpoint(
+    productTitle: string,
+    productDescription: string = '',
+  ): Promise<{
+    volume_cm3: number | null
+    volume_m3: number | null
+    weight_kg: number | null
+    external_success: boolean
+    has_volume: boolean
+    has_weight: boolean
+    method?: string
+    inferred?: boolean
+    asin?: string | null
+    error?: string
+  }> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(
+          'https://api.ekonomi.me/get_external_product_volume',
+          {
+            title: productTitle,
+            description: productDescription,
+          },
+          {
+            timeout: 10000,
+          },
+        ),
+      )
+
+      if (response.status < 200 || response.status >= 300) {
+        return {
+          volume_cm3: null,
+          volume_m3: null,
+          weight_kg: null,
+          external_success: false,
+          has_volume: false,
+          has_weight: false,
+          error: `Erro HTTP: ${response.status}`,
+        }
+      }
+
+      const data = response.data
+
+      if (!data) {
+        return {
+          volume_cm3: null,
+          volume_m3: null,
+          weight_kg: null,
+          external_success: false,
+          has_volume: false,
+          has_weight: false,
+          error: 'Resposta inválida',
+        }
+      }
+
+      // Extrair volume se disponível
+      const volumeCm3 = data.volume !== undefined && data.volume !== null ? Number(data.volume) : null
+      const volumeM3 = volumeCm3 ? volumeCm3 / 1000000 : null
+
+      // Extrair peso se disponível
+      const weightKg = data.weight !== undefined && data.weight !== null ? Number(data.weight) : null
+
+      const hasVolume = volumeCm3 !== null && !isNaN(volumeCm3)
+      const hasWeight = weightKg !== null && !isNaN(weightKg)
+      const success = hasVolume || hasWeight
+
+      return {
+        volume_cm3: volumeCm3,
+        volume_m3: volumeM3,
+        weight_kg: weightKg,
+        external_success: success,
+        has_volume: hasVolume,
+        has_weight: hasWeight,
+        method: data.method || 'desconhecido',
+        inferred: data.inferred || false,
+        asin: data.asin || null,
+      }
+    } catch (error: any) {
+      this.logger.error('Exceção ao chamar endpoint externo de volume/peso:', error.message)
+      return {
+        volume_cm3: null,
+        volume_m3: null,
+        weight_kg: null,
+        external_success: false,
+        has_volume: false,
+        has_weight: false,
+        error: error.message,
+      }
     }
   }
 }
