@@ -3,12 +3,28 @@ import { STANDARD_PDF_STYLES, DETAILED_PDF_STYLES } from './cart-pdf-styles.cons
 
 @Injectable()
 export class CartPdfTemplateService {
-  formatNumber(value: number, decimals: number = 2): string {
-    return value.toFixed(decimals).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  formatNumber(value: number | string | undefined | null, decimals: number = 2): string {
+    if (value === null || value === undefined) return '0' + ',00'.slice(0, decimals > 0 ? decimals + 1 : 0)
+    
+    const numValue = typeof value === 'string' 
+      ? parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.'))
+      : value
+    
+    if (isNaN(numValue)) return '0' + ',00'.slice(0, decimals > 0 ? decimals + 1 : 0)
+    
+    return numValue.toFixed(decimals).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   }
 
-  formatInteger(value: number): string {
-    return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  formatInteger(value: number | string | undefined | null): string {
+    if (value === null || value === undefined) return '0'
+    
+    const numValue = typeof value === 'string'
+      ? parseFloat(value.replace(/[^\d,.-]/g, '').replace(',', '.'))
+      : value
+    
+    if (isNaN(numValue)) return '0'
+    
+    return Math.round(numValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   }
 
   escapeHtml(text: string): string {
@@ -303,13 +319,13 @@ export class CartPdfTemplateService {
       tipoEmbarque = 'Carga Consolidada Aérea/Marítima'
     }
 
-    const primeiroItem = data.custoIndividualPorItem ? Object.values(data.custoIndividualPorItem)[0] as any : null
-    const freteCorreto = primeiroItem?.frete_item || 0
-
     const totalTransporteInternacional = data.totalTransporteInternacional?.totalFloat || 0
     const totalSeguro = data.totalSeguro?.totalFloat || 0
-    const cifTotal = data.cif?.total || 0
+    const cifTotal = data.cif?.totalFloat || 0
     const dolar = parseFloat(String(data.dolar || 0))
+    
+    const freteCorreto = totalTransporteInternacional || (freteTotalUSD * dolar)
+    const primeiroItem = data.custoIndividualPorItem ? Object.values(data.custoIndividualPorItem)[0] as any : null
 
     let totalValorFinalCabecalho = 0
     if (data.produtos) {

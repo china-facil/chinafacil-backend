@@ -56,6 +56,33 @@ export class BoardingTypesService {
     return boardingType
   }
 
+  async findByVolume(volume: number) {
+    const boardingTypes = await this.prisma.boardingType.findMany({
+      where: {
+        cmbStart: {
+          lte: volume,
+        },
+        cmbEnd: {
+          gte: volume,
+        },
+      },
+      orderBy: [
+        {
+          cmbEnd: 'asc',
+        },
+        {
+          cmbStart: 'desc',
+        },
+      ],
+    })
+
+    if (boardingTypes.length === 0) {
+      return this.findDefault()
+    }
+
+    return boardingTypes[0]
+  }
+
   async update(id: string, updateBoardingTypeDto: UpdateBoardingTypeDto) {
     const boardingType = await this.prisma.boardingType.findUnique({
       where: { id },

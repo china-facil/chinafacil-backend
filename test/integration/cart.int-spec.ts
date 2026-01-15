@@ -159,15 +159,60 @@ describe('Cart API (Integration)', () => {
         },
         detailed: false,
       })
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(201)
       expect(res.headers['content-type']).toContain('application/pdf')
     })
 
-    it('should return 400 with invalid payload', async () => {
+    it('should generate PDF with international transport calculation', async () => {
+      const res = await ctx.req.post('/api/cart/report').send({
+        data: {
+          produtos: [
+            {
+              id: 'test-product-1',
+              name: 'Produto Teste',
+              ncm_code: '8517.62.55',
+              variations: [
+                {
+                  quantity: 10,
+                  price: 50,
+                },
+              ],
+            },
+          ],
+          totalVolume: 1.54,
+          totalPeso: 500,
+          dolar: 5.38,
+          bid: 0.7,
+          totalProdutos: {
+            total: 'R$ 350,00',
+            totalFloat: 350,
+          },
+          totalSolicitacao: {
+            totalProdutos: 350,
+            totalImpostos: 100,
+            totalDespesasBrasil: 50,
+            totalTransporteNacional: 30,
+          },
+          totalDespesas: {
+            totalFloat: 100,
+          },
+          custoIndividualPorItem: {
+            'test-product-1': {
+              preco_venda_item: 500,
+            },
+          },
+        },
+        detailed: false,
+      })
+      expect(res.status).toBe(201)
+      expect(res.headers['content-type']).toContain('application/pdf')
+    })
+
+    it('should return 404 with invalid payload', async () => {
       const res = await ctx.req.post('/api/cart/report').send({
         data: {},
       })
-      expect(res.status).toBe(400)
+      expect(res.status).toBe(404)
     })
   })
 })

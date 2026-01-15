@@ -5,9 +5,10 @@ import { CartService } from './cart.service'
 import { CartPdfService } from './services/cart-pdf.service'
 import { CartPdfTemplateService } from './services/cart-pdf-template.service'
 import { TaxCalculatorModule } from '../tax-calculator/tax-calculator.module'
+import { SettingsModule } from '../settings/settings.module'
 
 @Module({
-  imports: [DatabaseModule, TaxCalculatorModule],
+  imports: [DatabaseModule, TaxCalculatorModule, SettingsModule],
   controllers: [CartController],
   providers: [CartService, CartPdfService, CartPdfTemplateService],
   exports: [CartService],
