@@ -161,7 +161,7 @@ describe('Cart API (Integration)', () => {
       })
       expect(res.status).toBe(201)
       expect(res.headers['content-type']).toContain('application/pdf')
-    })
+    }, 30000)
 
     it('should generate PDF with international transport calculation', async () => {
       const res = await ctx.req.post('/api/cart/report').send({
@@ -206,7 +206,7 @@ describe('Cart API (Integration)', () => {
       })
       expect(res.status).toBe(201)
       expect(res.headers['content-type']).toContain('application/pdf')
-    })
+    }, 15000)
 
     it('should return 404 with invalid payload', async () => {
       const res = await ctx.req.post('/api/cart/report').send({

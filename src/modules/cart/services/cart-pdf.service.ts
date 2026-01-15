@@ -51,12 +51,22 @@ export class CartPdfService {
       return
     }
 
-    for (const produto of data.produtos) {
+    const promises = data.produtos.map(async (produto: any) => {
       const ncmCode = produto.ncm_code
       
       if (typeof ncmCode === 'string' && ncmCode.trim()) {
         try {
-          const ncmData = await this.ncmService.findByCode(ncmCode)
+          let ncmData = null
+          
+          try {
+            ncmData = await this.ncmService.findByCode(ncmCode)
+          } catch (notFoundError) {
+            try {
+              ncmData = await this.ncmService.findSimilarByPrefix(ncmCode)
+            } catch (similarError) {
+              // NCM não encontrado
+            }
+          }
           
           if (ncmData && 'codigo' in ncmData) {
             const parseAliquot = (value: any): number => {
@@ -79,11 +89,28 @@ export class CartPdfService {
         }
       }
       else if (typeof ncmCode === 'object' && ncmCode) {
+        const hasAllData = ncmCode.ii !== undefined && ncmCode.ipi !== undefined && 
+                          ncmCode.pis !== undefined && ncmCode.cofins !== undefined
+        
+        if (hasAllData) {
+          return
+        }
+        
         const codigo = ncmCode.codigo || ncmCode.ncm || ncmCode.number
         
         if (codigo) {
           try {
-            const ncmData = await this.ncmService.findByCode(codigo)
+            let ncmData = null
+            
+            try {
+              ncmData = await this.ncmService.findByCode(codigo)
+            } catch (notFoundError) {
+              try {
+                ncmData = await this.ncmService.findSimilarByPrefix(codigo)
+              } catch (similarError) {
+                // NCM não encontrado
+              }
+            }
             
             if (ncmData && 'codigo' in ncmData) {
               const parseAliquot = (dbValue: any, existingValue: any): number => {
@@ -113,6 +140,8 @@ export class CartPdfService {
           }
         }
       }
-    }
+    })
+
+    await Promise.all(promises)
   }
 }

@@ -27,6 +27,18 @@ export class CartPdfTemplateService {
     return Math.round(numValue).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   }
 
+  formatPercentage(value: number | string | undefined | null, decimals: number = 2): string {
+    if (value === null || value === undefined) return '0'
+    
+    const numValue = typeof value === 'string'
+      ? parseFloat(value)
+      : value
+    
+    if (isNaN(numValue)) return '0'
+    
+    return numValue.toFixed(decimals)
+  }
+
   escapeHtml(text: string): string {
     const map: Record<string, string> = {
       '&': '&amp;',
@@ -355,16 +367,16 @@ export class CartPdfTemplateService {
         : (ncmCode || 'N/A')
 
       const ii = typeof ncmCode === 'object' && ncmCode 
-        ? (ncmCode.ii !== undefined && ncmCode.ii !== null ? String(ncmCode.ii) : '0')
+        ? (ncmCode.ii !== undefined && ncmCode.ii !== null ? this.formatPercentage(ncmCode.ii) : '0')
         : '0'
       const ipi = typeof ncmCode === 'object' && ncmCode 
-        ? (ncmCode.ipi !== undefined && ncmCode.ipi !== null ? String(ncmCode.ipi) : '0')
+        ? (ncmCode.ipi !== undefined && ncmCode.ipi !== null ? this.formatPercentage(ncmCode.ipi) : '0')
         : '0'
       const pis = typeof ncmCode === 'object' && ncmCode 
-        ? (ncmCode.pis !== undefined && ncmCode.pis !== null ? String(ncmCode.pis) : '0')
+        ? (ncmCode.pis !== undefined && ncmCode.pis !== null ? this.formatPercentage(ncmCode.pis) : '0')
         : '0'
       const cofins = typeof ncmCode === 'object' && ncmCode 
-        ? (ncmCode.cofins !== undefined && ncmCode.cofins !== null ? String(ncmCode.cofins) : '0')
+        ? (ncmCode.cofins !== undefined && ncmCode.cofins !== null ? this.formatPercentage(ncmCode.cofins) : '0')
         : '0'
 
       tributosRows += `
@@ -519,13 +531,11 @@ export class CartPdfTemplateService {
                   <td class="currency">R$ ${this.formatNumber(custoItem.tributos_item || 0)}</td>
                   <td class="small-text">II, IPI, PIS, COFINS, ICMS</td>
                 </tr>
-                ${currentVolume <= 3 ? `
-                  <tr>
-                    <td>Despesas no Brasil</td>
-                    <td class="currency">R$ ${this.formatNumber(custoItem.despesas_item || 0)}</td>
-                    <td class="small-text">Siscomex, despachante, etc.</td>
-                  </tr>
-                ` : ''}
+                <tr>
+                  <td>Custos Operacionais</td>
+                  <td class="currency">R$ ${this.formatNumber(custoItem.despesas_item || 0)}</td>
+                  <td class="small-text">Siscomex, despachante, armazenagem, etc.</td>
+                </tr>
                 <tr style="background-color: #f0f8ff;">
                   <td><strong>Custo Importado</strong></td>
                   <td class="currency"><strong>R$ ${this.formatNumber(custoImportado)}</strong></td>
@@ -559,8 +569,18 @@ export class CartPdfTemplateService {
     }
 
     const creditosTotal = data.creditosImportacao?.total || 0
-    const basePosCredito = data.creditosImportacao?.base_pos_credito || 0
-    const precoVendaGeral = data.totalVendaProduto?.precoVendaGeral || 0
+    
+    // Calcular basePosCredito somando todos os itens individuais
+    let basePosCredito = 0
+    let totalCreditosIndividuais = 0
+    if (data.produtos) {
+      for (const produto of data.produtos) {
+        if (data.custoIndividualPorItem?.[produto.id]) {
+          basePosCredito += data.custoIndividualPorItem[produto.id].base_pos_credito_item || 0
+          totalCreditosIndividuais += data.custoIndividualPorItem[produto.id].creditos_item || 0
+        }
+      }
+    }
 
     const totalSolicitacao = data.totalSolicitacao || {}
     const totalFinal = totalSolicitacao.totalFinal || 0
@@ -737,7 +757,7 @@ export class CartPdfTemplateService {
         <div class="formula">
             <strong>Créditos Creditáveis:</strong><br>
             PIS-imp + COFINS-imp + ICMS-imp + IPI-imp<br>
-            = R$ ${this.formatNumber(creditosTotal)}
+            = R$ ${this.formatNumber(totalCreditosIndividuais)}
         </div>
         <div class="formula">
             <strong>Base Pós-Crédito:</strong><br>
@@ -745,7 +765,7 @@ export class CartPdfTemplateService {
             = <span class="highlight">R$ ${this.formatNumber(basePosCredito)}</span>
         </div>
         <div class="result">
-            ✅ <strong>Créditos de Importação:</strong> R$ ${this.formatNumber(creditosTotal)}<br>
+            ✅ <strong>Créditos de Importação:</strong> R$ ${this.formatNumber(totalCreditosIndividuais)}<br>
             ✅ <strong>Base Pós-Crédito:</strong> R$ ${this.formatNumber(basePosCredito)}
         </div>
     </div>
@@ -765,7 +785,7 @@ export class CartPdfTemplateService {
         <div class="formula">
             <strong>Preço de Venda = Base Pós-Crédito ÷ 0,8175</strong><br>
             Preço = R$ ${this.formatNumber(basePosCredito)} ÷ 0,8175<br>
-            = <span class="highlight">R$ ${this.formatNumber(precoVendaGeral)}</span>
+            = <span class="highlight">R$ ${this.formatNumber(totalValorFinalCabecalho)}</span>
         </div>
         <div class="result">
             ✅ <strong>Preço de Venda Final:</strong> R$ ${this.formatNumber(totalValorFinalCabecalho)}

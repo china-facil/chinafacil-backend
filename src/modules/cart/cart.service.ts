@@ -2,7 +2,6 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
 import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
 import { CartPdfService } from './services/cart-pdf.service'
-import { BoardingTypesService } from '../settings/services/boarding-types.service'
 
 @Injectable()
 export class CartService {
@@ -11,7 +10,6 @@ export class CartService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cartPdfService: CartPdfService,
-    private readonly boardingTypesService: BoardingTypesService,
   ) {}
 
   async create(userId: string, createCartDto: CreateCartDto) {
@@ -481,174 +479,8 @@ export class CartService {
       throw new NotFoundException('Dados inválidos: produtos não encontrados')
     }
 
-    const isTaxCalculator = data?.lead?.name === 'Calculadora de Impostos'
-    if (!isTaxCalculator) {
-      await this.recalculateInternationalTransport(data)
-    }
-
     return this.cartPdfService.generatePDF(data, detailed)
   }
-
-  private async recalculateInternationalTransport(data: any): Promise<void> {
-    const totalVolume = data.totalVolume || 0
-    const totalWeight = data.totalPeso || 0
-    const dolar = data.dolar || 5.50
-
-    this.logger.log('=== INÍCIO: Recálculo transporte internacional ===', {
-      totalVolume,
-      totalWeight,
-      dolar,
-    })
-
-    const isWeightOver27Tons = totalWeight >= 27000
-    const isVolumeOver25m3 = totalVolume > 25
-    const useFCL = isWeightOver27Tons || isVolumeOver25m3
-
-    this.logger.log('=== ANÁLISE: Condições para FCL ===', {
-      is_weight_over_27t: isWeightOver27Tons,
-      is_volume_over_25m3: isVolumeOver25m3,
-      use_fcl: useFCL,
-    })
-
-    let freteTotalUSD: number
-    let boardingType: any
-
-    if (useFCL) {
-      this.logger.log('=== FCL: Usando valor fixo do container 25-67m³ ===')
-      
-      const containerShippingCost = 4100
-      freteTotalUSD = containerShippingCost
-      
-      boardingType = await this.prisma.boardingType.findFirst({
-        where: {
-          cmbStart: 25,
-          cmbEnd: 67,
-        },
-      })
-
-      if (!boardingType) {
-        boardingType = await this.boardingTypesService.findDefault()
-      }
-
-      this.logger.log('=== FCL: Valores calculados ===', {
-        container_shipping_cost: containerShippingCost,
-        boarding_type: boardingType,
-      })
-    } else {
-      this.logger.log('=== LCL: Usando cálculo baseado no volume real ===', {
-        volume_real: totalVolume,
-      })
-
-      boardingType = await this.boardingTypesService.findByVolume(totalVolume)
-
-      if (!boardingType) {
-        this.logger.warn('Tipo de embarque não encontrado para volume, usando fallback')
-        boardingType = await this.boardingTypesService.findDefault()
-      }
-
-      const freteUSDPerM3 = boardingType.internationalShipping
-      freteTotalUSD = freteUSDPerM3 * totalVolume
-
-      this.logger.log('=== LCL: Valores calculados ===', {
-        frete_usd_per_m3: freteUSDPerM3,
-        volume_real: totalVolume,
-        frete_total_usd: freteTotalUSD,
-        boarding_type: boardingType,
-      })
-    }
-
-    const freteTotalBRL = freteTotalUSD * dolar
-
-    data.totalTransporteInternacional = {
-      total: `R$ ${freteTotalBRL.toFixed(2).replace('.', ',')}`,
-      totalFloat: freteTotalBRL,
-    }
-
-    if (data.totalSolicitacao) {
-      data.totalSolicitacao.totalTransporteInternacional = freteTotalBRL
-      this.logger.log('=== ATUALIZANDO totalSolicitacao ===', {
-        novo_valor_transporte: freteTotalBRL,
-      })
-    }
-
-    data.defaultBoardingType = {
-      id: boardingType.id,
-      cmb_start: boardingType.cmbStart,
-      cmb_end: boardingType.cmbEnd,
-      international_shipping: boardingType.internationalShipping,
-      tax_bl_awb: boardingType.taxBlAwb,
-      storage_air: boardingType.storageAir,
-      storage_sea: boardingType.storageSea,
-      tax_afrmm: boardingType.taxAfrmm,
-      dispatcher: boardingType.dispatcher,
-      sda: boardingType.sda,
-      delivery_transport: boardingType.deliveryTransport,
-      other_fees: boardingType.otherFees,
-      brazil_expenses: boardingType.brazilExpenses,
-    }
-
-    this.recalculateInsurance(data, freteTotalBRL)
-    this.recalculateCIF(data)
-    this.recalculateTotalFinal(data)
-
-    this.logger.log('=== RESULTADO FINAL APÓS RECÁLCULO COMPLETO ===', {
-      modo_calculo: useFCL ? 'FCL (fixo)' : 'LCL (por volume)',
-      volume_real: totalVolume,
-      peso: totalWeight,
-      frete_usd: freteTotalUSD,
-      frete_brl: freteTotalBRL,
-      tipo_embarque: `${boardingType.cmbStart}-${boardingType.cmbEnd}`,
-      international_shipping: boardingType.internationalShipping,
-    })
-  }
-
-  private recalculateInsurance(data: any, freteTotalBRL: number): void {
-    const totalProdutosBRL = parseFloat(String(data.totalProdutos?.totalFloat || 0))
-    const baseSeguro = totalProdutosBRL + freteTotalBRL
-    const seguro = baseSeguro * 0.005
-
-    data.totalSeguro = {
-      total: `R$ ${seguro.toFixed(2).replace('.', ',')}`,
-      totalFloat: seguro,
-    }
-
-    if (data.totalSolicitacao) {
-      data.totalSolicitacao.totalSeguro = seguro
-    }
-  }
-
-  private recalculateCIF(data: any): void {
-    const totalProdutos = parseFloat(String(data.totalProdutos?.totalFloat || 0))
-    const totalTransporte = parseFloat(String(data.totalTransporteInternacional?.totalFloat || 0))
-    const totalSeguro = parseFloat(String(data.totalSeguro?.totalFloat || 0))
-
-    const cif = totalProdutos + totalTransporte + totalSeguro
-
-    data.cif = {
-      total: `R$ ${cif.toFixed(2).replace('.', ',')}`,
-      totalFloat: cif,
-    }
-
-    if (data.totalSolicitacao) {
-      data.totalSolicitacao.cif = cif
-    }
-  }
-
-  private recalculateTotalFinal(data: any): void {
-    if (!data.totalSolicitacao) {
-      return
-    }
-
-    const cif = parseFloat(String(data.cif?.totalFloat || 0))
-    const totalImpostos = parseFloat(String(data.totalSolicitacao.totalImpostos || 0))
-    const totalDespesasBrasil = parseFloat(String(data.totalSolicitacao.totalDespesasBrasil || 0))
-    const totalTransporteNacional = parseFloat(String(data.totalSolicitacao.totalTransporteNacional || 0))
-
-    const totalFinal = cif + totalImpostos + totalDespesasBrasil + totalTransporteNacional
-
-    data.totalSolicitacao.totalFinal = totalFinal
-  }
-
 }
 
 

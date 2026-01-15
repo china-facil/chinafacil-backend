@@ -61,6 +61,56 @@ export class NcmService {
     }
   }
 
+  async findSimilarByPrefix(ncmCode: string) {
+    if (!ncmCode || !ncmCode.trim()) {
+      throw new NotFoundException('Código NCM não fornecido')
+    }
+
+    const cleanCode = ncmCode.trim().replace(/[^0-9]/g, '')
+
+    if (cleanCode.length < 6) {
+      throw new NotFoundException('Código NCM deve ter ao menos 6 dígitos para busca similar')
+    }
+
+    const prefix = cleanCode.substring(0, 6)
+    const cacheKey = `ncm:similar:${prefix}`
+    const cached = await this.cacheManager.get(cacheKey)
+
+    if (cached) {
+      return { ...cached, cached: true }
+    }
+
+    try {
+      const ncmList = await this.ncmDatabase.findByCodeLike(prefix)
+
+      if (!ncmList || ncmList.length === 0) {
+        throw new NotFoundException(`Nenhum NCM similar encontrado para prefixo: ${prefix}`)
+      }
+
+      const firstMatch = ncmList[0]
+      const result = {
+        codigo: firstMatch.codigo,
+        nome: firstMatch.nome,
+        ii: firstMatch.ii,
+        ipi: firstMatch.ipi,
+        pis: firstMatch.pis,
+        cofins: firstMatch.cofins,
+        isSimilar: true,
+        originalCode: ncmCode,
+      }
+
+      await this.cacheManager.set(cacheKey, result, 604800000)
+
+      return result
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error
+      }
+      this.logger.error(`Erro ao buscar NCM similar: ${error.message}`)
+      throw new NotFoundException(`Nenhum NCM similar encontrado para: ${ncmCode}`)
+    }
+  }
+
   private normalizeNcmCode(code: string): string {
     return code.replace(/[^0-9]/g, '').replace(/(\d{4})(\d{2})(\d{2})/, '$1.$2.$3')
   }
