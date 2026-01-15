@@ -1351,13 +1351,10 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
 
       let productResult: any
 
-      // NOVA ABORDAGEM: Primeiro tentar extrair volume e peso do próprio produto
       if (product && typeof product === 'object' && !Array.isArray(product)) {
         const dataFromProduct = this.extractVolumeAndWeightFromProduct(product)
 
-        // Se temos QUALQUER dado válido do produto, usar e buscar apenas o que falta
         if (dataFromProduct.found_in_product) {
-          // Se status é 'complete', temos ambos dados - não precisamos do endpoint externo
           if (dataFromProduct.extraction_status === 'complete') {
             productResult = {
               search_term: term,
@@ -1372,15 +1369,12 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
               has_weight: dataFromProduct.has_weight,
             }
           } else {
-            // Se status é 'partial', temos alguns dados - buscar apenas o que falta externamente
             const productTitle = term
             const productDescription = product.description || ''
 
             const dataFromExternal = await this.getVolumeAndWeightFromExternalEndpoint(productTitle, productDescription)
 
-            // Combinar dados do produto com dados externos (híbrido inteligente)
             if (dataFromExternal.external_success) {
-              // Priorizar dados do produto quando disponíveis, usar endpoint externo apenas para dados faltantes
               const finalVolume = dataFromProduct.has_volume ? dataFromProduct.volume_cm3 : dataFromExternal.volume_cm3
               const finalWeight = dataFromProduct.has_weight ? dataFromProduct.weight_kg : dataFromExternal.weight_kg
               const finalVolumeM3 = finalVolume ? finalVolume / 1000000 : null
@@ -1404,27 +1398,93 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
                 },
               }
             } else {
-              // Endpoint externo falhou - usar apenas dados do produto que temos
-              productResult = {
-                search_term: term,
-                dimensions: {
-                  CBM: { DisplayValue: dataFromProduct.volume_m3 },
-                  Weight: { DisplayValue: dataFromProduct.weight_kg },
-                },
-                source: 'product_object_partial',
-                method: null,
-                inferred: false,
-                volume_cm3: dataFromProduct.volume_cm3,
-                weight_kg: dataFromProduct.weight_kg,
-                has_volume: dataFromProduct.has_volume,
-                has_weight: dataFromProduct.has_weight,
+              try {
+                const response = await firstValueFrom(
+                  this.httpService.post(
+                    'https://amazon-scraper.chinafacil.com/api/batch',
+                    { terms: [term] },
+                    {
+                      headers: {
+                        Authorization: 'Bearer 76c5c607-da44-4885-a450-02fc80d17d6e',
+                        'Content-Type': 'application/json',
+                      },
+                      timeout: 8000,
+                    },
+                  ),
+                )
+
+                const data = response.data
+                const result = data.results?.[0] || null
+
+                if (result) {
+                  const legacyVolume = result.dimensions?.CBM?.DisplayValue
+                  const legacyWeight = result.dimensions?.Weight?.DisplayValue
+
+                  const finalVolume = dataFromProduct.has_volume 
+                    ? dataFromProduct.volume_cm3 
+                    : legacyVolume 
+                      ? legacyVolume * 1000000
+                      : null
+                  const finalWeight = dataFromProduct.has_weight 
+                    ? dataFromProduct.weight_kg 
+                    : legacyWeight || null
+                  const finalVolumeM3 = finalVolume ? finalVolume / 1000000 : null
+
+                  productResult = {
+                    search_term: term,
+                    dimensions: {
+                      CBM: { DisplayValue: finalVolumeM3 },
+                      Weight: { DisplayValue: finalWeight },
+                    },
+                    source: 'hybrid_product_legacy',
+                    method: null,
+                    inferred: false,
+                    volume_cm3: finalVolume,
+                    weight_kg: finalWeight,
+                    has_volume: finalVolume !== null,
+                    has_weight: finalWeight !== null,
+                    hybrid_details: {
+                      volume_from: dataFromProduct.has_volume ? 'product' : 'legacy',
+                      weight_from: dataFromProduct.has_weight ? 'product' : 'legacy',
+                    },
+                  }
+                } else {
+                  productResult = {
+                    search_term: term,
+                    dimensions: {
+                      CBM: { DisplayValue: dataFromProduct.volume_m3 },
+                      Weight: { DisplayValue: dataFromProduct.weight_kg },
+                    },
+                    source: 'product_object_partial',
+                    method: null,
+                    inferred: false,
+                    volume_cm3: dataFromProduct.volume_cm3,
+                    weight_kg: dataFromProduct.weight_kg,
+                    has_volume: dataFromProduct.has_volume,
+                    has_weight: dataFromProduct.has_weight,
+                  }
+                }
+              } catch (legacyError: any) {
+                productResult = {
+                  search_term: term,
+                  dimensions: {
+                    CBM: { DisplayValue: dataFromProduct.volume_m3 },
+                    Weight: { DisplayValue: dataFromProduct.weight_kg },
+                  },
+                  source: 'product_object_partial',
+                  method: null,
+                  inferred: false,
+                  volume_cm3: dataFromProduct.volume_cm3,
+                  weight_kg: dataFromProduct.weight_kg,
+                  has_volume: dataFromProduct.has_volume,
+                  has_weight: dataFromProduct.has_weight,
+                }
               }
             }
           }
         }
       }
 
-      // Se não encontrou no produto, tentar endpoint externo
       if (!productResult) {
         const productTitle = term
         const productDescription = product?.description || ''
@@ -1447,7 +1507,6 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
             has_weight: dataFromExternal.has_weight,
           }
         } else {
-          // Se falhou, tentar o endpoint antigo como fallback
           try {
             const response = await firstValueFrom(
               this.httpService.post(
@@ -1477,12 +1536,10 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
               }
             }
           } catch (legacyError: any) {
-            this.logger.warn('Endpoint legacy também falhou:', legacyError.message)
           }
         }
       }
 
-      // Se ainda não tem resultado, retornar valores nulos
       if (!productResult) {
         productResult = {
           search_term: term,
@@ -1494,7 +1551,6 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
         }
       }
 
-      // Cachear resultado por 1 semana
       await this.cacheManager.set(cacheKey, productResult, 604800000)
 
       return {
@@ -1536,11 +1592,9 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
       let validVolume = false
       let validWeight = false
 
-      // Verificar se existe a estrutura skus[0].package_info
       if (productData?.skus?.[0]?.package_info) {
         const packageInfo = productData.skus[0].package_info
 
-        // Extrair volume se existir e for válido (maior que zero)
         if (packageInfo.volume !== undefined && packageInfo.volume !== null) {
           const volumeValue = Number(packageInfo.volume)
           if (!isNaN(volumeValue) && volumeValue > 0) {
@@ -1549,7 +1603,6 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
           }
         }
 
-        // Extrair peso se existir e for válido (maior que zero)
         if (packageInfo.weight !== undefined && packageInfo.weight !== null) {
           const weightValue = Number(packageInfo.weight)
           if (!isNaN(weightValue) && weightValue > 0) {
@@ -1561,11 +1614,9 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
         foundInProduct = validVolume || validWeight
       }
 
-      // Também verificar estrutura alternativa data.skus[0].package_info
       if (!foundInProduct && productData?.data?.skus?.[0]?.package_info) {
         const packageInfo = productData.data.skus[0].package_info
 
-        // Extrair volume se existir e for válido (maior que zero)
         if (packageInfo.volume !== undefined && packageInfo.volume !== null) {
           const volumeValue = Number(packageInfo.volume)
           if (!isNaN(volumeValue) && volumeValue > 0) {
@@ -1574,7 +1625,6 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
           }
         }
 
-        // Extrair peso se existir e for válido (maior que zero)
         if (packageInfo.weight !== undefined && packageInfo.weight !== null) {
           const weightValue = Number(packageInfo.weight)
           if (!isNaN(weightValue) && weightValue > 0) {
@@ -1635,7 +1685,7 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
     try {
       const response = await firstValueFrom(
         this.httpService.post(
-          'https://api.ekonomi.me/get_external_product_volume',
+          'https://api-ext.chinafacil.com/get_external_product_volume',
           {
             title: productTitle,
             description: productDescription,
@@ -1672,15 +1722,13 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
         }
       }
 
-      // Extrair volume se disponível
       const volumeCm3 = data.volume !== undefined && data.volume !== null ? Number(data.volume) : null
       const volumeM3 = volumeCm3 ? volumeCm3 / 1000000 : null
 
-      // Extrair peso se disponível
       const weightKg = data.weight !== undefined && data.weight !== null ? Number(data.weight) : null
 
-      const hasVolume = volumeCm3 !== null && !isNaN(volumeCm3)
-      const hasWeight = weightKg !== null && !isNaN(weightKg)
+      const hasVolume = volumeCm3 !== null && !isNaN(volumeCm3) && volumeCm3 > 0
+      const hasWeight = weightKg !== null && !isNaN(weightKg) && weightKg > 0
       const success = hasVolume || hasWeight
 
       return {
@@ -1695,7 +1743,6 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
         asin: data.asin || null,
       }
     } catch (error: any) {
-      this.logger.error('Exceção ao chamar endpoint externo de volume/peso:', error.message)
       return {
         volume_cm3: null,
         volume_m3: null,

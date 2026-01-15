@@ -86,6 +86,23 @@ export class NcmService {
       return { ...cached, cached: true }
     }
 
+    const productInfo = {
+      name: product?.name || product?.title || '',
+      description: product?.description || '',
+      category: product?.category || product?.category_name || '',
+      provider: product?.provider || '',
+    }
+
+    const truncatedName = productInfo.name.length > 500 ? productInfo.name.substring(0, 500) + '...' : productInfo.name
+    const truncatedDescription = productInfo.description.length > 300 ? productInfo.description.substring(0, 300) + '...' : productInfo.description
+
+    const productSummary = {
+      name: truncatedName,
+      description: truncatedDescription,
+      category: productInfo.category,
+      provider: productInfo.provider,
+    }
+
     const systemPrompt = `Você é um especialista em classificação fiscal brasileira. Identifique o código NCM (8 dígitos com pontos) e certificações obrigatórias. Retorne apenas JSON: {"text": "ÓRGÃO1,ÓRGÃO2" ou "N/A", "number": "1234.56.78"}`
 
     const messages = [
@@ -95,87 +112,70 @@ export class NcmService {
       },
       {
         role: 'user' as const,
-        content: `Classifique este produto: ${JSON.stringify(product)}`,
+        content: `Classifique este produto: ${JSON.stringify(productSummary)}`,
       },
     ]
 
-    let attempts = 0
-    const maxAttempts = 3
-    let aiResponse: any = null
-
-    let openAiError: Error | null = null
-
-    while (attempts < maxAttempts) {
-      try {
-        const response = await this.aiService.chatCompletion({
-          model: 'gpt-4o',
-          messages,
-          temperature: 0,
-          maxTokens: 50,
-        })
-
-        if (response?.message?.content) {
-          const content = response.message.content
-          const cleaned = content.replace(/```json|```|\s/g, '').replace(/`/g, '')
-          aiResponse = JSON.parse(cleaned)
-          break
-        }
-      } catch (error: any) {
-        this.logger.warn(`Tentativa ${attempts + 1} falhou: ${error.message}`)
-        if (error.message?.includes('not initialized') || error.message?.includes('API key') || error.message?.includes('não configurado')) {
-          openAiError = new Error('OpenAI service não configurado. OPEN_AI_API_KEY é obrigatório.')
-          break
-        }
-      }
-
-      attempts++
-      if (attempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      }
-    }
-
-    if (openAiError) {
-      this.logger.error(openAiError.message)
-      throw openAiError
-    }
-
-    if (!aiResponse?.number) {
-      throw new Error('Não foi possível identificar o código NCM')
-    }
-
-    const cleanCode = aiResponse.number.replace(/[^0-9]/g, '')
-    
     try {
-      const ncm = await this.ncmDatabase.findByCode(cleanCode)
+      const response = await this.aiService.chatCompletion({
+        model: 'gpt-4o-mini',
+        messages,
+        temperature: 0,
+        maxTokens: 50,
+      })
 
-      if (!ncm) {
-        throw new NotFoundException(
-          `Código NCM não encontrado no banco: ${aiResponse.number}`,
-        )
+      if (response?.message?.content) {
+        const content = response.message.content
+        const cleaned = content.replace(/```json|```|\s/g, '').replace(/`/g, '')
+        const aiResponse = JSON.parse(cleaned)
+
+        if (!aiResponse?.number) {
+          throw new Error('Não foi possível identificar o código NCM')
+        }
+
+        const cleanCode = aiResponse.number.replace(/[^0-9]/g, '')
+        
+        try {
+          const ncm = await this.ncmDatabase.findByCode(cleanCode)
+
+          if (!ncm) {
+            throw new NotFoundException(
+              `Código NCM não encontrado no banco: ${aiResponse.number}`,
+            )
+          }
+
+          const result = {
+            codigo: ncm.codigo,
+            nome: ncm.nome,
+            ii: ncm.ii,
+            ipi: ncm.ipi,
+            pis: ncm.pis,
+            cofins: ncm.cofins,
+            text: aiResponse.text,
+            number: aiResponse.number,
+          }
+
+          await this.cacheManager.set(cacheKey, result, 604800000)
+
+          return result
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            throw error
+          }
+          this.logger.error(`Erro ao buscar NCM: ${error.message}`)
+          throw new NotFoundException(
+            `Código NCM não encontrado no banco: ${aiResponse.number}`,
+          )
+        }
+      } else {
+        throw new Error('Resposta da OpenAI não contém conteúdo')
       }
-
-      const result = {
-        codigo: ncm.codigo,
-        nome: ncm.nome,
-        ii: ncm.ii,
-        ipi: ncm.ipi,
-        pis: ncm.pis,
-        cofins: ncm.cofins,
-        text: aiResponse.text,
-        number: aiResponse.number,
+    } catch (error: any) {
+      if (error.message?.includes('not initialized') || error.message?.includes('API key') || error.message?.includes('não configurado')) {
+        throw new Error('OpenAI service não configurado. OPEN_AI_API_KEY é obrigatório.')
       }
-
-      await this.cacheManager.set(cacheKey, result, 604800000)
-
-      return result
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error
-      }
-      this.logger.error(`Erro ao buscar NCM: ${error.message}`)
-      throw new NotFoundException(
-        `Código NCM não encontrado no banco: ${aiResponse.number}`,
-      )
+      
+      throw error
     }
   }
 }
