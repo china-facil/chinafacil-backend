@@ -29,6 +29,7 @@ import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.mod
 import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
 import { LogsModule } from './common/logs/logs.module';
+import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { LogsModule } from './common/logs/logs.module';
     BullBoardModule,
     CliModule,
     LogsModule,
+    FeatureFlagsModule,
   ],
   providers: [
     {
