@@ -15,6 +15,13 @@ export class NcmService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
+  private roundToTwoDecimals(value: number | undefined | null): number {
+    if (value === undefined || value === null || isNaN(value)) {
+      return 0
+    }
+    return Math.round(value * 100) / 100
+  }
+
   async findByCode(ncmCode: string) {
     if (!ncmCode || !ncmCode.trim()) {
       throw new NotFoundException('Código NCM não fornecido')
@@ -43,10 +50,10 @@ export class NcmService {
       const result = {
         codigo: ncm.codigo,
         nome: ncm.nome,
-        ii: ncm.ii,
-        ipi: ncm.ipi,
-        pis: ncm.pis,
-        cofins: ncm.cofins,
+        ii: this.roundToTwoDecimals(ncm.ii),
+        ipi: this.roundToTwoDecimals(ncm.ipi),
+        pis: this.roundToTwoDecimals(ncm.pis),
+        cofins: this.roundToTwoDecimals(ncm.cofins),
       }
 
       await this.cacheManager.set(cacheKey, result, 604800000)
@@ -153,7 +160,21 @@ export class NcmService {
       provider: productInfo.provider,
     }
 
-    const systemPrompt = `Você é um especialista em classificação fiscal brasileira. Identifique o código NCM (8 dígitos com pontos) e certificações obrigatórias. Retorne apenas JSON: {"text": "ÓRGÃO1,ÓRGÃO2" ou "N/A", "number": "1234.56.78"}`
+    const systemPrompt = `Você é um especialista em classificação NCM da Receita Federal do Brasil. Sua tarefa é identificar o código NCM correto (8 dígitos) e órgãos anuentes.
+
+EXEMPLOS:
+- Guitarra elétrica → NCM: 9202.90.00 (Instrumentos musicais)
+- Celular smartphone → NCM: 8517.12.31 (Telefones móveis)
+- Notebook → NCM: 8471.30.12 (Computadores portáteis)
+- Roupas de algodão → NCM: 6109.10.00 (Camisetas de malha)
+
+ÓRGÃOS ANUENTES comuns:
+- INMETRO: Produtos elétricos, brinquedos, pneus
+- ANVISA: Alimentos, cosméticos, medicamentos
+- ANATEL: Produtos de telecomunicação
+- MAPA: Produtos de origem animal/vegetal
+
+Retorne APENAS JSON válido: {"text": "ÓRGÃO1,ÓRGÃO2" ou "N/A", "number": "1234.56.78"}`
 
     const messages = [
       {
@@ -162,16 +183,16 @@ export class NcmService {
       },
       {
         role: 'user' as const,
-        content: `Classifique este produto: ${JSON.stringify(productSummary)}`,
+        content: `Produto: ${JSON.stringify(productSummary)}`,
       },
     ]
 
     try {
       const response = await this.aiService.chatCompletion({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages,
         temperature: 0,
-        maxTokens: 50,
+        maxTokens: 80,
       })
 
       if (response?.message?.content) {
@@ -197,10 +218,10 @@ export class NcmService {
           const result = {
             codigo: ncm.codigo,
             nome: ncm.nome,
-            ii: ncm.ii,
-            ipi: ncm.ipi,
-            pis: ncm.pis,
-            cofins: ncm.cofins,
+            ii: this.roundToTwoDecimals(ncm.ii),
+            ipi: this.roundToTwoDecimals(ncm.ipi),
+            pis: this.roundToTwoDecimals(ncm.pis),
+            cofins: this.roundToTwoDecimals(ncm.cofins),
             text: aiResponse.text,
             number: aiResponse.number,
           }

@@ -464,7 +464,7 @@ export class CartPdfTemplateService {
       <tr>
         <td>Despachante</td>
         <td>Honorários de despachante</td>
-        <td class="currency">R$ ${this.formatNumber(vars.desapachanteHOnorairios || 0)}</td>
+        <td class="currency">R$ ${this.formatNumber(vars.desapachanteHonorarios || 0)}</td>
       </tr>
       <tr>
         <td>SDA</td>
@@ -836,7 +836,7 @@ export class CartPdfTemplateService {
             <h3>PREÇO DE VENDA FINAL</h3>
             <p style="font-size: 23px; margin: 10px 0;"><strong>R$ ${this.formatNumber(totalValorFinalCabecalho)}</strong></p>
             <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; padding: 10px; margin: 10px 0; color: #856404;">
-                <p style="margin: 0; font-size: 11px; font-weight: bold;">⚠️ IMPORTANTE: O custo de transporte nacional não está incluído neste cálculo e deverá ser cotado separadamente.</p>
+                <p style="margin: 0; font-size: 11px; font-weight: bold;">⚠️ IMPORTANTE: O custo de transporte nacional não está incluído neste cálculo e será cotado separadamente pela nossa equipe.</p>
             </div>
         </div>
     </div>
