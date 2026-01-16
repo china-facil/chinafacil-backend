@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from "@nestjs/throttler";
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DatabaseModule } from './database/database.module';
@@ -49,6 +50,8 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
         return config
       }],
     }),
+
+    ScheduleModule.forRoot(),
 
     ThrottlerModule.forRoot([
       {

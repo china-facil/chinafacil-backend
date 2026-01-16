@@ -413,6 +413,95 @@ export class SubscriptionsService {
 
     return subscriptionWithRelations
   }
+
+  async expireSubscriptions(): Promise<{
+    processedCount: number
+    errorCount: number
+  }> {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const expiredSubscriptions = await this.prisma.subscription.findMany({
+      where: {
+        status: SubscriptionStatus.active,
+        currentPeriodEnd: {
+          lte: today,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+        client: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    })
+
+    if (expiredSubscriptions.length === 0) {
+      return {
+        processedCount: 0,
+        errorCount: 0,
+      }
+    }
+
+    let processedCount = 0
+    let errorCount = 0
+
+    for (const subscription of expiredSubscriptions) {
+      try {
+        await this.prisma.$transaction(async (tx) => {
+          await tx.subscription.update({
+            where: { id: subscription.id },
+            data: {
+              status: SubscriptionStatus.inactive,
+            },
+          })
+
+          if (subscription.user && subscription.user.role === UserRole.client) {
+            await tx.user.update({
+              where: { id: subscription.user.id },
+              data: {
+                role: UserRole.lead,
+              },
+            })
+          }
+
+          await tx.notification.create({
+            data: {
+              type: 'WARNING',
+              notifiableType: 'App\\Models\\User',
+              notifiableId: subscription.user.id,
+              data: JSON.stringify({
+                message: `Sua assinatura do plano ${subscription.client?.name || 'N/A'} expirou. Entre em contato para renovar.`,
+                subscriptionId: subscription.id,
+                planName: subscription.client?.name || 'N/A',
+                expiredAt: subscription.currentPeriodEnd?.toISOString(),
+              }),
+            },
+          })
+        })
+
+        processedCount++
+      } catch (error: any) {
+        errorCount++
+        throw error
+      }
+    }
+
+    return {
+      processedCount,
+      errorCount,
+    }
+  }
 }
 
 
