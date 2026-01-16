@@ -15,6 +15,7 @@ export class OpenAIService {
     if (apiKey) {
       this.openai = new OpenAI({
         apiKey,
+        timeout: 10000,
       })
     }
   }
@@ -31,10 +32,12 @@ export class OpenAIService {
     let attempts = 0
 
     while (attempts < maxAttempts) {
+      const attemptStart = Date.now()
       try {
         return await operation()
       } catch (error: any) {
         attempts++
+        const duration = (Date.now() - attemptStart) / 1000
         const statusCode = error?.status || error?.response?.status
 
         const hasChoices = error?.response?.data?.choices && error.response.data.choices.length > 0
@@ -44,23 +47,20 @@ export class OpenAIService {
 
         const isDefinitiveError = statusCode >= 400 && statusCode < 500 && statusCode !== 429
         if (isDefinitiveError || attempts >= maxAttempts) {
-          this.logger.error(
-            `${operationName} error after ${attempts} attempts: ${error.message}`,
-          )
           throw error
         }
 
         const isRateLimit = statusCode === 429
         const isServerError = statusCode >= 500
+        const isTimeout = error.message?.includes('timeout') || error.code === 'ECONNABORTED' || duration >= 9
 
-        if (isRateLimit || isServerError) {
+        if (isTimeout && attempts < maxAttempts) {
+          await this.sleep(200)
+        } else if (isRateLimit || isServerError) {
           const delay = isRateLimit ? 2000 : 1000
-          this.logger.warn(
-            `${operationName} attempt ${attempts}/${maxAttempts} failed (${statusCode}). Retrying in ${delay}ms...`,
-          )
           await this.sleep(delay)
         } else {
-          await this.sleep(1000)
+          await this.sleep(500)
         }
       }
     }

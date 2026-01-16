@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { SolicitationStatus } from '@prisma/client'
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator'
+import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString } from 'class-validator'
 
 export class CreateSolicitationDto {
   @ApiProperty({
@@ -42,6 +42,22 @@ export class CreateSolicitationDto {
   @IsOptional()
   @IsNumber()
   quantity?: number
+
+  @ApiPropertyOptional({
+    description: 'Itens do carrinho',
+    type: 'array',
+  })
+  @IsOptional()
+  @IsArray()
+  cart?: any[]
+
+  @ApiPropertyOptional({
+    description: 'Dados de precificação do carrinho',
+    type: 'object',
+  })
+  @IsOptional()
+  @IsObject()
+  pricing_data?: any
 }
 
 

@@ -87,7 +87,20 @@ export class SolicitationResource {
   private async fetchQuotation(): Promise<any | null> {
     try {
       const quotationResponse = await this.quotationService!.getQuotation()
-      return quotationResponse.data || null
+      if (!quotationResponse || !quotationResponse.data) {
+        return null
+      }
+      
+      const data = quotationResponse.data
+      const sanitized: any = {}
+      
+      if (data.CNYBRL) {
+        sanitized.CNYBRL = {
+          bid: typeof data.CNYBRL.bid === 'number' ? data.CNYBRL.bid : parseFloat(data.CNYBRL.bid?.toString() || '0.7')
+        }
+      }
+      
+      return sanitized
     } catch (error) {
       console.warn('Falha ao obter cotação no SolicitationResource, usando valor padrão', {
         error: (error as Error).message,

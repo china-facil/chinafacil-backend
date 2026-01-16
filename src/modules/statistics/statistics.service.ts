@@ -279,6 +279,23 @@ export class StatisticsService {
   }
 
   async getAdminDashboardStatistics() {
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    });
+    const validUserIdArray = validUserIds.map((u) => u.id).filter((id) => id !== null && id !== undefined);
+    const validUserIdSet = new Set(validUserIdArray);
+
+    const solicitationFilter: any = {};
+    if (validUserIdArray.length > 0) {
+      solicitationFilter.userId = {
+        in: validUserIdArray,
+      };
+    } else {
+      solicitationFilter.userId = {
+        in: [],
+      };
+    }
+
     const [
       totalUsers,
       totalClients,
@@ -293,9 +310,12 @@ export class StatisticsService {
           deletedAt: null,
         },
       }),
-      this.prisma.solicitation.count(),
+      this.prisma.solicitation.count({
+        where: solicitationFilter,
+      }),
       this.prisma.solicitation.count({
         where: {
+          ...solicitationFilter,
           status: SolicitationStatus.open,
         },
       }),
@@ -311,12 +331,8 @@ export class StatisticsService {
       }),
     ])
 
-    const validUserIds = await this.prisma.user.findMany({
-      select: { id: true },
-    });
-    const validUserIdSet = new Set(validUserIds.map((u) => u.id));
-
     const allSolicitations = await this.prisma.solicitation.findMany({
+      where: solicitationFilter,
       take: 20,
       orderBy: {
         createdAt: "desc",
@@ -356,8 +372,25 @@ export class StatisticsService {
   }
 
   async getSolicitationsByStatus() {
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    });
+    const validUserIdArray = validUserIds.map((u) => u.id).filter((id) => id !== null && id !== undefined);
+
+    const whereFilter: any = {};
+    if (validUserIdArray.length > 0) {
+      whereFilter.userId = {
+        in: validUserIdArray,
+      };
+    } else {
+      whereFilter.userId = {
+        in: [],
+      };
+    }
+
     const statusCounts = await this.prisma.solicitation.groupBy({
       by: ['status'],
+      where: whereFilter,
       _count: {
         id: true,
       },

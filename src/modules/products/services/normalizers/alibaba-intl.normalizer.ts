@@ -35,17 +35,54 @@ export class AlibabaIntlNormalizer {
     const basicProduct = this.normalizeSearchItem(item)
 
     if (vendorData) {
+      const vendorLocation = vendorData.Location
+      const locationParts = []
+      if (vendorLocation?.State) locationParts.push(vendorLocation.State)
+      if (vendorLocation?.Country) locationParts.push(vendorLocation.Country)
+      const locationString = locationParts.length > 0 ? locationParts.join(', ') : (vendorData.Country || basicProduct.supplier.location || '')
+
       basicProduct.supplier = {
         ...basicProduct.supplier,
-        name: vendorData.CompanyName || basicProduct.supplier.name,
-        location: vendorData.Country || basicProduct.supplier.location,
+        id: vendorData.Id?.toString() || basicProduct.supplier.id,
+        name: vendorData.Name || vendorData.DisplayName || vendorData.ShopName || vendorData.CompanyName || basicProduct.supplier.name,
+        location: locationString,
       }
     }
 
+    const minimumOrder = item.FirstLotQuantity || this.extractMinimumOrder(item)
+    const salesQuantity = this.extractSalesQuantityFromDetailed(item)
+    const rating = this.extractRatingFromDetailed(item)
+    const variations = this.normalizeVariations(item.Attributes || [])
+    const quantityPrices = this.normalizeQuantityPrices(item.QuantityRanges || [])
+    const descriptionHtml = item.Description || ''
+    const specifications = this.normalizeSpecifications(item.Attributes || item.ProductAttributes || [])
+    const productProps = this.normalizeProductProps(specifications)
+    const detailImgs = this.extractImagesFromDescription(descriptionHtml)
+
     return {
       ...basicProduct,
-      descriptionHtml: item.Description || '',
-      specifications: this.normalizeSpecifications(item.ProductAttributes || []),
+      provider: 'alibaba',
+      item_id: basicProduct.id,
+      descriptionHtml,
+      description_html: descriptionHtml,
+      detail_html: descriptionHtml,
+      descriptionImages: detailImgs,
+      detail_imgs: detailImgs,
+      specifications,
+      product_props: productProps,
+      minimumOrder,
+      salesQuantity,
+      rating,
+      variations,
+      quantity_prices: quantityPrices,
+      quantityPrices,
+      vendor_id: basicProduct.supplier.id,
+      vendor_name: basicProduct.supplier.name,
+      vendorId: basicProduct.supplier.id,
+      vendorName: basicProduct.supplier.name,
+      quantity_begin: minimumOrder,
+      minimumOrderQuantity: minimumOrder,
+      minimum_order_quantity: minimumOrder,
     }
   }
 
@@ -86,6 +123,10 @@ export class AlibabaIntlNormalizer {
   }
 
   private extractMinimumOrder(item: any): number {
+    if (item.FirstLotQuantity) {
+      return parseInt(item.FirstLotQuantity.toString(), 10) || 1
+    }
+    
     if (item.QuantityRanges && Array.isArray(item.QuantityRanges) && item.QuantityRanges.length > 0) {
       const firstRange = item.QuantityRanges[0]
       if (firstRange && firstRange.MinQuantity) {
@@ -145,6 +186,56 @@ export class AlibabaIntlNormalizer {
     
     if (item.VendorScore) {
       return parseFloat(item.VendorScore.toString()) || 0
+    }
+    
+    return 0
+  }
+
+  private extractRatingFromDetailed(item: any): number {
+    if (item.FeaturedValues && Array.isArray(item.FeaturedValues)) {
+      const ratingObj = item.FeaturedValues.find((fv: any) => fv.Name === 'Rating')
+      if (ratingObj && ratingObj.Value) {
+        const ratingValue = parseFloat(ratingObj.Value.toString())
+        if (!isNaN(ratingValue) && ratingValue > 0) {
+          return ratingValue
+        }
+      }
+      
+      const normalizedRating = item.FeaturedValues.find((fv: any) => fv.Name === 'normalizedRating')
+      if (normalizedRating && normalizedRating.Value) {
+        const ratingValue = parseFloat(normalizedRating.Value.toString())
+        if (!isNaN(ratingValue) && ratingValue > 0) {
+          return ratingValue
+        }
+      }
+    }
+    
+    if (item.VendorScore) {
+      return parseFloat(item.VendorScore.toString()) || 0
+    }
+    
+    return 0
+  }
+
+  private extractSalesQuantityFromDetailed(item: any): number {
+    if (item.ConfiguredItems && Array.isArray(item.ConfiguredItems) && item.ConfiguredItems.length > 0) {
+      const totalSales = item.ConfiguredItems.reduce((sum: number, configuredItem: any) => {
+        return sum + (parseInt(configuredItem.SalesCount?.toString() || '0', 10) || 0)
+      }, 0)
+      if (totalSales > 0) {
+        return totalSales
+      }
+    }
+    
+    if (item.Volume) {
+      return parseInt(item.Volume.toString(), 10) || 0
+    }
+    
+    if (item.FeaturedValues && Array.isArray(item.FeaturedValues)) {
+      const totalSales = item.FeaturedValues.find((fv: any) => fv.Name === 'TotalSales' || fv.Name === 'totalSales')
+      if (totalSales && totalSales.Value) {
+        return parseInt(totalSales.Value.toString(), 10) || 0
+      }
     }
     
     return 0
@@ -224,11 +315,113 @@ export class AlibabaIntlNormalizer {
   private normalizeSpecifications(attributes: any[]): Array<{ name: string; value: string }> {
     if (!Array.isArray(attributes)) return []
     
-    return attributes.map(attr => ({
-      name: attr.Name || attr.name || '',
-      value: attr.Value || attr.value || '',
-    })).filter(spec => spec.name && spec.value)
+    return attributes
+      .filter(attr => {
+        const isConfigurator = attr.IsConfigurator === false || attr.IsConfigurator === undefined
+        return isConfigurator
+      })
+      .map(attr => ({
+        name: attr.PropertyName || attr.OriginalPropertyName || attr.Name || attr.name || '',
+        value: attr.Value || attr.OriginalValue || attr.value || '',
+      }))
+      .filter(spec => spec.name && spec.value)
+  }
+
+  private normalizeVariations(attributes: any[]): Array<{ name: string; values: Array<{ id: string; name: string; image_url?: string }> }> {
+    if (!Array.isArray(attributes)) return []
+    
+    const configuratorAttributes = attributes.filter(attr => attr.IsConfigurator === true)
+    
+    if (configuratorAttributes.length === 0) return []
+    
+    const variationsMap = new Map<string, Array<{ id: string; name: string; image_url?: string }>>()
+    
+    configuratorAttributes.forEach(attr => {
+      const propertyName = attr.PropertyName || attr.OriginalPropertyName || ''
+      const vid = attr.Vid?.toString() || ''
+      const value = attr.Value || attr.OriginalValue || ''
+      const imageUrl = attr.ImageUrl || attr.MiniImageUrl || ''
+      
+      if (!propertyName || !vid || !value) return
+      
+      if (!variationsMap.has(propertyName)) {
+        variationsMap.set(propertyName, [])
+      }
+      
+      const existingValues = variationsMap.get(propertyName) || []
+      const valueExists = existingValues.some(v => v.id === vid)
+      
+      if (!valueExists) {
+        existingValues.push({
+          id: vid,
+          name: value,
+          ...(imageUrl ? { image_url: this.normalizeImageUrl(imageUrl) } : {}),
+        })
+        variationsMap.set(propertyName, existingValues)
+      }
+    })
+    
+    return Array.from(variationsMap.entries()).map(([name, values]) => ({
+      name,
+      values,
+    }))
+  }
+
+  private normalizeQuantityPrices(quantityRanges: any[]): Array<{ beginAmount: number; quantity: number; price: number }> {
+    if (!Array.isArray(quantityRanges) || quantityRanges.length === 0) return []
+    
+    return quantityRanges.map(range => {
+      const minQuantity = parseInt(range.MinQuantity?.toString() || '1', 10) || 1
+      const priceObj = range.Price
+      
+      let price = 0
+      if (priceObj && typeof priceObj === 'object') {
+        price = this.parsePrice(
+          priceObj.OriginalPrice || 
+          priceObj.PriceWithoutDelivery?.OriginalPrice || 
+          priceObj.OneItemPriceWithoutDelivery?.OriginalPrice ||
+          priceObj.ConvertedPriceList?.Internal?.Price ||
+          priceObj.ConvertedPriceList?.DisplayedMoneys?.[0]?.Price ||
+          priceObj.MarginPrice ||
+          0
+        )
+      }
+      
+      return {
+        beginAmount: minQuantity,
+        quantity: minQuantity,
+        price,
+      }
+    }).sort((a, b) => a.beginAmount - b.beginAmount)
+  }
+
+  private normalizeProductProps(specifications: Array<{ name: string; value: string }>): Array<{ [key: string]: string }> {
+    if (!Array.isArray(specifications) || specifications.length === 0) return []
+    
+    return specifications.map(spec => {
+      const key = spec.name || 'Propriedade'
+      const value = spec.value || ''
+      return { [key]: value }
+    })
+  }
+
+  private extractImagesFromDescription(descriptionHtml: string): string[] {
+    if (!descriptionHtml || typeof descriptionHtml !== 'string') return []
+    
+    const imageUrls: string[] = []
+    const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi
+    let match
+    
+    while ((match = imgRegex.exec(descriptionHtml)) !== null) {
+      const imageUrl = match[1]
+      if (imageUrl) {
+        const normalizedUrl = this.normalizeImageUrl(imageUrl)
+        if (normalizedUrl && !imageUrls.includes(normalizedUrl)) {
+          imageUrls.push(normalizedUrl)
+        }
+      }
+    }
+    
+    return imageUrls
   }
 }
-
-

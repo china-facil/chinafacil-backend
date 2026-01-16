@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import {
@@ -57,12 +58,62 @@ export class BoardingTypesController {
   }
 
   @Get('default-boarding-type')
-  @ApiOperation({ summary: 'Obter tipo padrão (público)' })
+  @ApiOperation({ summary: 'Obter tipo padrão baseado no volume (público)' })
   @ApiResponse({ status: 200, description: 'Tipo padrão' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 403, description: 'Sem permissão' })
-  async findDefault() {
-    return this.boardingTypesService.findDefault()
+  async findDefault(@Query('total_volume') totalVolume?: string) {
+    let boardingType = null
+    
+    if (totalVolume) {
+      const volume = parseFloat(totalVolume)
+      if (!isNaN(volume) && volume > 0) {
+        boardingType = await this.boardingTypesService.findByVolume(volume)
+      }
+    }
+    
+    if (!boardingType) {
+      boardingType = await this.boardingTypesService.findDefault()
+    }
+    
+    if (!boardingType) {
+      return {
+        status: 'error',
+        message: 'Nenhum tipo de embarque encontrado',
+      }
+    }
+    
+    const serializedData = {
+      id: boardingType.id,
+      cmb_start: boardingType.cmbStart,
+      cmb_end: boardingType.cmbEnd,
+      international_shipping: this.formatNumber(boardingType.internationalShipping),
+      tax_bl_awb: this.formatNumber(boardingType.taxBlAwb),
+      storage_air: boardingType.storageAir,
+      storage_sea: this.formatNumber(boardingType.storageSea),
+      tax_afrmm: boardingType.taxAfrmm,
+      dispatcher: this.formatNumber(boardingType.dispatcher),
+      sda: this.formatNumber(boardingType.sda),
+      delivery_transport: this.formatNumber(boardingType.deliveryTransport),
+      other_fees: boardingType.otherFees !== null ? this.formatNumber(boardingType.otherFees) : '0,00',
+      brazil_expenses: boardingType.brazilExpenses !== null ? boardingType.brazilExpenses : 0,
+    }
+    
+    return {
+      status: 'success',
+      data: serializedData,
+    }
+  }
+  
+  private formatNumber(value: number): string {
+    if (value === null || value === undefined) {
+      return '0,00'
+    }
+    
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
   }
 
   @Get('boarding-types/:id')

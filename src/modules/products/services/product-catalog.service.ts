@@ -215,24 +215,21 @@ export class ProductCatalogService {
         }
       }
 
-      const top300Raw = await this.prisma.productCatalog.findMany({
+      const allProductsRaw = await this.prisma.productCatalog.findMany({
         where,
         orderBy: orderByClause,
-        take: 500,
       })
 
-      // Remove duplicatas por productMlbId manualmente
       const seenItemIds = new Set<string>()
-      const top300 = top300Raw.filter((product) => {
+      const uniqueProducts = allProductsRaw.filter((product) => {
         if (seenItemIds.has(product.productMlbId)) {
           return false
         }
         seenItemIds.add(product.productMlbId)
         return true
-      }).slice(0, 300)
+      })
 
-      // Filtrar por categoria primeiro (verificar se categoryId está no array categoryIds)
-      const filteredByCategory = top300.filter((product) => {
+      const filteredByCategory = uniqueProducts.filter((product) => {
         if (!product.categoryIds) return false
         const categoryIdsArray = Array.isArray(product.categoryIds)
           ? product.categoryIds
@@ -255,7 +252,6 @@ export class ProductCatalogService {
       })
 
       const shuffled = filteredByQuotation.sort(() => Math.random() - 0.5)
-      const randomProducts = shuffled.slice(0, 20)
 
       const perPage = 20
       const currentPage = page
@@ -263,7 +259,7 @@ export class ProductCatalogService {
 
       const startIndex = (currentPage - 1) * perPage
       const endIndex = startIndex + perPage
-      const paginatedProducts = randomProducts.slice(startIndex, endIndex)
+      const paginatedProducts = shuffled.slice(startIndex, endIndex)
 
       // Transformar produtos para o formato esperado pelo frontend (mesmo formato do PHP)
       const transformedProducts = paginatedProducts.map((product) =>

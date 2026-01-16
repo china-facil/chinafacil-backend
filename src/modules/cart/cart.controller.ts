@@ -7,21 +7,25 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiOperation,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { Response } from 'express'
 import { CurrentUser } from '../../common/decorators/current-user.decorator'
+import { Public } from '../../common/decorators/public.decorator'
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { CartService } from './cart.service'
-import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
+import { CreateCartDto, SyncCartDto, UpdateCartDto, GenerateReportDto } from './dto'
 
 @ApiTags('cart')
 @Controller()
@@ -134,6 +138,58 @@ export class CartController {
   async sync(@CurrentUser() user: any, @Body() syncCartDto: SyncCartDto) {
     return this.cartService.sync(user.id, syncCartDto)
   }
+
+  @Post('cart/report')
+  @Public()
+  @ApiOperation({ summary: 'Gerar relatório PDF do carrinho' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          description: 'Dados do carrinho',
+        },
+        detailed: {
+          type: 'boolean',
+          description: 'Se deve gerar versão detalhada',
+          default: false,
+        },
+      },
+      required: ['data'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'PDF gerado com sucesso',
+    content: {
+      'application/pdf': {},
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Dados inválidos ou produtos não encontrados' })
+  @ApiResponse({ status: 500, description: 'Erro ao gerar PDF' })
+  async generateReport(
+    @Body() generateReportDto: GenerateReportDto,
+    @Res() res: Response,
+  ) {
+    const { data, detailed = false } = generateReportDto
+    const pdfBuffer = await this.cartService.generateReport(data, detailed)
+    
+    const filename = detailed
+      ? `relatorio-detalhado-${new Date().toISOString().slice(0, 16).replace(/[-:]/g, '')}.pdf`
+      : `relatorio-${new Date().toISOString().slice(0, 16).replace(/[-:]/g, '')}.pdf`
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    })
+
+    res.send(pdfBuffer)
+  }
+
 }
 
 

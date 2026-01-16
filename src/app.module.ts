@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bull';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from "@nestjs/throttler";
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DatabaseModule } from './database/database.module';
@@ -29,6 +30,7 @@ import { TaxCalculatorModule } from './modules/tax-calculator/tax-calculator.mod
 import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
 import { LogsModule } from './common/logs/logs.module';
+import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { LogsModule } from './common/logs/logs.module';
         return config
       }],
     }),
+
+    ScheduleModule.forRoot(),
 
     ThrottlerModule.forRoot([
       {
@@ -99,6 +103,7 @@ import { LogsModule } from './common/logs/logs.module';
     BullBoardModule,
     CliModule,
     LogsModule,
+    FeatureFlagsModule,
   ],
   providers: [
     {

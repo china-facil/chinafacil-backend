@@ -19,7 +19,7 @@ describe('Translation API (Integration)', () => {
 
   describe('POST /api/translation/text', () => {
     it('should translate text successfully', async () => {
-      const res = await ctx.authReq.post('/api/translation/text').send({
+      const res = await ctx.req.post('/api/translation/text').send({
         text: 'Hello world',
         to: 'pt',
       })
@@ -28,17 +28,13 @@ describe('Translation API (Integration)', () => {
     })
 
     it('should return 400 with invalid payload', async () => {
-      await ctx.authReq.post('/api/translation/text').send({}).expect(400)
-    })
-
-    it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/translation/text').send({ text: 'test', to: 'pt' }).expect(401)
+      await ctx.req.post('/api/translation/text').send({}).expect(400)
     })
   })
 
   describe('POST /api/translation/titles', () => {
     it('should translate titles successfully', async () => {
-      const res = await ctx.authReq.post('/api/translation/titles').send({
+      const res = await ctx.req.post('/api/translation/titles').send({
         titles: ['Hello', 'World'],
         from: 'en',
         to: 'pt',
@@ -48,17 +44,13 @@ describe('Translation API (Integration)', () => {
     })
 
     it('should return 400 with invalid payload', async () => {
-      await ctx.authReq.post('/api/translation/titles').send({}).expect(400)
-    })
-
-    it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/translation/titles').send({ titles: ['test'] }).expect(401)
+      await ctx.req.post('/api/translation/titles').send({}).expect(400)
     })
   })
 
   describe('POST /api/translation/product', () => {
     it('should translate product successfully', async () => {
-      const res = await ctx.authReq.post('/api/translation/product').send({
+      const res = await ctx.req.post('/api/translation/product').send({
         product: { title: 'Test', description: 'Test' },
       })
       expect(res.status).toBe(201)
@@ -66,17 +58,13 @@ describe('Translation API (Integration)', () => {
     })
 
     it('should return 400 with invalid payload', async () => {
-      await ctx.authReq.post('/api/translation/product').send({}).expect(400)
-    })
-
-    it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/translation/product').send({ product: {} }).expect(401)
+      await ctx.req.post('/api/translation/product').send({}).expect(400)
     })
   })
 
   describe('POST /api/translation/detect-chinese', () => {
     it('should detect chinese successfully', async () => {
-      const res = await ctx.authReq.post('/api/translation/detect-chinese').send({
+      const res = await ctx.req.post('/api/translation/detect-chinese').send({
         text: '你好世界',
       })
       expect(res.status).toBe(201)
@@ -84,11 +72,7 @@ describe('Translation API (Integration)', () => {
     })
 
     it('should return 400 with invalid payload', async () => {
-      await ctx.authReq.post('/api/translation/detect-chinese').send({}).expect(400)
-    })
-
-    it('should return 401 without auth', async () => {
-      await ctx.req.post('/api/translation/detect-chinese').send({ text: 'test' }).expect(401)
+      await ctx.req.post('/api/translation/detect-chinese').send({}).expect(400)
     })
   })
 

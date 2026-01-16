@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -6,24 +7,34 @@ import {
   Param,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { diskStorage } from 'multer'
+import { existsSync, mkdirSync } from 'fs'
+import { extname } from 'path'
 import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
-import { AddFavoriteDto, SearchByImageDto, SearchProductsDto } from '../dto'
+import { AddFavoriteDto, SearchByImageDto, SearchProductsDto, SearchBySellerDto, ShopInfoDto } from '../dto'
 import { ProductsService } from '../services/products.service'
 
 @ApiTags('products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+  ) {}
 
   @Get('search/1688')
   @ApiOperation({ summary: 'Buscar produtos no Alibaba 1688 por keyword' })
@@ -86,6 +97,69 @@ export class ProductsController {
   @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
   async searchByImageAlibaba(@Body() searchDto: SearchByImageDto) {
     return this.productsService.searchByImageAlibabaIntl(searchDto)
+  }
+
+  @Post('search/image/upload')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload de imagem para busca de produtos' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Arquivo de imagem (JPG, JPEG, PNG, GIF ou WEBP)',
+        },
+      },
+      required: ['image'],
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Imagem enviada com sucesso',
+    schema: {
+      example: {
+        imgUrl: 'http://localhost:3000/uploads/search-images/abc123def456.jpg',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Arquivo inválido, muito grande ou não fornecido' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './public/uploads/search-images'
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true })
+          }
+          cb(null, uploadPath)
+        },
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('')
+          cb(null, `${randomName}${extname(file.originalname)}`)
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file) {
+          return cb(new BadRequestException('Arquivo não fornecido'), false)
+        }
+        if (!file.originalname || !file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          return cb(new BadRequestException('Apenas imagens são permitidas (JPG, JPEG, PNG, GIF ou WEBP)'), false)
+        }
+        cb(null, true)
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+    }),
+  )
+  async uploadSearchImage(@UploadedFile() file: Express.Multer.File) {
+    return this.productsService.uploadSearchImage(file)
   }
 
   @Get('details/1688/:itemId')
@@ -323,6 +397,104 @@ export class ProductsController {
   @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
   async getProductDescription(@Param('itemId') itemId: string) {
     return this.productsService.getProductDescription(itemId)
+  }
+
+  @Post('search/concierge')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Buscar produtos via concierge (keyword ou imagem)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        keyword: {
+          type: 'string',
+          description: 'Palavra-chave para busca (obrigatório se image não for fornecido)',
+          example: 'procure produtos de limpeza para mim',
+        },
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagem para busca (obrigatório se keyword não for fornecido)',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Resultados da busca com descrições' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (keyword ou image obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  @UseInterceptors(FileInterceptor('image'))
+  async searchConcierge(
+    @Body('keyword') keyword?: string,
+    @UploadedFile() image?: Express.Multer.File,
+  ) {
+    return this.productsService.searchConcierge(keyword || undefined, image)
+  }
+
+  @Get('shop/info')
+  @ApiOperation({ summary: 'Obter informações da loja' })
+  @ApiQuery({ name: 'member_id', required: true, type: String, description: 'ID do vendedor' })
+  @ApiResponse({ status: 200, description: 'Informações da loja' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (member_id obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getShopInfo(@Query('member_id') memberId: string) {
+    if (!memberId) {
+      throw new BadRequestException('O campo member_id é obrigatório!')
+    }
+    return this.productsService.getShopInfo({ memberId })
+  }
+
+  @Get('shop/categories')
+  @ApiOperation({ summary: 'Obter categorias da loja' })
+  @ApiQuery({ name: 'member_id', required: true, type: String, description: 'ID do vendedor' })
+  @ApiResponse({ status: 200, description: 'Categorias da loja' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (member_id obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getShopCategories(@Query('member_id') memberId: string) {
+    if (!memberId) {
+      throw new BadRequestException('O campo member_id é obrigatório!')
+    }
+    return this.productsService.getShopCategories({ memberId })
+  }
+
+  @Get('seller')
+  @ApiOperation({ summary: 'Buscar produtos por vendedor' })
+  @ApiQuery({ name: 'member_id', required: true, type: String, description: 'ID do vendedor' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Número da página', example: 1 })
+  @ApiQuery({ name: 'page_size', required: false, type: Number, description: 'Itens por página', example: 20 })
+  @ApiQuery({ name: 'sort', required: false, type: String, description: 'Ordenação (sales, price_up, price_down)', example: 'sales' })
+  @ApiQuery({ name: 'price_start', required: false, type: Number, description: 'Preço mínimo' })
+  @ApiQuery({ name: 'price_end', required: false, type: Number, description: 'Preço máximo' })
+  @ApiResponse({ status: 200, description: 'Produtos do vendedor' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (member_id obrigatório)' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async searchProductsBySeller(
+    @Query('member_id') memberId: string,
+    @Query('page') page?: number,
+    @Query('page_size') pageSize?: number,
+    @Query('sort') sort?: string,
+    @Query('price_start') priceStart?: number,
+    @Query('price_end') priceEnd?: number,
+  ) {
+    if (!memberId) {
+      throw new BadRequestException('O campo member_id é obrigatório!')
+    }
+    return this.productsService.searchProductsBySeller({
+      memberId,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+      sort: sort as any,
+      priceStart: priceStart ? Number(priceStart) : undefined,
+      priceEnd: priceEnd ? Number(priceEnd) : undefined,
+    })
+  }
+
+  @Post('search/get-cbm-individual')
+  @ApiOperation({ summary: 'Obter CBM e peso individual de um produto' })
+  @ApiResponse({ status: 200, description: 'Dados de CBM e peso do produto' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
+  async getCbmIndividual(@Body() body: { term: string; product: any }) {
+    return this.productsService.getCbmIndividual(body.term, body.product)
   }
 
   @Get(':id')

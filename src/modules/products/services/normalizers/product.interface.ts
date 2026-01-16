@@ -16,7 +16,7 @@ export interface NormalizedProduct {
   salesQuantity?: number
   rating?: number
   url: string
-  provider: 'alibaba_1688' | 'alibaba_intl'
+  provider: 'alibaba_1688' | 'alibaba_intl' | 'alibaba'
   descriptionHtml?: string
   descriptionImages?: string[]
   categoryPath?: string[]

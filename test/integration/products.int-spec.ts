@@ -1,10 +1,85 @@
 import { createTestContext, TestContext } from "./test-helper";
+import { ProductsService } from "../../src/modules/products/services/products.service";
+import { TmService } from "../../src/integrations/china-marketplace/services/tm.service";
+import { OtService } from "../../src/integrations/china-marketplace/services/ot.service";
 
 describe("Products API (Integration)", () => {
   let ctx: TestContext;
 
   beforeAll(async () => {
     ctx = await createTestContext();
+
+    const productsService = ctx.moduleFixture.get(ProductsService);
+    const tmService = ctx.moduleFixture.get(TmService);
+    const otService = ctx.moduleFixture.get(OtService);
+
+    const mockProductData = {
+      code: 200,
+      data: {
+        itemId: "123456",
+        title: "Test Product",
+        price: 100,
+        currency: "CNY",
+        images: ["https://example.com/image.jpg"],
+        skus: [],
+        specifications: {},
+      },
+    };
+
+    const mockSearchResponse = {
+      code: 200,
+      data: {
+        items: [],
+        total_count: 0,
+      },
+    };
+
+    jest.spyOn(productsService, "translateKeywordToChinese" as any).mockResolvedValue("笔记本电脑");
+    jest.spyOn(productsService, "translateKeywordToEnglish" as any).mockResolvedValue("laptop");
+    jest.spyOn(tmService, "searchProductsByKeyword").mockResolvedValue(mockSearchResponse);
+    jest.spyOn(otService, "searchProductsByKeywordAlibaba").mockResolvedValue(mockSearchResponse);
+    jest.spyOn(tmService, "getProductDetails").mockResolvedValue(mockProductData);
+    jest.spyOn(tmService, "getProductSkuDetails").mockResolvedValue(mockProductData);
+    jest.spyOn(tmService, "getProductShipping").mockResolvedValue({
+      code: 200,
+      data: { shippingCost: 10 },
+    });
+    jest.spyOn(tmService, "getProductStatistics").mockResolvedValue({
+      code: 200,
+      data: { sales: 100 },
+    });
+    jest.spyOn(tmService, "getProductDescription").mockResolvedValue({
+      code: 200,
+      data: { description: "Test description" },
+    });
+    jest.spyOn(otService, "getProductDetailsAlibaba").mockResolvedValue(mockProductData);
+    jest.spyOn(productsService, "getDetails1688").mockResolvedValue(mockProductData);
+    jest.spyOn(productsService, "getDetailsAlibabaIntl").mockResolvedValue(mockProductData);
+    jest.spyOn(productsService, "getSku1688").mockResolvedValue(mockProductData);
+    jest.spyOn(productsService, "getShipping1688").mockResolvedValue({
+      code: 200,
+      data: { shippingCost: 10 },
+    });
+    jest.spyOn(productsService, "show").mockResolvedValue({
+      status: "success",
+      data: mockProductData.data,
+    });
+    jest.spyOn(productsService, "getProductDetails").mockResolvedValue({
+      status: "success",
+      data: mockProductData.data,
+    });
+    jest.spyOn(productsService, "getProductSkuDetails").mockResolvedValue({
+      status: "success",
+      data: mockProductData.data,
+    });
+    jest.spyOn(productsService, "getProductStatistics").mockResolvedValue({
+      status: "success",
+      data: { sales: 100 },
+    });
+    jest.spyOn(productsService, "getProductDescription").mockResolvedValue({
+      status: "success",
+      data: { description: "Test description" },
+    });
   });
 
   describe("GET /api/products/search/1688", () => {
@@ -177,8 +252,7 @@ describe("Products API (Integration)", () => {
   describe("POST /api/products/favorites", () => {
     it("should add product to favorites", async () => {
       const res = await ctx.authReq.post("/api/products/favorites").send({
-        productId: `test-product-${Date.now()}`,
-        productData: { name: "Test Product", price: 100 },
+        productId: `123456`,
       });
       expect(res.status).toBe(201);
     });
@@ -208,10 +282,9 @@ describe("Products API (Integration)", () => {
 
   describe("DELETE /api/products/favorites/:productId", () => {
     it("should remove product from favorites", async () => {
-      const productId = `test-product-delete-${Date.now()}`;
+      const productId = `123456`;
       await ctx.authReq.post("/api/products/favorites").send({
         productId,
-        productData: { name: "Test Product", price: 100 },
       });
       const res = await ctx.authReq.delete(`/api/products/favorites/${productId}`);
       expect(res.status).toBe(200);
