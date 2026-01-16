@@ -14,10 +14,11 @@ export class SolicitationsService {
 
   async create(createSolicitationDto: CreateSolicitationDto) {
     const code = await this.generateCode()
+    const { cart, pricing_data, ...solicitationData } = createSolicitationDto
 
     const solicitation = await this.prisma.solicitation.create({
       data: {
-        ...createSolicitationDto,
+        ...solicitationData,
         code,
         status: createSolicitationDto.status || SolicitationStatus.open,
       },
@@ -37,6 +38,26 @@ export class SolicitationsService {
         },
       },
     })
+
+    if (cart && cart.length > 0) {
+      await this.prisma.cart.create({
+        data: {
+          userId: createSolicitationDto.userId,
+          solicitationId: solicitation.id,
+          items: cart,
+          pricingData: pricing_data || null,
+        },
+      })
+    }
+
+    if (createSolicitationDto.userId) {
+      await this.prisma.solicitationTrack.create({
+        data: {
+          solicitationId: solicitation.id,
+          userId: createSolicitationDto.userId,
+        },
+      })
+    }
 
     return solicitation
   }
