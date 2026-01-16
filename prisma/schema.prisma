@@ -478,6 +478,27 @@ model Notification {
   @@map("notifications")
 }
 
+model FlagsOtProducts {
+  id          String   @id @default(uuid())
+  isActive    Boolean  @default(true) @map("is_active")
+  pageSize    Int      @default(20) @map("page_size")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("flags_ot_products")
+}
+
+model FlagsHomepageCarousel {
+  id          String   @id @default(uuid())
+  isActive    Boolean  @default(true) @map("is_active")
+  slides      Json     @db.Json
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("flags_homepage_carousel")
+}
+
 
 // model Export {
 //   id          String        @id @default(uuid())
