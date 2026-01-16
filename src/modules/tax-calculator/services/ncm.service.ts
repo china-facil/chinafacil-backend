@@ -206,38 +206,38 @@ Retorne APENAS JSON válido: {"text": "ÓRGÃO1,ÓRGÃO2" ou "N/A", "number": "1
 
         const cleanCode = aiResponse.number.replace(/[^0-9]/g, '')
         
+        let ncm: any = null
+        
         try {
-          const ncm = await this.ncmDatabase.findByCode(cleanCode)
-
-          if (!ncm) {
-            throw new NotFoundException(
-              `Código NCM não encontrado no banco: ${aiResponse.number}`,
-            )
+          ncm = await this.ncmDatabase.findByCode(cleanCode)
+        } catch (notFoundError) {
+          try {
+            const similarResult = await this.findSimilarByPrefix(cleanCode)
+            ncm = similarResult
+          } catch (similarError) {
           }
+        }
 
-          const result = {
-            codigo: ncm.codigo,
-            nome: ncm.nome,
-            ii: this.roundToTwoDecimals(ncm.ii),
-            ipi: this.roundToTwoDecimals(ncm.ipi),
-            pis: this.roundToTwoDecimals(ncm.pis),
-            cofins: this.roundToTwoDecimals(ncm.cofins),
-            text: aiResponse.text,
-            number: aiResponse.number,
-          }
-
-          await this.cacheManager.set(cacheKey, result, 604800000)
-
-          return result
-        } catch (error) {
-          if (error instanceof NotFoundException) {
-            throw error
-          }
-          this.logger.error(`Erro ao buscar NCM: ${error.message}`)
+        if (!ncm || !ncm.codigo) {
           throw new NotFoundException(
             `Código NCM não encontrado no banco: ${aiResponse.number}`,
           )
         }
+
+        const result = {
+          codigo: ncm.codigo,
+          nome: ncm.nome,
+          ii: this.roundToTwoDecimals(ncm.ii),
+          ipi: this.roundToTwoDecimals(ncm.ipi),
+          pis: this.roundToTwoDecimals(ncm.pis),
+          cofins: this.roundToTwoDecimals(ncm.cofins),
+          text: aiResponse.text,
+          number: aiResponse.number,
+        }
+
+        await this.cacheManager.set(cacheKey, result, 604800000)
+
+        return result
       } else {
         throw new Error('Resposta da OpenAI não contém conteúdo')
       }

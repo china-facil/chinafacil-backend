@@ -260,14 +260,17 @@ export class CartPdfTemplateService {
 
     let produtosRows = ''
     for (const produto of data.produtos || []) {
+      const isAlibaba = produto.provider === 'alibaba' || String(produto.id)?.startsWith('alb-')
+      const exchangeRate = isAlibaba ? (data.dolar || 1) : (data.bid || 1)
+      
       for (const variation of produto.variations || []) {
         const quantity = variation.quantity || 0
         const priceUnit = variation.price || 0
-        const totalCNY = priceUnit * quantity
-        const totalBRL = totalCNY * (data.bid || 1)
-        const precoUnitBRL = priceUnit * (data.bid || 1)
+        const totalOriginal = priceUnit * quantity
+        const totalBRL = totalOriginal * exchangeRate
+        const precoUnitBRL = priceUnit * exchangeRate
 
-        totalProdutosCNY += totalCNY
+        totalProdutosCNY += totalOriginal
         totalProdutosBRL += totalBRL
 
         let valorFinalItem = 0
@@ -649,8 +652,10 @@ export class CartPdfTemplateService {
             </tbody>
         </table>
         <div class="formula">
-            <strong>Conversão CNY → BRL:</strong><br>
-            ¥ ${this.formatNumber(totalProdutosCNY)} × ${this.formatNumber(data.bid || 0, 4)} = <span class="highlight">R$ ${this.formatNumber(totalProdutosBRL)}</span>
+            ${data.produtos?.some((p: any) => p.provider === 'alibaba' || String(p.id)?.startsWith('alb-')) 
+              ? `<strong>Conversão USD → BRL:</strong><br>$ ${this.formatNumber(totalProdutosCNY)} × ${this.formatNumber(data.dolar || 0, 4)} = <span class="highlight">R$ ${this.formatNumber(totalProdutosBRL)}</span>`
+              : `<strong>Conversão CNY → BRL:</strong><br>¥ ${this.formatNumber(totalProdutosCNY)} × ${this.formatNumber(data.bid || 0, 4)} = <span class="highlight">R$ ${this.formatNumber(totalProdutosBRL)}</span>`
+            }
         </div>
         <div class="result">
             ✅ <strong>Valor China:</strong> R$ ${this.formatNumber(totalProdutosBRL)}
@@ -716,7 +721,7 @@ export class CartPdfTemplateService {
         </div>
         ${tributosRows}
         <div class="result">
-            ✅ <strong>Total de Tributos:</strong> ${data.totalTributos?.totalText || 'R$ ' + this.formatNumber(data.totalTributos?.total || 0)}
+            ✅ <strong>Total de Tributos:</strong> ${data.totalTributos?.totalText || data.totalTributos?.total || 'R$ ' + this.formatNumber(data.totalTributos?.totalFloat || 0)}
         </div>
     </div>
 

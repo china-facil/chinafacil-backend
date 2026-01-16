@@ -469,7 +469,7 @@ export class CartService {
   }
 
   async generateReport(data: any, detailed: boolean = false): Promise<Buffer> {
-    this.logger.log('Gerando relatório PDF do carrinho', {
+    this.logger.log('Gerando relatório PDF', {
       hasData: !!data,
       detailed,
       produtosCount: data?.produtos?.length || 0,
