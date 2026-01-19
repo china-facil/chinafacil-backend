@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -15,6 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { Roles } from '../../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../../auth/guards/roles.guard'
@@ -34,7 +36,7 @@ export class SolicitationsController {
   constructor(private readonly solicitationsService: SolicitationsService) {}
 
   @Post()
-  @Roles('admin', 'user')
+  @Roles('admin', 'user', 'lead', 'sourcer')
   @ApiOperation({ summary: 'Criar nova solicitação' })
   @ApiResponse({
     status: 201,
@@ -56,10 +58,18 @@ export class SolicitationsController {
   }
 
   @Get()
-  @Roles('admin', 'seller', 'user')
+  @Roles('admin', 'seller', 'user', 'lead', 'sourcer')
   @ApiOperation({ summary: 'Listar solicitações com filtros' })
   @ApiResponse({ status: 200, description: 'Lista de solicitações' })
-  async findAll(@Query() filterDto: FilterSolicitationDto) {
+  async findAll(
+    @Query() filterDto: FilterSolicitationDto,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    // Se não for admin ou seller, forçar que veja apenas suas próprias solicitações
+    if (userRole !== 'admin' && userRole !== 'seller') {
+      filterDto.userId = userId
+    }
     return this.solicitationsService.findAll(filterDto)
   }
 
@@ -83,12 +93,25 @@ export class SolicitationsController {
   }
 
   @Get(':id')
-  @Roles('admin', 'seller', 'user')
+  @Roles('admin', 'seller', 'user', 'lead', 'sourcer')
   @ApiOperation({ summary: 'Obter detalhes de uma solicitação' })
   @ApiResponse({ status: 200, description: 'Detalhes da solicitação' })
   @ApiResponse({ status: 404, description: 'Solicitação não encontrada' })
-  async findOne(@Param('id') id: string) {
-    return this.solicitationsService.findOne(id)
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @CurrentUser('role') userRole: string,
+  ) {
+    const solicitation = await this.solicitationsService.findOne(id)
+    
+    // Se não for admin ou seller, verificar se a solicitação pertence ao usuário
+    if (userRole !== 'admin' && userRole !== 'seller') {
+      if (solicitation.userId !== userId) {
+        throw new ForbiddenException('Você não tem permissão para acessar esta solicitação')
+      }
+    }
+    
+    return solicitation
   }
 
   @Patch(':id')
