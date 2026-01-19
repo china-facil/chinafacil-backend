@@ -70,7 +70,7 @@ export class NcmDatabaseService implements OnModuleInit, OnModuleDestroy {
     }
 
     const [rows] = await this.connection.execute(
-      'SELECT codigo, nome, ii, ipi, pis, cofins FROM ncm_impostos WHERE codigo = ? LIMIT 1',
+      'SELECT codigo, nome, ii, ipi, pis, cofins FROM extension.ncm_impostos WHERE codigo = ? LIMIT 1',
       [searchCode],
     )
 
@@ -92,7 +92,7 @@ export class NcmDatabaseService implements OnModuleInit, OnModuleDestroy {
     const searchPattern = `${cleanCode}%`
 
     const [rows] = await this.connection.execute(
-      'SELECT codigo, nome, ii, ipi, pis, cofins FROM ncm_impostos WHERE codigo LIKE ? LIMIT 10',
+      'SELECT codigo, nome, ii, ipi, pis, cofins FROM extension.ncm_impostos WHERE codigo LIKE ? LIMIT 10',
       [searchPattern],
     )
 
