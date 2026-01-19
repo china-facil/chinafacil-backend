@@ -20,7 +20,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
-import { CreateLeadDto, FilterLeadDto, LandingEkonomiDto, UpdateLeadDto } from './dto'
+import { CreateLeadDto, CreateUserFromLeadDto, FilterLeadDto, LandingEkonomiDto, UpdateLeadDto } from './dto'
 import { LeadsService } from './leads.service'
 
 @ApiTags('leads')
@@ -138,5 +138,36 @@ export class LeadsController {
     @Ip() clientIp: string,
   ) {
     return this.leadsService.storeLandingEkonomi(landingEkonomiDto, clientIp)
+  }
+
+  @Post('create-user')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles('admin')
+  @ApiOperation({ summary: 'Criar usuário a partir da página de leads (admin)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuário criado com sucesso',
+    schema: {
+      example: {
+        id: 'user-uuid',
+        email: 'usuario@example.com',
+        name: 'João Silva',
+        phone: '11999999999',
+        cnpj: '12345678000190',
+        employees: '1-5',
+        monthlyBilling: '50000',
+        role: 'lead',
+        status: 'active',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Email já cadastrado ou dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  async createUserFromLead(@Body() createUserFromLeadDto: CreateUserFromLeadDto) {
+    return this.leadsService.createUserFromLead(createUserFromLeadDto)
   }
 }
