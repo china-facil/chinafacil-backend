@@ -7,7 +7,7 @@ import { Roles } from '../../../common/decorators/roles.decorator'
 import { CurrentUser } from '../../../common/decorators/current-user.decorator'
 import { AddStatusDto } from '../dto/add-status.dto'
 import { SolicitationTrackingService } from '../services/solicitation-tracking.service'
-import { PrismaService } from '../../../prisma/prisma.service'
+import { PrismaService } from '../../../database/prisma.service'
 
 @ApiTags('solicitation-tracking')
 @Controller()
