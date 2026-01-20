@@ -13,7 +13,7 @@ describe('Exports API (Integration)', () => {
         type: 'csv',
         model: 'User',
       })
-      expect(res.status).toBe(200)
+      expect(res.status).toBe(201)
       expect(res.body).toHaveProperty('status', 'success')
       expect(res.body).toHaveProperty('jobId')
     })

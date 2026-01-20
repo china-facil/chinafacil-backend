@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { SubscriptionStatus } from '@prisma/client'
-import { IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator'
+import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator'
 
 export class CreateSubscriptionDto {
   @ApiProperty({
@@ -49,6 +49,22 @@ export class CreateSubscriptionDto {
   })
   @IsOptional()
   price?: number
+
+  @ApiPropertyOptional({
+    example: 5,
+    description: 'Quantidade de buscas de fornecedor',
+  })
+  @IsOptional()
+  @IsInt()
+  supplierSearch?: number
+
+  @ApiPropertyOptional({
+    example: 9999,
+    description: 'Quantidade de estudos de viabilidade',
+  })
+  @IsOptional()
+  @IsInt()
+  viabilityStudy?: number
 }
 
 

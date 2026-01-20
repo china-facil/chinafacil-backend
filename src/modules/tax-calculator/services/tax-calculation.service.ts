@@ -148,6 +148,7 @@ export class TaxCalculationService {
     const {
       userId,
       ncmCode,
+      search,
       startDate,
       endDate,
       page = 1,
@@ -165,6 +166,13 @@ export class TaxCalculationService {
 
     if (ncmCode) {
       where.ncmCode = ncmCode
+    }
+
+    if (search) {
+      where.OR = [
+        { userEmail: { contains: search, mode: 'insensitive' } },
+        { productName: { contains: search, mode: 'insensitive' } },
+      ]
     }
 
     if (startDate || endDate) {

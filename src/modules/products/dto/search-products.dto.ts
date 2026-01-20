@@ -31,13 +31,12 @@ export class SearchProductsDto {
   @ApiPropertyOptional({
     example: 20,
     description: 'Itens por página',
-    default: 20,
   })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  pageSize?: number = 20
+  pageSize?: number
 
   @ApiPropertyOptional({
     enum: ProductSortOrder,

@@ -48,6 +48,7 @@ export class TaxCalculationController {
   @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiQuery({ name: 'userId', required: false, type: String })
   @ApiQuery({ name: 'ncmCode', required: false, type: String })
+  @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'startDate', required: false, type: String })
   @ApiQuery({ name: 'endDate', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number })

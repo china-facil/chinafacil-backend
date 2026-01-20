@@ -2,5 +2,5 @@ export * from './completion.dto'
 export * from './chat-message.dto'
 export * from './product-similarity.dto'
 export * from './embedding.dto'
-
-
+export * from './detect-intent.dto'
+export * from './concierge-ask.dto'
