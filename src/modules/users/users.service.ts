@@ -32,7 +32,7 @@ export class UsersService {
       data: {
         ...createUserDto,
         password: hashedPassword,
-        role: createUserDto.role || UserRole.user,
+        role: createUserDto.role || UserRole.lead,
         status: createUserDto.status || UserStatus.active,
       },
       select: {
