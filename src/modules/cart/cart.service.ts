@@ -1,12 +1,16 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../database/prisma.service'
 import { CreateCartDto, SyncCartDto, UpdateCartDto } from './dto'
+import { CartPdfService } from './services/cart-pdf.service'
 
 @Injectable()
 export class CartService {
   private readonly logger = new Logger(CartService.name)
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cartPdfService: CartPdfService,
+  ) {}
 
   async create(userId: string, createCartDto: CreateCartDto) {
     const existingCart = await this.prisma.cart.findFirst({
@@ -462,6 +466,20 @@ export class CartService {
       },
       message: 'Carrinho sincronizado com sucesso',
     }
+  }
+
+  async generateReport(data: any, detailed: boolean = false): Promise<Buffer> {
+    this.logger.log('Gerando relatório PDF', {
+      hasData: !!data,
+      detailed,
+      produtosCount: data?.produtos?.length || 0,
+    })
+
+    if (!data || !data.produtos || !Array.isArray(data.produtos) || data.produtos.length === 0) {
+      throw new NotFoundException('Dados inválidos: produtos não encontrados')
+    }
+
+    return this.cartPdfService.generatePDF(data, detailed)
   }
 }
 

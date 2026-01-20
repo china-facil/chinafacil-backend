@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Ip,
   Param,
   Patch,
   Post,
@@ -19,7 +20,7 @@ import {
 import { Roles } from '../../common/decorators/roles.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
-import { CreateLeadDto, FilterLeadDto, UpdateLeadDto } from './dto'
+import { CreateLeadDto, CreateUserFromLeadDto, FilterLeadDto, LandingEkonomiDto, UpdateLeadDto } from './dto'
 import { LeadsService } from './leads.service'
 
 @ApiTags('leads')
@@ -31,6 +32,7 @@ export class LeadsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Criar lead' })
   @ApiResponse({ status: 201, description: 'Lead criado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 429, description: 'Muitas requisições. Limite: 10 por minuto' })
   async create(@Body() createLeadDto: CreateLeadDto) {
     return this.leadsService.create(createLeadDto)
@@ -42,6 +44,8 @@ export class LeadsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Listar leads' })
   @ApiResponse({ status: 200, description: 'Lista de leads' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async findAll(@Query() filterLeadDto: FilterLeadDto) {
     return this.leadsService.findAll(filterLeadDto)
   }
@@ -52,6 +56,8 @@ export class LeadsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Estatísticas por origem' })
   @ApiResponse({ status: 200, description: 'Stats por origem' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getStatsByOrigin() {
     return this.leadsService.getStatsByOrigin()
   }
@@ -62,6 +68,8 @@ export class LeadsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Estatísticas por status' })
   @ApiResponse({ status: 200, description: 'Stats por status' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   async getStatsByStatus() {
     return this.leadsService.getStatsByStatus()
   }
@@ -72,6 +80,9 @@ export class LeadsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Obter lead específico' })
   @ApiResponse({ status: 200, description: 'Lead encontrado' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Lead não encontrado' })
   async findOne(@Param('id') id: string) {
     return this.leadsService.findOne(id)
   }
@@ -82,6 +93,10 @@ export class LeadsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Atualizar lead' })
   @ApiResponse({ status: 200, description: 'Lead atualizado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Lead não encontrado' })
   async update(@Param('id') id: string, @Body() updateLeadDto: UpdateLeadDto) {
     return this.leadsService.update(id, updateLeadDto)
   }
@@ -92,6 +107,9 @@ export class LeadsController {
   @Roles('admin', 'seller')
   @ApiOperation({ summary: 'Converter lead em usuário' })
   @ApiResponse({ status: 200, description: 'Lead convertido' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Lead não encontrado' })
   async convertToUser(@Param('id') id: string) {
     return this.leadsService.convertToUser(id)
   }
@@ -102,9 +120,54 @@ export class LeadsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Remover lead' })
   @ApiResponse({ status: 200, description: 'Lead removido' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Lead não encontrado' })
   async remove(@Param('id') id: string) {
     return this.leadsService.remove(id)
   }
+
+  @Post('landing-ekonomi')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Processar lead da landing page eKonomi' })
+  @ApiResponse({ status: 201, description: 'Lead processado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 429, description: 'Muitas requisições. Limite: 10 por minuto' })
+  async storeLandingEkonomi(
+    @Body() landingEkonomiDto: LandingEkonomiDto,
+    @Ip() clientIp: string,
+  ) {
+    return this.leadsService.storeLandingEkonomi(landingEkonomiDto, clientIp)
+  }
+
+  @Post('create-user')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
+  @Roles('admin')
+  @ApiOperation({ summary: 'Criar usuário a partir da página de leads (admin)' })
+  @ApiResponse({
+    status: 201,
+    description: 'Usuário criado com sucesso',
+    schema: {
+      example: {
+        id: 'user-uuid',
+        email: 'usuario@example.com',
+        name: 'João Silva',
+        phone: '11999999999',
+        cnpj: '12345678000190',
+        employees: '1-5',
+        monthlyBilling: '50000',
+        role: 'lead',
+        status: 'active',
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Email já cadastrado ou dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  async createUserFromLead(@Body() createUserFromLeadDto: CreateUserFromLeadDto) {
+    return this.leadsService.createUserFromLead(createUserFromLeadDto)
+  }
 }
-
-

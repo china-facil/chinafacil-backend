@@ -29,9 +29,12 @@ export class SolicitationItemsController {
   ) {}
 
   @Post()
-  @Roles('admin', 'seller', 'user')
+  @Roles('admin', 'seller', 'user', 'lead', 'sourcer')
   @ApiOperation({ summary: 'Adicionar item à solicitação' })
   @ApiResponse({ status: 201, description: 'Item adicionado' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Solicitação não encontrada' })
   async addItem(
     @Param('solicitationId') solicitationId: string,
     @CurrentUser('id') userId: string,
@@ -41,9 +44,11 @@ export class SolicitationItemsController {
   }
 
   @Delete(':itemId')
-  @Roles('admin', 'seller', 'user')
+  @Roles('admin', 'seller', 'user', 'lead', 'sourcer')
   @ApiOperation({ summary: 'Remover item da solicitação' })
   @ApiResponse({ status: 200, description: 'Item removido' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 404, description: 'Item não encontrado' })
   async removeItem(
     @Param('solicitationId') solicitationId: string,
     @Param('itemId') itemId: string,

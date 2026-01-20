@@ -1,23 +1,54 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, Logger } from '@nestjs/common'
 import { Alibaba1688Normalizer } from './alibaba-1688.normalizer'
 import { AlibabaIntlNormalizer } from './alibaba-intl.normalizer'
 import { NormalizedProduct } from './product.interface'
 
 @Injectable()
 export class ProductNormalizerService {
+  private readonly logger = new Logger(ProductNormalizerService.name)
+
   constructor(
     private readonly alibaba1688Normalizer: Alibaba1688Normalizer,
     private readonly alibabaIntlNormalizer: AlibabaIntlNormalizer,
   ) {}
 
   normalize1688SearchResponse(response: any): any {
+    this.logger.log('ProductNormalizerService::normalize1688SearchResponse - Iniciando', {
+      hasResponse: !!response,
+      responseKeys: response ? Object.keys(response) : [],
+      hasData: !!response?.data,
+      dataKeys: response?.data ? Object.keys(response.data) : [],
+      hasItems: !!response?.data?.items,
+      itemsIsArray: Array.isArray(response?.data?.items),
+      itemsCount: Array.isArray(response?.data?.items) ? response.data.items.length : 0,
+    })
+
     if (!response?.data?.items || !Array.isArray(response.data.items)) {
+      this.logger.warn('ProductNormalizerService::normalize1688SearchResponse - Resposta inválida ou sem items', {
+        hasData: !!response?.data,
+        hasItems: !!response?.data?.items,
+        itemsType: typeof response?.data?.items,
+        responseSample: JSON.stringify(response).substring(0, 500),
+      })
       return response
     }
 
-    const normalizedItems = response.data.items.map((item: any) =>
-      this.alibaba1688Normalizer.normalizeSearchItem(item),
-    )
+    const normalizedItems = response.data.items.map((item: any) => {
+      try {
+        return this.alibaba1688Normalizer.normalizeSearchItem(item)
+      } catch (error: any) {
+        this.logger.warn('ProductNormalizerService::normalize1688SearchResponse - Erro ao normalizar item', {
+          error: error.message,
+          itemSample: JSON.stringify(item).substring(0, 200),
+        })
+        return null
+      }
+    }).filter((item: any) => item !== null)
+
+    this.logger.log('ProductNormalizerService::normalize1688SearchResponse - Sucesso', {
+      normalizedItemsCount: normalizedItems.length,
+      total: response.data.total_count || normalizedItems.length,
+    })
 
     return {
       ...response,
@@ -44,25 +75,74 @@ export class ProductNormalizerService {
   }
 
   normalizeAlibabaSearchResponse(response: any): any {
-    if (!response?.Result?.Items || !Array.isArray(response.Result.Items)) {
+    try {
+      const itemsArray = response?.Result?.Items?.Items?.Content || response?.Result?.Items
+
+      this.logger.log('ProductNormalizerService::normalizeAlibabaSearchResponse - Iniciando', {
+        hasResponse: !!response,
+        errorCode: response?.ErrorCode,
+        hasResult: !!response?.Result,
+        hasItems: !!response?.Result?.Items,
+        hasItemsItems: !!response?.Result?.Items?.Items,
+        hasContent: !!response?.Result?.Items?.Items?.Content,
+        itemsIsArray: Array.isArray(itemsArray),
+        itemsCount: Array.isArray(itemsArray) ? itemsArray.length : 0,
+      })
+
+      if (!itemsArray || !Array.isArray(itemsArray)) {
+        this.logger.warn('ProductNormalizerService::normalizeAlibabaSearchResponse - Resposta inválida', {
+          errorCode: response?.ErrorCode,
+          hasResult: !!response?.Result,
+          hasItems: !!response?.Result?.Items,
+          hasItemsItems: !!response?.Result?.Items?.Items,
+          hasContent: !!response?.Result?.Items?.Items?.Content,
+          responseSample: JSON.stringify(response).substring(0, 500),
+        })
+        
+        return {
+          code: response?.ErrorCode === 'Ok' ? 200 : 500,
+          msg: response?.ErrorCode === 'Ok' ? 'Nenhum item encontrado' : 'Error',
+          data: { items: [] },
+        }
+      }
+
+      const normalizedItems = itemsArray.map((item: any) => {
+        try {
+          return this.alibabaIntlNormalizer.normalizeSearchItem(item)
+        } catch (error: any) {
+          this.logger.warn('ProductNormalizerService::normalizeAlibabaSearchResponse - Erro ao normalizar item', {
+            error: error.message,
+            itemSample: JSON.stringify(item).substring(0, 200),
+          })
+          return null
+        }
+      }).filter((item: any) => item !== null)
+
+      this.logger.log('ProductNormalizerService::normalizeAlibabaSearchResponse - Sucesso', {
+        normalizedItemsCount: normalizedItems.length,
+        total: response.Result?.Items?.Items?.TotalCount || normalizedItems.length,
+      })
+
       return {
-        code: response.Code || 500,
-        msg: response.Message || 'Error',
+        code: 200,
+        msg: 'success',
+        data: {
+          items: normalizedItems,
+          total: response.Result?.Items?.Items?.TotalCount || normalizedItems.length,
+        },
+      }
+    } catch (error: any) {
+      this.logger.error('ProductNormalizerService::normalizeAlibabaSearchResponse - Erro crítico', {
+        error: error.message,
+        stack: error.stack,
+        responseSample: JSON.stringify(response).substring(0, 500),
+      })
+      
+      return {
+        code: response?.ErrorCode === 'Ok' ? 200 : 500,
+        msg: response?.ErrorCode === 'Ok' ? 'Erro ao processar resposta' : 'Error',
         data: { items: [] },
       }
-    }
-
-    const normalizedItems = response.Result.Items.map((item: any) =>
-      this.alibabaIntlNormalizer.normalizeSearchItem(item),
-    )
-
-    return {
-      code: 200,
-      msg: 'success',
-      data: {
-        items: normalizedItems,
-        total: response.Result.TotalCount || normalizedItems.length,
-      },
     }
   }
 

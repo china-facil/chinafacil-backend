@@ -481,6 +481,27 @@ export class UsersService {
       }
     }
 
+    const validUserIds = await this.prisma.user.findMany({
+      select: { id: true },
+    })
+
+    const validUserIdArray = validUserIds.map((user) => user.id).filter((id) => id !== null && id !== undefined)
+
+    const solicitationFilter: any = {
+      ...dateFilter,
+      from: 'chinafacil',
+    }
+
+    if (validUserIdArray.length > 0) {
+      solicitationFilter.userId = {
+        in: validUserIdArray,
+      }
+    } else {
+      solicitationFilter.userId = {
+        in: [],
+      }
+    }
+
     const [totalLeads, totalClients, totalUsers, totalSolicitations, solicitationsWithCart] = await Promise.all([
       this.prisma.user.count({
         where: {
@@ -503,11 +524,11 @@ export class UsersService {
       }),
       this.prisma.user.count(),
       this.prisma.solicitation.count({
-        where: dateFilter,
+        where: solicitationFilter,
       }),
       this.prisma.solicitation.findMany({
         where: {
-          ...dateFilter,
+          ...solicitationFilter,
           cart: { isNot: null },
         },
         include: {

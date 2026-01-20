@@ -1,5 +1,5 @@
 export * from './create-lead.dto'
 export * from './update-lead.dto'
 export * from './filter-lead.dto'
-
-
+export * from './landing-ekonomi.dto'
+export * from './create-user-from-lead.dto'

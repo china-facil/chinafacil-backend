@@ -46,7 +46,7 @@ export class ClientsService {
         skip,
         take,
         orderBy: {
-          createdAt: 'desc',
+          updatedAt: 'desc',
         },
         include: {
           users: {

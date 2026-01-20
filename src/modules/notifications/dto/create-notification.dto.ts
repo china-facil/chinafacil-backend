@@ -19,7 +19,11 @@ export class CreateNotificationDto {
   type: string
 
   @ApiProperty({
-    description: 'Dados da notificação (JSON)',
+    example: {
+      message: 'Nova mensagem recebida',
+      link: '/messages/123',
+    },
+    description: 'Dados da notificação (objeto JSON)',
   })
   @IsObject()
   @IsNotEmpty()

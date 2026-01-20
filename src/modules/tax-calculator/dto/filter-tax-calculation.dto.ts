@@ -4,6 +4,7 @@ import { IsDateString, IsNumber, IsOptional, IsString, Min } from 'class-validat
 
 export class FilterTaxCalculationDto {
   @ApiPropertyOptional({
+    example: 'user-uuid',
     description: 'ID do usuário para filtrar',
   })
   @IsOptional()
@@ -11,6 +12,7 @@ export class FilterTaxCalculationDto {
   userId?: string
 
   @ApiPropertyOptional({
+    example: '84713010',
     description: 'Código NCM para filtrar',
   })
   @IsOptional()
@@ -18,6 +20,15 @@ export class FilterTaxCalculationDto {
   ncmCode?: string
 
   @ApiPropertyOptional({
+    example: 'notebook',
+    description: 'Busca por termo (busca parcial em productName e userEmail)',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string
+
+  @ApiPropertyOptional({
+    example: '2024-01-01T00:00:00.000Z',
     description: 'Data inicial (ISO 8601)',
   })
   @IsOptional()
@@ -25,6 +36,7 @@ export class FilterTaxCalculationDto {
   startDate?: string
 
   @ApiPropertyOptional({
+    example: '2024-12-31T23:59:59.000Z',
     description: 'Data final (ISO 8601)',
   })
   @IsOptional()

@@ -3,14 +3,30 @@ import { NormalizedProduct } from './product.interface'
 
 @Injectable()
 export class Alibaba1688Normalizer {
+
   normalizeSearchItem(item: any): NormalizedProduct {
     const mainImgs = item.main_imgs || []
     const imageUrl = this.normalizeImageUrl(
       mainImgs[0] || item.img || item.pic_url || item.image_url || item.pic,
     )
     const images = this.normalizeImages(mainImgs.length > 0 ? mainImgs : (item.item_imgs || item.images || item.pic_url || []))
+    
+    const saleInfo = item.sale_info || {}
+    const saleQuantityInt = saleInfo.sale_quantity_int ?? item.sale_quantity_int ?? null
+    const ordersCount = saleInfo.orders_count ?? item.orders_count ?? null
+    const saleQuantity90Days = saleInfo.sale_quantity_90days ?? null
+    const itemRepurchaseRate = item.item_repurchase_rate ?? null
+    
+    const preservedSaleInfo = item.sale_info 
+      ? {
+          ...item.sale_info,
+          sale_quantity_int: saleInfo.sale_quantity_int ?? item.sale_info.sale_quantity_int,
+          orders_count: saleInfo.orders_count ?? item.sale_info.orders_count,
+          sale_quantity_90days: saleInfo.sale_quantity_90days ?? item.sale_info.sale_quantity_90days,
+        }
+      : null
 
-    return {
+    const normalizedProduct = {
       id: item.item_id?.toString() || item.id?.toString() || '',
       item_id: item.item_id?.toString() || item.id?.toString() || '',
       title: item.title || item.item_title || '',
@@ -34,17 +50,23 @@ export class Alibaba1688Normalizer {
       specifications: [],
       minimumOrder: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
       quantity_begin: item.moq || item.minimum_order || item.tiered_price_info?.begin_num || 1,
-      salesQuantity: parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10),
-      sold_quantity: parseInt(item.sales_quantity || item.sales || item.sale_info?.sale_quantity_int || '0', 10),
+      salesQuantity: parseInt(item.sales_quantity || item.sales || saleQuantityInt?.toString() || '0', 10),
+      sold_quantity: parseInt(item.sales_quantity || item.sales || saleQuantityInt?.toString() || '0', 10),
       rating: item.rate_percentage || item.goods_score || 0,
       goods_score: item.rate_percentage || item.goods_score || 0,
       url: item.detail_url || item.url || item.product_url || '',
-      provider: 'alibaba_1688',
+      provider: 'alibaba_1688' as const,
       skus: item.skus || [],
       sku_props: item.sku_props || [],
       shop_info: item.shop_info || null,
-      sale_info: item.sale_info || null,
+      sale_info: preservedSaleInfo,
+      sale_quantity_int: saleQuantityInt,
+      orders_count: ordersCount,
+      sale_quantity_90days: saleQuantity90Days,
+      item_repurchase_rate: itemRepurchaseRate,
     }
+
+    return normalizedProduct
   }
 
   private extractPriceFromTiered(item: any): number {
@@ -147,6 +169,25 @@ export class Alibaba1688Normalizer {
       name: spec.name || spec.prop_name || '',
       value: spec.value || spec.prop_value || '',
     })).filter(spec => spec.name && spec.value)
+  }
+
+  private formatLocation(areaFrom: any): string {
+    if (!areaFrom) return ''
+    if (typeof areaFrom === 'string') return areaFrom
+    if (Array.isArray(areaFrom)) {
+      return areaFrom.filter(Boolean).join(', ')
+    }
+    return ''
+  }
+
+  private parseRating(rating: any): number {
+    if (!rating) return 0
+    if (typeof rating === 'number') return rating
+    if (typeof rating === 'string') {
+      const parsed = parseFloat(rating)
+      return isNaN(parsed) ? 0 : parsed
+    }
+    return 0
   }
 }
 

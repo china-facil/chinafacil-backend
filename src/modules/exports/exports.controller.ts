@@ -1,9 +1,8 @@
-import { Body, Controller, Post, Res, UseGuards, HttpStatus, NotFoundException, HttpCode } from "@nestjs/common";
+import { Body, Controller, Post, Res, UseGuards, HttpStatus, NotFoundException } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { Response } from "express";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
-import * as fs from "fs/promises";
 import * as path from "path";
 import { createReadStream } from "fs";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -25,9 +24,11 @@ export class ExportsController {
   ) {}
 
   @Post("request")
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Solicitar exportação (processamento assíncrono)" })
-  @ApiResponse({ status: 200, description: "Exportação solicitada com sucesso" })
+  @ApiResponse({ status: 201, description: "Exportação solicitada com sucesso" })
+  @ApiResponse({ status: 400, description: "Dados inválidos" })
+  @ApiResponse({ status: 401, description: "Não autenticado" })
+  @ApiResponse({ status: 500, description: "Erro ao criar job de exportação" })
   async requestExport(@CurrentUser() user: any, @Body() requestExportDto: RequestExportDto) {
     const job = await this.exportQueue.add(
       "process-export",
@@ -56,40 +57,82 @@ export class ExportsController {
   @Post("download-direct")
   @ApiOperation({ summary: "Gerar e baixar exportação diretamente" })
   @ApiResponse({ status: 200, description: "Arquivo gerado e disponível para download" })
+  @ApiResponse({ status: 400, description: "Dados inválidos" })
+  @ApiResponse({ status: 401, description: "Não autenticado" })
   @ApiResponse({ status: 404, description: "Nenhum dado encontrado" })
+  @ApiResponse({ status: 500, description: "Erro ao gerar arquivo de exportação" })
   async downloadDirect(@Body() requestExportDto: RequestExportDto, @Res() res: Response) {
+    return this.handleDownload(requestExportDto, res)
+  }
+
+  @Post("download")
+  @ApiOperation({ summary: "Gerar e baixar exportação diretamente (alias)" })
+  @ApiResponse({ status: 200, description: "Arquivo gerado e disponível para download" })
+  @ApiResponse({ status: 400, description: "Dados inválidos" })
+  @ApiResponse({ status: 401, description: "Não autenticado" })
+  @ApiResponse({ status: 404, description: "Nenhum dado encontrado" })
+  @ApiResponse({ status: 500, description: "Erro ao gerar arquivo de exportação" })
+  async download(@Body() requestExportDto: RequestExportDto, @Res() res: Response) {
+    return this.handleDownload(requestExportDto, res)
+  }
+
+  private async handleDownload(requestExportDto: RequestExportDto, @Res() res: Response) {
     try {
       const { filePath, filename } = await this.exportsService.generateExport(requestExportDto);
 
       const fullPath = path.join(process.cwd(), "public", filePath);
 
+      const fs = require("fs");
+      if (!fs.existsSync(fullPath)) {
+        if (!res.headersSent) {
+          return res.status(HttpStatus.NOT_FOUND).json({
+            status: "error",
+            message: "Arquivo de exportação não encontrado",
+          });
+        }
+        return;
+      }
+
       const mimeTypes: Record<string, string> = {
         csv: "text/csv",
         xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         pdf: "application/pdf",
+        json: "application/json",
       };
 
       const extension = filename.split(".").pop() || "csv";
       const mimeType = mimeTypes[extension] || "application/octet-stream";
 
-      res.status(HttpStatus.OK);
-      res.setHeader("Content-Type", mimeType);
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-      const fileStream = createReadStream(fullPath);
-      fileStream.pipe(res);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        return res.status(HttpStatus.NOT_FOUND).json({
-          status: "error",
-          message: error.message,
-        });
+      if (!res.headersSent) {
+        res.status(HttpStatus.OK);
+        res.setHeader("Content-Type", mimeType);
+        res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       }
 
-      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        status: "error",
-        message: "Erro ao gerar o arquivo de exportação",
+      const fileStream = createReadStream(fullPath);
+      fileStream.on("error", (error) => {
+        if (!res.headersSent) {
+          res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+            status: "error",
+            message: "Erro ao ler o arquivo de exportação",
+          });
+        }
       });
+      fileStream.pipe(res);
+    } catch (error) {
+      if (!res.headersSent) {
+        if (error instanceof NotFoundException) {
+          return res.status(HttpStatus.NOT_FOUND).json({
+            status: "error",
+            message: error.message,
+          });
+        }
+
+        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          status: "error",
+          message: "Erro ao gerar o arquivo de exportação",
+        });
+      }
     }
   }
 }
