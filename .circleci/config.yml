@@ -121,16 +121,28 @@ jobs:
 
               CURRENT_COMMIT=$(git rev-parse HEAD)
 
+              echo "Stopping containers before update..."
+              docker compose -f docker-compose.prod.yml down || true
+
+              echo "Fetching latest changes..."
               git fetch origin main
+
+              echo "Resetting permissions and cleaning..."
+              sudo chown -R $(whoami):$(whoami) .
+              git clean -fd
               git reset --hard origin/main
 
+              echo "Building new containers..."
               docker compose -f docker-compose.prod.yml build --no-cache
+              
+              echo "Starting new containers..."
               docker compose -f docker-compose.prod.yml up -d
 
               sleep 15
 
               if ! curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
                 echo "Health check failed! Rolling back..."
+                docker compose -f docker-compose.prod.yml down
                 git reset --hard $CURRENT_COMMIT
                 docker compose -f docker-compose.prod.yml build --no-cache
                 docker compose -f docker-compose.prod.yml up -d

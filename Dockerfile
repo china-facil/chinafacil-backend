@@ -6,6 +6,7 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY newrelic.js ./
 
 RUN npm ci
 
@@ -30,6 +31,7 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY newrelic.js ./
 
 RUN npm ci --only=production && \
     npx prisma generate && \

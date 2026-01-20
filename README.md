@@ -144,6 +144,9 @@ Authorization: Bearer <token>
 - **Logs:** `/api/logs` (interface web)
 - **Health:** `/api/health`
 - **Metrics:** `/api/metrics`
+- **Sentry:** Monitoramento de erros
+- **New Relic:** APM e Performance
+
 
 ## 🤝 Contribuindo
 
