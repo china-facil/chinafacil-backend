@@ -8,8 +8,6 @@ import { TranslationService } from "./translation.service";
 
 @ApiTags("translation")
 @Controller("translation")
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
 export class TranslationController {
   constructor(private readonly translationService: TranslationService) {}
 
@@ -17,8 +15,6 @@ export class TranslationController {
   @ApiOperation({ summary: "Traduzir texto" })
   @ApiResponse({ status: 201, description: "Texto traduzido" })
   @ApiResponse({ status: 400, description: "Dados inválidos" })
-  @ApiResponse({ status: 401, description: "Não autenticado" })
-  @ApiResponse({ status: 403, description: "Sem permissão" })
   async translateText(@Body() translateTextDto: TranslateTextDto) {
     return this.translationService.translateText(translateTextDto);
   }
@@ -27,8 +23,6 @@ export class TranslationController {
   @ApiOperation({ summary: "Traduzir múltiplos títulos" })
   @ApiResponse({ status: 201, description: "Títulos traduzidos" })
   @ApiResponse({ status: 400, description: "Dados inválidos" })
-  @ApiResponse({ status: 401, description: "Não autenticado" })
-  @ApiResponse({ status: 403, description: "Sem permissão" })
   async translateTitles(@Body("titles") titles: string[], @Body("from") from: string, @Body("to") to: string) {
     return this.translationService.translateTitles(titles, from, to);
   }
@@ -37,8 +31,6 @@ export class TranslationController {
   @ApiOperation({ summary: "Traduzir produto" })
   @ApiResponse({ status: 201, description: "Produto traduzido" })
   @ApiResponse({ status: 400, description: "Dados inválidos" })
-  @ApiResponse({ status: 401, description: "Não autenticado" })
-  @ApiResponse({ status: 403, description: "Sem permissão" })
   async translateProduct(@Body() translateProductDto: TranslateProductDto) {
     return this.translationService.translateProduct(translateProductDto);
   }
@@ -47,13 +39,13 @@ export class TranslationController {
   @ApiOperation({ summary: "Detectar se o texto é chinês" })
   @ApiResponse({ status: 201, description: "Detecção concluída" })
   @ApiResponse({ status: 400, description: "Dados inválidos" })
-  @ApiResponse({ status: 401, description: "Não autenticado" })
-  @ApiResponse({ status: 403, description: "Sem permissão" })
   async detectChinese(@Body("text") text: string) {
     return this.translationService.detectChinese(text);
   }
 
   @Delete("clear-cache")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @Roles("admin")
   @ApiOperation({ summary: "Limpar cache de traduções" })
   @ApiResponse({ status: 200, description: "Cache limpo" })

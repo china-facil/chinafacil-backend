@@ -1,8 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common'
-import { UserRole } from '@prisma/client'
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { UserRole, UserStatus } from '@prisma/client'
+import * as bcrypt from 'bcrypt'
 import { PrismaService } from '../../database/prisma.service'
 import { GoHighLevelService } from '../../integrations/crm/gohighlevel/gohighlevel.service'
-import { CreateLeadDto, FilterLeadDto, LandingEkonomiDto, UpdateLeadDto } from './dto'
+import { CreateLeadDto, CreateUserFromLeadDto, FilterLeadDto, LandingEkonomiDto, UpdateLeadDto } from './dto'
 import * as crypto from 'crypto'
 
 @Injectable()
@@ -256,6 +257,47 @@ export class LeadsService {
       this.logger.error(`❌ Landing eKonomi error: ${error.message}`)
       throw error
     }
+  }
+
+  async createUserFromLead(createUserFromLeadDto: CreateUserFromLeadDto) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: createUserFromLeadDto.email },
+    })
+
+    if (existingUser) {
+      throw new BadRequestException('Email já cadastrado')
+    }
+
+    const hashedPassword = await bcrypt.hash(createUserFromLeadDto.password, 10)
+
+    const user = await this.prisma.user.create({
+      data: {
+        name: createUserFromLeadDto.name,
+        email: createUserFromLeadDto.email,
+        password: hashedPassword,
+        phone: createUserFromLeadDto.phone,
+        cnpj: createUserFromLeadDto.cnpj,
+        employees: createUserFromLeadDto.employees,
+        monthlyBilling: createUserFromLeadDto.monthlyBilling,
+        role: UserRole.lead,
+        status: UserStatus.active,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        cnpj: true,
+        employees: true,
+        monthlyBilling: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    })
+
+    return user
   }
 }
 

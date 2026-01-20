@@ -26,6 +26,14 @@ export class RequestExportDto {
   model: string
 
   @ApiPropertyOptional({
+    example: 'lead',
+    description: 'Filtro de roles para exportação de usuários',
+  })
+  @IsOptional()
+  @IsString()
+  roles?: string
+
+  @ApiPropertyOptional({
     example: {
       status: 'active',
       startDate: '2024-01-01',

@@ -1,11 +1,20 @@
 import { createTestContext, TestContext } from "./test-helper";
 import * as crypto from "crypto";
+import { GoHighLevelService } from "../../src/integrations/crm/gohighlevel/gohighlevel.service";
 
 describe("Webhooks API (Integration)", () => {
   let ctx: TestContext;
 
   beforeAll(async () => {
     ctx = await createTestContext();
+    
+    const goHighLevelService = ctx.moduleFixture.get(GoHighLevelService);
+    jest.spyOn(goHighLevelService, "createOrUpdateContact").mockResolvedValue({
+      success: true,
+      contact_id: "test-contact-id",
+      action: "created",
+    });
+    jest.spyOn(goHighLevelService, "mapCustomFields").mockReturnValue([]);
   });
 
   describe("POST /api/webhooks/typeform", () => {
@@ -17,7 +26,8 @@ describe("Webhooks API (Integration)", () => {
         form_response: {
           answers: [
             {
-              field: { ref: "email" },
+              field: { ref: "8210b17e-f183-4992-9771-a85e7e81c451" },
+              type: "email",
               email: "test@example.com",
             },
           ],

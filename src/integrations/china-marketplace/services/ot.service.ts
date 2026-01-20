@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { HttpService } from '@nestjs/axios'
 import { firstValueFrom } from 'rxjs'
 import { ProductNormalizerService } from '../../../modules/products/services/normalizers/product-normalizer.service'
+import { FeatureFlagsService } from '../../../modules/feature-flags/feature-flags.service'
 
 @Injectable()
 export class OtService {
@@ -13,6 +14,7 @@ export class OtService {
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly normalizer: ProductNormalizerService,
+    private readonly featureFlagsService: FeatureFlagsService,
   ) {
     this.rapidApiKey = this.configService.get('RAPIDAPI_KEY') || ''
   }
@@ -24,12 +26,16 @@ export class OtService {
     sort?: string
   }) {
     try {
+      const flag = await this.featureFlagsService.getOtProductsFlag()
+      const defaultPageSize = flag.isActive ? flag.pageSize : 20
+      const pageSize = params.pageSize ?? defaultPageSize
+
       const endpoint = 'https://otapi-alibaba.p.rapidapi.com/BatchSearchItemsFrame'
       
       const queryParams = {
         language: 'en',
-        framePosition: ((params.page || 1) - 1) * (params.pageSize || 20),
-        frameSize: params.pageSize || 20,
+        framePosition: ((params.page || 1) - 1) * pageSize,
+        frameSize: pageSize,
         ItemTitle: params.keyword,
         OrderBy: this.mapSortToAlibaba(params.sort || 'default'),
       }
@@ -105,12 +111,17 @@ export class OtService {
     pageSize?: number
   }) {
     try {
+      const flag = await this.featureFlagsService.getOtProductsFlag()
+      const defaultPageSize = flag.isActive ? flag.pageSize : 20
+      const pageSize = params.pageSize || defaultPageSize
+
       const endpoint = 'https://otapi-alibaba.p.rapidapi.com/BatchSearchItemsFrame'
       
       const queryParams = {
         ImageUrl: params.imgUrl,
-        framePosition: ((params.page || 1) - 1) * (params.pageSize || 20),
-        frameSize: params.pageSize || 20,
+        framePosition: ((params.page || 1) - 1) * pageSize,
+        frameSize: pageSize,
+        language: 'en',
       }
 
       this.logger.log('OtService::searchProductsByImageAlibaba - Parâmetros', queryParams)
@@ -186,10 +197,11 @@ export class OtService {
 
   async getProductDetailsAlibaba(productId: string) {
     try {
-      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/GetProductDetails'
+      const endpoint = 'https://otapi-alibaba.p.rapidapi.com/BatchGetItemFullInfo'
       
       const queryParams = {
-        ProductId: productId,
+        itemId: productId,
+        language: 'en',
       }
 
       const response = await firstValueFrom(
@@ -230,9 +242,9 @@ export class OtService {
   private mapSortToAlibaba(sort: string): string {
     const sortMap: { [key: string]: string } = {
       default: '',
-      sales: 'TotalSales',
-      price_up: 'PriceAsc',
-      price_down: 'PriceDesc',
+      sales: 'TotalSales:Desc',
+      price_up: 'Price:Asc',
+      price_down: 'Price:Desc',
     }
 
     return sortMap[sort] || ''

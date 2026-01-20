@@ -24,6 +24,8 @@ import {
   CompletionDto,
   EmbeddingDto,
   ProductSimilarityDto,
+  DetectIntentDto,
+  ConciergeAskDto,
 } from './dto'
 
 @ApiTags('ai')
@@ -135,6 +137,36 @@ export class AIController {
       productSimilarityDto,
       provider,
     )
+  }
+
+  @Post('concierge/detect-intent')
+  @Roles('admin', 'seller', 'user')
+  @ApiOperation({ summary: 'Detectar intenção do usuário no concierge' })
+  @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
+  @ApiResponse({ status: 201, description: 'Intenção detectada' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  async detectIntent(
+    @Body() detectIntentDto: DetectIntentDto,
+    @Query('provider') provider?: 'openai' | 'anthropic',
+  ) {
+    return this.aiService.detectIntent(detectIntentDto, provider)
+  }
+
+  @Post('concierge/ask')
+  @Roles('admin', 'seller', 'user')
+  @ApiOperation({ summary: 'Fazer pergunta ao concierge' })
+  @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
+  @ApiResponse({ status: 201, description: 'Resposta gerada' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  async askConcierge(
+    @Body() conciergeAskDto: ConciergeAskDto,
+    @Query('provider') provider?: 'openai' | 'anthropic',
+  ) {
+    return this.aiService.askConcierge(conciergeAskDto, provider)
   }
 }
 

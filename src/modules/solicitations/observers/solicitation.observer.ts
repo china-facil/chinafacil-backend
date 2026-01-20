@@ -24,19 +24,23 @@ export class SolicitationObserver implements OnModuleInit {
       if (params.model === 'Solicitation') {
         if (params.action === 'create') {
           const result = await next(params)
-          await this.onSolicitationCreated(result)
+          this.onSolicitationCreated(result).catch((error) => {
+            this.logger.error(`Error in onSolicitationCreated hook: ${error.message}`, error.stack)
+          })
           return result
         }
 
         if (params.action === 'update') {
           const before = await this.prisma.solicitation.findUnique({
             where: { id: params.args.where.id },
-          })
+          }).catch(() => null)
 
           const result = await next(params)
 
           if (before && result) {
-            await this.onSolicitationUpdated(before, result)
+            this.onSolicitationUpdated(before, result).catch((error) => {
+              this.logger.error(`Error in onSolicitationUpdated hook: ${error.message}`, error.stack)
+            })
           }
 
           return result
@@ -61,29 +65,43 @@ export class SolicitationObserver implements OnModuleInit {
       })
 
       if (solicitation.clientId) {
-        const client = await this.prisma.client.findUnique({
-          where: { id: solicitation.clientId },
-          include: {
-            users: {
-              include: {
-                user: true,
+        try {
+          const client = await this.prisma.client.findUnique({
+            where: { id: solicitation.clientId },
+            include: {
+              users: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                    },
+                  },
+                },
               },
             },
-          },
-        })
+          })
 
-        if (client) {
-          for (const clientUser of client.users) {
-            await this.notificationsService.create({
-              userId: clientUser.userId,
-              type: 'INFO',
-              data: {
-                message: `Nova solicitação ${solicitation.code || solicitation.id} para o cliente ${client.name}`,
-                solicitationId: solicitation.id,
-                clientId: solicitation.clientId,
-              },
-            })
+          if (client && client.users) {
+            for (const clientUser of client.users) {
+              try {
+                await this.notificationsService.create({
+                  userId: clientUser.userId,
+                  type: 'INFO',
+                  data: {
+                    message: `Nova solicitação ${solicitation.code || solicitation.id} para o cliente ${client.name}`,
+                    solicitationId: solicitation.id,
+                    clientId: solicitation.clientId,
+                  },
+                })
+              } catch (notificationError) {
+                this.logger.error(`Error creating notification for client user ${clientUser.userId}: ${notificationError.message}`)
+              }
+            }
           }
+        } catch (clientError) {
+          this.logger.error(`Error fetching client ${solicitation.clientId}: ${clientError.message}`)
         }
       }
     } catch (error) {
