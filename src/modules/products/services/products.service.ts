@@ -1123,7 +1123,10 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
       throw new BadRequestException('Arquivo não fornecido. Por favor, envie uma imagem.')
     }
 
-    const baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000'
+    // Usar FRONTEND_URL para imagens estáticas servidas pelo frontend
+    const baseUrl = this.configService.get<string>('FRONTEND_URL') ||
+                   this.configService.get<string>('APP_URL') ||
+                   'http://localhost:5173'
     const imgUrl = `${baseUrl}/uploads/search-images/${file.filename}`
 
     return {
