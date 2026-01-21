@@ -22,7 +22,7 @@ export class HealthService {
     const redisStatus = 'not-checked'
 
     return {
-      status: 'success3',
+      status: 'success',
       uptime,
       database: databaseStatus,
       timestamp,
