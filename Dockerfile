@@ -12,6 +12,10 @@ RUN npm ci
 
 COPY . .
 
+COPY google_credentials.json* ./ || echo "Warning: google_credentials.json not found"
+
+RUN ls -la google_credentials.json || echo "Warning: google_credentials.json not present in container"
+
 RUN npx prisma generate
 
 FROM base AS development
