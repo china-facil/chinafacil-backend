@@ -132,9 +132,6 @@ jobs:
               git clean -fd
               git reset --hard origin/main
 
-              echo "Copying Google credentials..."
-              echo "$GOOGLE_CREDENTIALS_JSON" | base64 -d > google_credentials.json
-
               echo "Building new containers..."
               docker compose -f docker-compose.prod.yml build --no-cache
               
