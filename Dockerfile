@@ -47,6 +47,7 @@ RUN npm ci --only=production && \
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
+COPY --from=base /app/google_credentials.json ./google_credentials.json
 
 EXPOSE 3000
 
