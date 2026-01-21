@@ -12,9 +12,6 @@ RUN npm ci
 
 COPY . .
 
-
-COPY google_credentials.json* ./
-
 RUN npx prisma generate
 
 FROM base AS development
