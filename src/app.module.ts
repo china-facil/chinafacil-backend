@@ -3,7 +3,9 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from "@nestjs/throttler";
+import { join } from 'path';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DatabaseModule } from './database/database.module';
 import { JobsModule } from './jobs/jobs.module';
@@ -34,6 +36,10 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/',
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env', '../.env'],

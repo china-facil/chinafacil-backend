@@ -38,6 +38,7 @@ RUN npm ci --only=production && \
     npm cache clean --force
 
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/public ./public
 
 EXPOSE 3000
 
