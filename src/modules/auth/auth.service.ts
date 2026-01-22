@@ -229,7 +229,7 @@ export class AuthService {
         phone: registerDto.phone,
         cnpj: registerDto.cnpj,
         companyData: registerDto.companyData,
-        role: UserRole.user,
+        role: UserRole.lead,
         status: UserStatus.active,
       },
       select: {
