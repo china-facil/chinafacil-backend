@@ -33,7 +33,7 @@ export class MailService {
   async sendEmail(sendEmailDto: SendEmailDto) {
     try {
       const mailOptions = {
-        from: `${this.configService.get('MAIL_FROM_NAME')} <${this.configService.get('MAIL_FROM')}>`,
+        from: `${this.configService.get('MAIL_FROM_NAME')} <${this.configService.get('MAIL_FROM_ADDRESS')}>`,
         to: sendEmailDto.to,
         cc: sendEmailDto.cc,
         subject: sendEmailDto.subject,
