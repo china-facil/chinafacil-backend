@@ -51,7 +51,7 @@ export class MailService {
         messageId: info.messageId,
       }
     } catch (error) {
-      this.logger.error(`Failed to send email: ${error.message}`)
+      this.logger.error(`Failed to send email: ${error.message}`, error.stack)
       throw error
     }
   }
