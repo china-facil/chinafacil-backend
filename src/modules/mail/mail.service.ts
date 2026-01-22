@@ -14,9 +14,13 @@ export class MailService {
     const mailPassword = this.configService.get("MAIL_PASSWORD");
 
     if (mailHost && mailUser && mailPassword) {
+      const mailEncryption = this.configService.get("MAIL_ENCRYPTION");
+      const mailPort = this.configService.get("MAIL_PORT");
+
       this.transporter = nodemailer.createTransport({
         host: mailHost,
-        port: this.configService.get("MAIL_PORT"),
+        port: mailPort,
+        secure: mailEncryption === 'ssl' || mailPort === 465,
         auth: {
           user: mailUser,
           pass: mailPassword,
