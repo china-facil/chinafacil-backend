@@ -10,7 +10,7 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {
     const mailHost = this.configService.get("MAIL_HOST");
-    const mailUser = this.configService.get("MAIL_USER");
+    const mailUser = this.configService.get("MAIL_USERNAME");
     const mailPassword = this.configService.get("MAIL_PASSWORD");
 
     if (mailHost && mailUser && mailPassword) {
