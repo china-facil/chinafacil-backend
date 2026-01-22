@@ -13,6 +13,9 @@ import { UsersService } from './users.service'
     BullModule.registerQueue({
       name: 'lead-queue',
     }),
+    BullModule.registerQueue({
+      name: 'email-queue',
+    }),
   ],
   controllers: [UsersController, UserAddressController],
   providers: [UsersService, UserAddressService, UserObserver],

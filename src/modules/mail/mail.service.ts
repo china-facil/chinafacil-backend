@@ -35,6 +35,7 @@ export class MailService {
       const mailOptions = {
         from: `${this.configService.get('MAIL_FROM_NAME')} <${this.configService.get('MAIL_FROM')}>`,
         to: sendEmailDto.to,
+        cc: sendEmailDto.cc,
         subject: sendEmailDto.subject,
         text: sendEmailDto.text,
         html: sendEmailDto.html,
@@ -57,14 +58,48 @@ export class MailService {
 
   async sendNewUserEmail(email: string, name: string) {
     const html = `
-      <h1>Bem-vindo ao ChinaFácil, ${name}!</h1>
-      <p>Sua conta foi criada com sucesso.</p>
-      <p>Agora você pode fazer login e começar a usar nossos serviços.</p>
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>China Fácil - Novo Lead</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #eceff1; }
+          .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 4px; }
+          .header { text-align: center; padding: 48px; }
+          .content { padding: 30px 48px; color: #626262; font-size: 14px; line-height: 24px; }
+          .info { margin: 0 0 10px; font-size: 16px; }
+          .divider { height: 1px; background-color: #eceff1; margin: 32px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <img src="https://chinafacil.com/storage/Logo.png" width="220" alt="China Fácil" style="border: 0; max-width: 100%;">
+          </div>
+          <div class="content">
+            <p style="font-weight: 600; font-size: 18px; margin-bottom: 20px;">
+              ${name.split(' ')[0]} acabou de se cadastrar no site!
+            </p>
+
+            <p class="info"><b>Nome Completo</b>: ${name}</p>
+            <p class="info"><b>Email</b>: ${email}</p>
+            <p class="info"><b>Telefone</b>: Não informado</p>
+            <p class="info"><b>Data de cadastro</b>: ${new Date().toLocaleString('pt-BR')}</p>
+
+            <div class="divider"></div>
+            <p style="margin: 0 0 16px;">Obrigado, <br><b>Equipe China Fácil</b></p>
+          </div>
+        </div>
+      </body>
+      </html>
     `
 
     return this.sendEmail({
-      to: email,
-      subject: 'Bem-vindo ao ChinaFácil',
+      to: ['cilmeia.nogueira@chinafacil.com'],
+      cc: ['thiago.martins@chinafacil.com', 'pedro@chinafacil.com'],
+      subject: 'Novo Lead',
       html,
     })
   }
