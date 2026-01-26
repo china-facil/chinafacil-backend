@@ -36,15 +36,19 @@ export class SolicitationsService {
             name: true,
           },
         },
+        items: true,
+
       },
     })
-
+    
+    
     if (cart && cart.length > 0) {
+      const normalizedCart = cart.map((item: any) => ({ ...item }));
       await this.prisma.cart.create({
         data: {
           userId: createSolicitationDto.userId,
           solicitationId: solicitation.id,
-          items: cart,
+          items: normalizedCart,
           pricingData: pricing_data || null,
         },
       })

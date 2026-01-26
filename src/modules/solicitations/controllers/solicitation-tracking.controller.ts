@@ -47,7 +47,6 @@ export class SolicitationTrackingController {
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: string,
   ) {
-    // Verificar se usuário tem permissão para acessar a solicitação
     if (userRole !== 'admin' && userRole !== 'seller') {
       const solicitation = await this.prisma.solicitation.findUnique({
         where: { id },
@@ -74,7 +73,6 @@ export class SolicitationTrackingController {
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: string,
   ) {
-    // Verificar se usuário tem permissão para acessar a solicitação
     if (userRole !== 'admin' && userRole !== 'seller') {
       const solicitation = await this.prisma.solicitation.findUnique({
         where: { id },
