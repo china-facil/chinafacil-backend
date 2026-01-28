@@ -35,7 +35,7 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Post('cart')
-  @Roles('user', 'admin')
+  @Roles('user', 'admin', 'seller', 'lead')
   @ApiOperation({ summary: 'Criar ou atualizar carrinho' })
   @ApiResponse({ status: 201, description: 'Carrinho criado/atualizado' })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
@@ -46,7 +46,7 @@ export class CartController {
   }
 
   @Get('cart')
-  @Roles('user', 'admin')
+  @Roles('user', 'admin', 'seller', 'lead')
   @ApiOperation({ summary: 'Obter carrinho do usuário' })
   @ApiResponse({ status: 200, description: 'Carrinho do usuário' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
@@ -128,7 +128,7 @@ export class CartController {
   }
 
   @Post('cart/sync')
-  @Roles('user', 'admin')
+  @Roles('user', 'admin', 'seller', 'lead')
   @ApiOperation({ summary: 'Sincronizar carrinho' })
   @ApiResponse({ status: 200, description: 'Carrinho sincronizado' })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
