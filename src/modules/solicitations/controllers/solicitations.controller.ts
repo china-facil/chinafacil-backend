@@ -66,7 +66,6 @@ export class SolicitationsController {
     @CurrentUser('id') userId: string,
     @CurrentUser('role') userRole: string,
   ) {
-    // Se não for admin ou seller, forçar que veja apenas suas próprias solicitações
     if (userRole !== 'admin' && userRole !== 'seller') {
       filterDto.userId = userId
     }
@@ -104,7 +103,6 @@ export class SolicitationsController {
   ) {
     const solicitation = await this.solicitationsService.findOne(id)
     
-    // Se não for admin ou seller, verificar se a solicitação pertence ao usuário
     if (userRole !== 'admin' && userRole !== 'seller') {
       if (solicitation.userId !== userId) {
         throw new ForbiddenException('Você não tem permissão para acessar esta solicitação')

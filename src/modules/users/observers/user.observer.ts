@@ -9,6 +9,7 @@ import { Queue } from 'bull'
 import { PrismaService } from '../../../database/prisma.service'
 import { UserRole } from '@prisma/client'
 import { ProcessSiteLeadJobDto } from '../../../jobs/dto/lead-job.dto'
+import { SendNewUserEmailJobDto } from '../../../jobs/dto/email-job.dto'
 
 @Injectable()
 export class UserObserver implements OnModuleInit {
@@ -18,6 +19,7 @@ export class UserObserver implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     @InjectQueue('lead-queue') private readonly leadQueue: Queue,
+    @InjectQueue('email-queue') private readonly emailQueue: Queue,
   ) {}
 
   onModuleInit() {
@@ -73,6 +75,24 @@ export class UserObserver implements OnModuleInit {
       })
 
       this.logger.log(`✅ Lead processing job queued for: ${user.email}`)
+
+     
+      const emailJobData: SendNewUserEmailJobDto = {
+        email: user.email,
+        name: user.name,
+      }
+
+      await this.emailQueue.add('send-new-user-email', emailJobData, {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      })
+
+      this.logger.log(`✅ New user notification email job queued for: ${user.email}`)
     } catch (error: any) {
       this.logger.error(`❌ Error processing site user: ${error.message}`, error.stack)
     }

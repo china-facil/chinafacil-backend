@@ -1123,15 +1123,8 @@ Retorne **somente um JSON válido** com as chaves "contexto", "descricao", e "co
       throw new BadRequestException('Arquivo não fornecido. Por favor, envie uma imagem.')
     }
 
-    const nodeEnv = this.configService.get<string>('NODE_ENV') || 'development'
-    
-    let imgUrl: string
-    if (nodeEnv === 'development') {
-      imgUrl = 'https://http2.mlstatic.com/D_NQ_NP_2X_866486-MLA99610369246_122025-F.webp'
-    } else {
-      const baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000'
-      imgUrl = `${baseUrl}/uploads/search-images/${file.filename}`
-    }
+    const baseUrl = this.configService.get<string>('APP_URL') || 'http://localhost:3000'
+    const imgUrl = `${baseUrl}/uploads/search-images/${file.filename}`
 
     return {
       imgUrl,

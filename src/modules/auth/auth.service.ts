@@ -91,6 +91,16 @@ export class AuthService {
     switch (role) {
       case 'admin':
         return [{ action: 'manage', subject: 'all' }]
+      case 'sourcer':
+        return [
+          { action: 'read', subject: 'Solicitations' },
+          { action: 'manage', subject: 'Solicitations' },
+          { action: 'read', subject: 'General' },
+          { action: 'read', subject: 'UserProfile' },
+          { action: 'read', subject: 'Auth' },
+          { action: 'read', subject: 'Logout' },
+          { action: 'read', subject: 'AdminDashboard' },
+        ]
       case 'seller':
         return [
           { action: 'read', subject: 'Solicitations' },

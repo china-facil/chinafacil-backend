@@ -127,10 +127,25 @@ jobs:
               echo "Fetching latest changes..."
               git fetch origin main
 
+              echo "Backing up credentials..."
+              if [ -f google_credentials.json ]; then
+                cp google_credentials.json /tmp/google_credentials_backup.json
+                echo "Credentials backed up"
+              fi
+
               echo "Resetting permissions and cleaning..."
               sudo chown -R $(whoami):$(whoami) .
               git clean -fd
               git reset --hard origin/main
+
+              echo "Restoring credentials..."
+              if [ -f /tmp/google_credentials_backup.json ]; then
+                cp /tmp/google_credentials_backup.json google_credentials.json
+                ls -lh google_credentials.json
+                echo "Credentials restored"
+              else
+                echo "WARNING: No backup found!"
+              fi
 
               echo "Building new containers..."
               docker compose -f docker-compose.prod.yml build --no-cache

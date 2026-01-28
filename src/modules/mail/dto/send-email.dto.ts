@@ -9,6 +9,14 @@ export class SendEmailDto {
   @IsNotEmpty()
   to: string | string[]
 
+  @ApiPropertyOptional({
+    example: ['cc@example.com'],
+    description: 'Emails em cópia',
+  })
+  @IsOptional()
+  @IsArray()
+  cc?: string[]
+
   @ApiProperty({
     example: 'Assunto do Email',
     description: 'Assunto',

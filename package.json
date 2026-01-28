@@ -48,6 +48,7 @@
     "@nestjs/passport": "^10.0.3",
     "@nestjs/platform-express": "^10.2.10",
     "@nestjs/schedule": "^6.1.0",
+    "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7.1.16",
     "@nestjs/throttler": "^5.0.1",
     "@prisma/client": "^5.7.1",
