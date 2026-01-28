@@ -89,7 +89,7 @@ describe('UsersService', () => {
       await expect(service.create(createUserDto)).rejects.toThrow(BadRequestException)
     })
 
-    it('deve usar role padrão USER quando não fornecido', async () => {
+    it('deve usar role padrão LEAD quando não fornecido', async () => {
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(null)
       jest.spyOn(prismaService.user, 'create').mockResolvedValue(mockUser as any)
       ;(bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword')
@@ -99,7 +99,7 @@ describe('UsersService', () => {
       expect(prismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            role: UserRole.user,
+            role: UserRole.lead,
           }),
         }),
       )
