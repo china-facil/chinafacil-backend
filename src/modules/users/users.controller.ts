@@ -115,7 +115,7 @@ export class UsersController {
   }
 
   @Get('users/:id')
-  @Roles('admin', 'seller', 'user')
+  @Roles('admin', 'seller', 'user', 'lead')
   @ApiOperation({ summary: 'Obter detalhes de um usuário' })
   @ApiResponse({ status: 200, description: 'Detalhes do usuário' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
@@ -124,7 +124,7 @@ export class UsersController {
   }
 
   @Patch('users/:id')
-  @Roles('admin', 'user')
+  @Roles('admin', 'user', 'seller', 'lead')
   @ApiOperation({ summary: 'Atualizar usuário' })
   @ApiResponse({ status: 200, description: 'Usuário atualizado com sucesso' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
@@ -142,11 +142,12 @@ export class UsersController {
   }
 
   @Patch('users/:id/phone')
-  @Roles('admin', 'user')
+  @Roles('admin', 'user', 'seller', 'lead')
   @ApiOperation({ summary: 'Atualizar telefone do usuário' })
   @ApiResponse({ status: 200, description: 'Telefone atualizado com sucesso' })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   async updatePhone(
     @Param('id') id: string,
@@ -156,7 +157,7 @@ export class UsersController {
   }
 
   @Patch('users/:id/validate-phone')
-  @Roles('admin', 'user')
+  @Roles('admin', 'user', 'seller', 'lead')
   @ApiOperation({ summary: 'Validar telefone do usuário' })
   @ApiResponse({ status: 200, description: 'Telefone validado com sucesso' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })

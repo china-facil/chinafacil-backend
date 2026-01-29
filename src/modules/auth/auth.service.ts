@@ -231,6 +231,9 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10)
 
+    const employees = registerDto.companyData?.employees || registerDto.companyData?.employees_count || null
+    const monthlyBilling = registerDto.companyData?.monthly_billing || registerDto.companyData?.monthlyBilling || null
+
     const user = await this.prisma.user.create({
       data: {
         name: registerDto.name,
@@ -239,6 +242,8 @@ export class AuthService {
         phone: registerDto.phone,
         cnpj: registerDto.cnpj,
         companyData: registerDto.companyData,
+        employees: employees ? String(employees) : null,
+        monthlyBilling: monthlyBilling ? String(monthlyBilling) : null,
         role: UserRole.lead,
         status: UserStatus.active,
       },
