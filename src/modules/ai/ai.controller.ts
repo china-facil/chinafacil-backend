@@ -1,21 +1,32 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
   Query,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common'
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger'
+import { FileInterceptor } from '@nestjs/platform-express'
+import { diskStorage } from 'multer'
+import { existsSync, mkdirSync } from 'fs'
+import { extname } from 'path'
 import { Throttle } from '@nestjs/throttler'
 import { Response } from 'express'
 import { Roles } from '../../common/decorators/roles.decorator'
+import { CurrentUser } from '../../common/decorators/current-user.decorator'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 import { RolesGuard } from '../auth/guards/roles.guard'
 import { AIService } from './ai.service'
@@ -140,22 +151,100 @@ export class AIController {
   }
 
   @Post('concierge/detect-intent')
-  @Roles('admin', 'seller', 'user')
-  @ApiOperation({ summary: 'Detectar intenção do usuário no concierge' })
+  @Roles('admin', 'seller', 'user', 'client')
+  @ApiConsumes('multipart/form-data', 'application/json')
+  @ApiOperation({ summary: 'Detectar intenção do usuário no concierge (com suporte a imagem)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          description: 'Mensagem do usuário para detectar intenção',
+          example: 'busque carregadores',
+        },
+        conversation_history: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              role: { type: 'string' },
+              content: { type: 'string' },
+            },
+          },
+          description: 'Histórico da conversa',
+        },
+        image: {
+          type: 'string',
+          format: 'binary',
+          description: 'Imagem do produto (opcional)',
+        },
+      },
+      required: ['message'],
+    },
+  })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
-  @ApiResponse({ status: 201, description: 'Intenção detectada' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Intenção detectada',
+    schema: {
+      example: {
+        status: 'success',
+        data: {
+          intent: 'product_search',
+          message: 'busque carregadores',
+          imgUrl: 'http://localhost:3000/uploads/search-images/abc123def456.jpg',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 400, description: 'Dados inválidos' })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './public/uploads/search-images'
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true })
+          }
+          cb(null, uploadPath)
+        },
+        filename: (req, file, cb) => {
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('')
+          cb(null, `${randomName}${extname(file.originalname)}`)
+        },
+      }),
+      limits: {
+        fileSize: 10 * 1024 * 1024,
+      },
+      fileFilter: (req, file, cb) => {
+        if (!file) {
+          return cb(null, true)
+        }
+        if (!file.originalname || !file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+          return cb(new BadRequestException('Apenas imagens são permitidas (JPG, JPEG, PNG, GIF ou WEBP)'), false)
+        }
+        cb(null, true)
+      },
+    }),
+  )
   async detectIntent(
     @Body() detectIntentDto: DetectIntentDto,
+    @CurrentUser() user: any,
+    @UploadedFile() image?: Express.Multer.File,
     @Query('provider') provider?: 'openai' | 'anthropic',
   ) {
-    return this.aiService.detectIntent(detectIntentDto, provider)
+    const userId = user?.id || null
+    return this.aiService.detectIntent(detectIntentDto, userId, provider, image)
   }
 
   @Post('concierge/ask')
-  @Roles('admin', 'seller', 'user')
+  @Roles('admin', 'seller', 'user', 'client')
   @ApiOperation({ summary: 'Fazer pergunta ao concierge' })
   @ApiQuery({ name: 'provider', required: false, enum: ['openai', 'anthropic'] })
   @ApiResponse({ status: 201, description: 'Resposta gerada' })
@@ -164,11 +253,12 @@ export class AIController {
   @ApiResponse({ status: 403, description: 'Sem permissão' })
   async askConcierge(
     @Body() conciergeAskDto: ConciergeAskDto,
+    @CurrentUser() user: any,
     @Query('provider') provider?: 'openai' | 'anthropic',
   ) {
-    return this.aiService.askConcierge(conciergeAskDto, provider)
+    const userId = user?.id || null
+    return this.aiService.askConcierge(conciergeAskDto, userId, provider)
   }
-}
 
   @Get('concierge/history')
   @Roles('admin', 'seller', 'user', 'client')

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common'
+import { Injectable, NotFoundException, Logger, BadRequestException, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
 import { Inject } from '@nestjs/common'
@@ -23,6 +23,7 @@ export class ProductsService {
     private readonly tmService: TmService,
     private readonly otService: OtService,
     private readonly normalizer: ProductNormalizerService,
+    @Inject(forwardRef(() => AIService))
     private readonly aiService: AIService,
     private readonly mercadoLivreService: MercadoLivreService,
     private readonly productCatalogService: ProductCatalogService,
@@ -829,15 +830,36 @@ Exemplo de saída:
     return this.productCatalogService.getProductsByCategory(options)
   }
 
-  async searchConcierge(keyword?: string, imageFile?: Express.Multer.File) {
-    if (!keyword && !imageFile) {
-      throw new BadRequestException('O campo de busca ou imagem é obrigatório!')
+  async searchConcierge(keyword?: string, userId?: string | null, imgUrl?: string) {
+    if (!keyword && !imgUrl) {
+      throw new BadRequestException('O campo de busca (keyword) ou URL da imagem (imgUrl) é obrigatório!')
     }
 
+    const question = keyword || 'Busca por imagem'
     let translatedKeyword: string | null = null
     let searchResponse: any
 
-    if (!imageFile) {
+    if (imgUrl) {
+      const imageSearchDto: SearchByImageDto = {
+        imgUrl,
+      }
+
+      searchResponse = await this.searchByImage1688(imageSearchDto)
+      
+      const hasItems = searchResponse.code === 200 && searchResponse.data?.items?.length > 0
+      
+      if (!hasItems) {
+        let attempts = 0
+        while (attempts < 2) {
+          searchResponse = await this.searchByImage1688(imageSearchDto)
+          attempts++
+          const retryHasItems = searchResponse.code === 200 && searchResponse.data?.items && searchResponse.data.items.length > 0
+          if (retryHasItems) {
+            break
+          }
+        }
+      }
+    } else {
       translatedKeyword = await this.translateKeywordToChinese(keyword!)
       if (!translatedKeyword) {
         throw new InternalServerErrorException('Erro ao trazer os resultados. Tente novamente!')
@@ -859,35 +881,6 @@ Exemplo de saída:
           })
           attempts++
           if (searchResponse.code === 200 && searchResponse.data?.items && searchResponse.data.items.length > 0) {
-            break
-          }
-        }
-      }
-    } else {
-      let imageUrl: string
-      if (imageFile.path) {
-        imageUrl = imageFile.path
-      } else if (imageFile.buffer) {
-        imageUrl = `data:${imageFile.mimetype || 'image/jpeg'};base64,${imageFile.buffer.toString('base64')}`
-      } else {
-        throw new BadRequestException('Imagem inválida')
-      }
-
-      const imageSearchDto: SearchByImageDto = {
-        imgUrl: imageUrl,
-      }
-
-      searchResponse = await this.searchByImage1688(imageSearchDto)
-      
-      const hasItems = searchResponse.code === 200 && searchResponse.data?.items?.length > 0
-      
-      if (!hasItems) {
-        let attempts = 0
-        while (attempts < 2) {
-          searchResponse = await this.searchByImage1688(imageSearchDto)
-          attempts++
-          const retryHasItems = searchResponse.code === 200 && searchResponse.data?.items?.length > 0
-          if (retryHasItems) {
             break
           }
         }

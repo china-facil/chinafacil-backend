@@ -1,6 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
+import { PrismaService } from '../../database/prisma.service'
 import { AnthropicService } from '../../integrations/ai-providers/anthropic/anthropic.service'
 import { OpenAIService } from '../../integrations/ai-providers/openai/openai.service'
+import { ProductsService } from '../products/services/products.service'
 import {
   ChatCompletionDto,
   CompletionDto,
@@ -10,6 +13,8 @@ import {
 } from './dto'
 import { ConciergeContexts } from './data/concierge-contexts'
 
+type ConciergeInteractionType = 'company_question' | 'product_search'
+
 @Injectable()
 export class AIService {
   private readonly logger = new Logger(AIService.name)
@@ -17,6 +22,10 @@ export class AIService {
   constructor(
     private readonly openaiService: OpenAIService,
     private readonly anthropicService: AnthropicService,
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => ProductsService))
+    private readonly productsService: ProductsService,
+    private readonly configService: ConfigService,
   ) {}
 
   async completion(completionDto: CompletionDto) {
@@ -63,7 +72,9 @@ export class AIService {
 
   async detectIntent(
     detectIntentDto: DetectIntentDto,
+    userId: string | null,
     provider: 'openai' | 'anthropic' = 'openai',
+    image?: Express.Multer.File,
   ) {
     const message = detectIntentDto.message.trim()
     const conversationHistory = detectIntentDto.conversation_history || []
@@ -72,7 +83,32 @@ export class AIService {
       message,
       history_count: conversationHistory.length,
       history: conversationHistory,
+      hasImage: !!image,
     })
+
+    if (image) {
+      try {
+        const uploadResult = await this.productsService.uploadSearchImage(image)
+        return {
+          status: 'success',
+          data: {
+            intent: 'product_search',
+            message: detectIntentDto.message || 'Busca por imagem',
+            imgUrl: uploadResult.imgUrl,
+          },
+        }
+      } catch (error) {
+        this.logger.error(`Erro ao fazer upload da imagem: ${error.message}`)
+        return {
+          status: 'error',
+          data: {
+            intent: 'product_search',
+            message: detectIntentDto.message || 'Busca por imagem',
+            error: 'Erro ao processar imagem',
+          },
+        }
+      }
+    }
 
     try {
       const intent = await this.detectUserIntent(message, conversationHistory, provider)
@@ -174,6 +210,7 @@ Responda APENAS com: company_question OU product_search`
 
   async askConcierge(
     conciergeAskDto: ConciergeAskDto,
+    userId: string | null,
     provider: 'openai' | 'anthropic' = 'openai',
   ) {
     const question = conciergeAskDto.question.trim()
@@ -185,22 +222,53 @@ Responda APENAS com: company_question OU product_search`
       history: conversationHistory,
     })
 
+    let intent: ConciergeInteractionType = 'company_question'
+    let responseText = ''
+
     try {
-      const response = await this.generateAIResponse(question, conversationHistory, provider)
+      if (userId) {
+        intent = (await this.detectUserIntent(question, conversationHistory, provider)) as ConciergeInteractionType
+      }
+
+      responseText = await this.generateAIResponse(question, conversationHistory, provider)
+
+      if (userId) {
+        await this.saveConciergeInteraction({
+          userId,
+          question: conciergeAskDto.question,
+          answer: responseText,
+          type: intent,
+          products: null,
+        })
+      }
+
       return {
         status: 'success',
         data: {
-          response,
+          response: responseText,
           question: conciergeAskDto.question,
         },
       }
     } catch (error) {
       this.logger.error(`Erro na IA do Concierge: ${error.message}`)
+      const errorResponse = 'Desculpe, não consegui processar sua pergunta no momento. Tente novamente em alguns instantes.'
+
+      if (userId) {
+        await this.saveConciergeInteraction({
+          userId,
+          question: conciergeAskDto.question,
+          answer: errorResponse,
+          type: intent,
+          products: null,
+        }).catch((saveError) => {
+          this.logger.error(`Erro ao salvar interação: ${saveError.message}`)
+        })
+      }
+
       return {
         status: 'error',
         data: {
-          response:
-            'Desculpe, não consegui processar sua pergunta no momento. Tente novamente em alguns instantes.',
+          response: errorResponse,
           question: conciergeAskDto.question,
         },
       }
@@ -402,7 +470,6 @@ CONTEÚDO:
     result = result.replace(/\n{4,}/g, '\n\n\n')
     return result
   }
-}
 
   private async saveConciergeInteraction(data: {
     userId: string

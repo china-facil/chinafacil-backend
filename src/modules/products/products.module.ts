@@ -20,7 +20,7 @@ import { ProductNormalizerService } from './services/normalizers/product-normali
     CacheModule.register(),
     forwardRef(() => ChinaMarketplaceModule),
     MarketplaceModule,
-    AIModule,
+    forwardRef(() => AIModule),
     SettingsModule,
   ],
   controllers: [ProductsController],
