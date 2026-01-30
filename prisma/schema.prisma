@@ -66,6 +66,11 @@ enum NotificationType {
   SUCCESS
 }
 
+enum ConciergeInteractionType {
+  company_question
+  product_search
+}
+
 // enum ExportStatus {
 //   PENDING
 //   PROCESSING
@@ -110,6 +115,7 @@ model User {
   sellerLeads       UserSellerLead[] @relation("Seller")
   leads             UserSellerLead[] @relation("Lead")
   taxCalculations   TaxCalculation[]
+  conciergeInteractions ConciergeInteraction[]
 
   @@map("users")
 }
@@ -497,6 +503,24 @@ model FlagsHomepageCarousel {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("flags_homepage_carousel")
+}
+
+model ConciergeInteraction {
+  id        String                     @id @default(uuid())
+  userId    String                     @map("user_id")
+  question  String                     @db.Text
+  answer    String                     @db.Text
+  products  Json?                      @db.Json
+  type      ConciergeInteractionType
+  createdAt DateTime                   @default(now()) @map("created_at")
+  updatedAt DateTime                   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("concierge_interactions")
 }
 
 

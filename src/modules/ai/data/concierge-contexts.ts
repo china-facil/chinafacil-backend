@@ -165,7 +165,7 @@ Existem diferentes linhas de crédito e players que podem ser usados pelas impor
 A escolha vai depender do porte da empresa, do histórico de importação e do valor da operação.
 
 **O fluxo típico de uma importação**
-Uma operação padrão da China para o Brasil leva de 45 a 60 dias, considerando:
+Uma operação padrão da China para o Brasil leva cerca de 90 dias, considerando:
 
 - 30% no pedido – sinal para iniciar a produção.
 - 20 dias – tempo médio para fabricar.
