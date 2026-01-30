@@ -469,12 +469,6 @@ export class CartService {
   }
 
   async generateReport(data: any, detailed: boolean = false): Promise<Buffer> {
-    this.logger.log('Gerando relatório PDF', {
-      hasData: !!data,
-      detailed,
-      produtosCount: data?.produtos?.length || 0,
-    })
-
     if (!data || !data.produtos || !Array.isArray(data.produtos) || data.produtos.length === 0) {
       throw new NotFoundException('Dados inválidos: produtos não encontrados')
     }

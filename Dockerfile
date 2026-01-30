@@ -1,6 +1,11 @@
 FROM node:22-alpine AS base
 
-RUN apk add --no-cache openssl openssl-dev libc6-compat
+RUN apk add --no-cache \
+  openssl openssl-dev libc6-compat \
+  chromium nss freetype harfbuzz ca-certificates ttf-freefont
+
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
@@ -12,7 +17,6 @@ RUN npm ci
 
 COPY . .
 
-# Copiar credenciais Google se existir
 RUN if [ -f google_credentials.json ]; then \
       echo "Google credentials found and copied"; \
       ls -la google_credentials.json; \
