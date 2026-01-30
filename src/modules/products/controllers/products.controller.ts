@@ -400,34 +400,38 @@ export class ProductsController {
   }
 
   @Post('search/concierge')
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Buscar produtos via concierge (keyword ou imagem)' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiOperation({ summary: 'Buscar produtos via concierge (keyword ou imgUrl)' })
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         keyword: {
           type: 'string',
-          description: 'Palavra-chave para busca (obrigatório se image não for fornecido)',
+          description: 'Palavra-chave para busca (obrigatório se imgUrl não for fornecido)',
           example: 'procure produtos de limpeza para mim',
         },
-        image: {
+        imgUrl: {
           type: 'string',
-          format: 'binary',
-          description: 'Imagem para busca (obrigatório se keyword não for fornecido)',
+          description: 'URL da imagem já enviada (obrigatório se keyword não for fornecido)',
+          example: 'http://localhost:3000/uploads/search-images/abc123def456.jpg',
         },
       },
     },
   })
   @ApiResponse({ status: 200, description: 'Resultados da busca com descrições' })
-  @ApiResponse({ status: 400, description: 'Dados inválidos (keyword ou image obrigatório)' })
+  @ApiResponse({ status: 400, description: 'Dados inválidos (keyword ou imgUrl obrigatório)' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
   @ApiResponse({ status: 500, description: 'Erro interno do servidor' })
-  @UseInterceptors(FileInterceptor('image'))
   async searchConcierge(
     @Body('keyword') keyword?: string,
-    @UploadedFile() image?: Express.Multer.File,
+    @Body('imgUrl') imgUrl?: string,
+    @CurrentUser() user?: any,
   ) {
-    return this.productsService.searchConcierge(keyword || undefined, image)
+    const userId = user?.id || null
+    return this.productsService.searchConcierge(keyword || undefined, userId, imgUrl || undefined)
   }
 
   @Get('shop/info')
