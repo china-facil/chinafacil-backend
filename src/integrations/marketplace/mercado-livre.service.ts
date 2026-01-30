@@ -8,6 +8,7 @@ export class MercadoLivreService {
   private readonly logger = new Logger(MercadoLivreService.name)
   private readonly baseUrl: string
   private accessToken: string | null = null
+  private lastTokenRefresh: Date = new Date()
 
   constructor(
     private readonly httpService: HttpService,
@@ -19,7 +20,7 @@ export class MercadoLivreService {
   }
 
   private async auth(): Promise<string> {
-    if (this.accessToken) {
+    if (this.accessToken && this.lastTokenRefresh > new Date(Date.now() - 14400)) {
       return this.accessToken
     }
 
@@ -40,6 +41,7 @@ export class MercadoLivreService {
       )
 
       this.accessToken = response.data.access_token
+      this.lastTokenRefresh = new Date()
       if (!this.accessToken) {
         throw new Error('Access token não retornado pela API')
       }
