@@ -35,9 +35,13 @@ RUN npm run build
 
 FROM node:22-alpine AS production
 
-RUN apk add --no-cache openssl openssl-dev libc6-compat
+RUN apk add --no-cache \
+  openssl openssl-dev libc6-compat \
+  chromium nss freetype harfbuzz ca-certificates ttf-freefont
 
 ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
@@ -54,5 +58,4 @@ COPY --from=build /app/public ./public
 COPY --from=base /app/google_credentials.json ./google_credentials.json
 
 EXPOSE 3000
-
 CMD ["node", "dist/main.js"]
