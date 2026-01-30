@@ -10,6 +10,7 @@ import { UserRole, UserStatus } from '@prisma/client'
 import * as bcrypt from 'bcrypt'
 import { randomBytes } from 'crypto'
 import { PrismaService } from '../../database/prisma.service'
+import { MailService } from '../mail/mail.service'
 import {
   ForgotPasswordDto,
   LoginDto,
@@ -26,6 +27,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -355,10 +357,18 @@ export class AuthService {
       },
     })
 
+    try {
+      await this.mailService.sendPasswordResetEmail(user.email, resetToken)
+      this.logger.log(`Email de recuperação de senha enviado para ${user.email}`)
+    } catch (error) {
+      this.logger.error(
+        `Erro ao enviar email de recuperação de senha: ${error.message}`,
+      )
+    }
+
     return {
       message:
         'Se o email existir, um link de recuperação será enviado em breve',
-      resetToken,
     }
   }
 
