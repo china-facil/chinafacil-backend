@@ -897,6 +897,25 @@ Exemplo de saída:
     const items = searchResponse.data?.items || []
     const descriptionObject = await this.generateProductDescriptions(items)
 
+    let answerForDatabase: string
+    if (imgUrl) {
+      answerForDatabase = imgUrl
+    } else {
+      answerForDatabase = `Resultados para: '${keyword}'`
+    }
+
+    if (userId) {
+      await this.saveConciergeInteraction({
+        userId,
+        question,
+        answer: answerForDatabase,
+        type: 'product_search',
+        products: items.length > 0 ? items : null,
+      }).catch((error) => {
+        this.logger.error(`Erro ao salvar interação do concierge: ${error.message}`)
+      })
+    }
+
     return {
       status: 'success',
       data: {
@@ -904,6 +923,29 @@ Exemplo de saída:
         items,
         description: descriptionObject,
       },
+    }
+  }
+
+  private async saveConciergeInteraction(data: {
+    userId: string
+    question: string
+    answer: string
+    type: 'company_question' | 'product_search'
+    products: any[] | null
+  }): Promise<void> {
+    try {
+      await (this.prisma as any).conciergeInteraction.create({
+        data: {
+          userId: data.userId,
+          question: data.question,
+          answer: data.answer,
+          type: data.type,
+          products: data.products ? data.products : null,
+        },
+      })
+    } catch (error) {
+      this.logger.error(`Erro ao salvar interação do concierge: ${error.message}`)
+      throw error
     }
   }
 

@@ -404,4 +404,56 @@ CONTEÚDO:
   }
 }
 
+  private async saveConciergeInteraction(data: {
+    userId: string
+    question: string
+    answer: string
+    type: ConciergeInteractionType
+    products: any[] | null
+  }): Promise<void> {
+    try {
+      await (this.prisma as any).conciergeInteraction.create({
+        data: {
+          userId: data.userId,
+          question: data.question,
+          answer: data.answer,
+          type: data.type,
+          products: data.products ? data.products : null,
+        },
+      })
+    } catch (error) {
+      this.logger.error(`Erro ao salvar interação do concierge: ${error.message}`)
+      throw error
+    }
+  }
 
+  async getConciergeHistory(userId: string, limit: number = 50) {
+    try {
+      const interactions = await (this.prisma as any).conciergeInteraction.findMany({
+        where: {
+          userId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: limit,
+        select: {
+          id: true,
+          question: true,
+          answer: true,
+          products: true,
+          type: true,
+          createdAt: true,
+        },
+      })
+
+      return {
+        status: 'success',
+        data: interactions.reverse(),
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao buscar histórico do concierge: ${error.message}`)
+      throw error
+    }
+  }
+}

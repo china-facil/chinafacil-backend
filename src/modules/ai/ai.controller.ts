@@ -170,4 +170,26 @@ export class AIController {
   }
 }
 
+  @Get('concierge/history')
+  @Roles('admin', 'seller', 'user', 'client')
+  @ApiOperation({ summary: 'Buscar histórico de interações do concierge' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Número máximo de interações (padrão: 50)' })
+  @ApiResponse({ status: 200, description: 'Histórico de interações' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  async getConciergeHistory(
+    @CurrentUser() user: any,
+    @Query('limit') limit?: string,
+  ) {
+    const userId = user?.id
+    if (!userId) {
+      return {
+        status: 'error',
+        data: [],
+      }
+    }
 
+    const limitNumber = limit ? parseInt(limit, 10) : 50
+    return this.aiService.getConciergeHistory(userId, limitNumber)
+  }
+}
