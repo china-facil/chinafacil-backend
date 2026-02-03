@@ -130,7 +130,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
     });
 
     if (typeof (global as any).newrelic !== 'undefined') {
-      (global as any).newrelic.noticeError(exception, {
+      const exceptionName =
+        exception instanceof Error
+          ? exception.name
+          : exception instanceof HttpException
+            ? exception.constructor?.name
+            : 'UnknownException';
+
+      const normalizedError = new Error(
+        `[${status}] ${exceptionName} ${request.method} ${request.url} - ${finalMessage}`,
+      );
+      normalizedError.name = `${exceptionName} ${status}`;
+      if (exception instanceof Error && exception.stack) {
+        normalizedError.stack = exception.stack;
+      }
+
+      (global as any).newrelic.noticeError(normalizedError, {
         request: {
           url: request.url,
           method: request.method,
@@ -141,6 +156,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         response: {
           statusCode: status,
           errorResponse: errorResponse,
+        },
+        exception: {
+          name: exceptionName,
+          raw: exception instanceof Error ? exception.message : exception,
         },
         user: userContext,
       });
