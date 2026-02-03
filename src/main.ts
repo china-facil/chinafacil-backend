@@ -8,8 +8,8 @@ import { NestFactory } from '@nestjs/core'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import * as compression from 'compression'
 import helmet from 'helmet'
-import * as Sentry from '@sentry/node'
-import { httpIntegration } from '@sentry/node'
+import * as Sentry from '@sentry/nestjs'
+import { httpIntegration } from '@sentry/nestjs'
 import { AppModule } from './app.module'
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter'
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor'
@@ -29,21 +29,10 @@ async function bootstrap() {
     environment: process.env.NODE_ENV || 'development',
     integrations: [
       httpIntegration(),
+      Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] })
     ],
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    beforeSend(event) {
-
-      if (event.request?.data) {
-
-        if (typeof event.request.data === 'object' && event.request.data !== null) {
-          const data = { ...event.request.data } as any;
-          if (data.password) delete data.password;
-          if (data.confirmPassword) delete data.confirmPassword;
-          event.request.data = data;
-        }
-      }
-      return event;
-    },
+    enableLogs: true,
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.2 : 1.0,
   });
 
   const app = await NestFactory.create(AppModule, {
@@ -116,6 +105,7 @@ async function bootstrap() {
   console.log(`🚀 Application is running on: http://localhost:${port}`)
   console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`)
   console.log(`📋 Logs viewer: http://localhost:${port}/api/logs`)
+  Sentry.logger.info('Server started', { action: 'init_log' })
 }
 
 bootstrap()

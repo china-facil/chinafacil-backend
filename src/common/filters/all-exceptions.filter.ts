@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
-import * as Sentry from '@sentry/node';
+import * as Sentry from '@sentry/nestjs';
 import { RequestWithUser } from '../interfaces/request-with-user.interface';
 
 @Catch()
