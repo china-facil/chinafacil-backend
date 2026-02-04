@@ -46,6 +46,10 @@ describe('AuthService', () => {
               findUnique: jest.fn(),
               create: jest.fn(),
             },
+            favoriteProduct: {
+              findMany: jest.fn(),
+            },
+            $queryRaw: jest.fn(),
           },
         },
         {
@@ -137,17 +141,18 @@ describe('AuthService', () => {
       jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue(mockUser as any)
       ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
       jest.spyOn(jwtService, 'sign').mockReturnValue('mock-token')
+      jest.spyOn(prismaService.favoriteProduct, 'findMany').mockResolvedValue([] as any)
+      jest.spyOn(prismaService, '$queryRaw').mockRejectedValue(new Error('no abilities table'))
 
       const result = await service.login({
         email: 'test@example.com',
         password: 'password123',
       })
 
-      expect(result).toHaveProperty('accessToken')
-      expect(result).toHaveProperty('refreshToken')
-      expect(result).toHaveProperty('user')
-      expect(result).toHaveProperty('tokenType', 'Bearer')
-      expect(jwtService.sign).toHaveBeenCalledTimes(2)
+      expect(result).toHaveProperty('token', 'mock-token')
+      expect(result).toHaveProperty('data')
+      expect(result.data).toHaveProperty('id', mockUser.id)
+      expect(jwtService.sign).toHaveBeenCalledTimes(1)
     })
 
     it('deve lançar exceção quando credenciais são inválidas', async () => {
@@ -168,8 +173,6 @@ describe('AuthService', () => {
       email: 'newuser@example.com',
       password: 'password123',
       phone: '11999999999',
-      cnpj: null,
-      companyData: null,
     }
 
     it('deve criar novo usuário com sucesso', async () => {

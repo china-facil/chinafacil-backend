@@ -16,9 +16,7 @@ describe('UserAddressService', () => {
     neighborhood: 'Centro',
     city: 'São Paulo',
     state: 'SP',
-    zipCode: '01234567',
-    country: 'Brasil',
-    isDefault: false,
+    postalCode: '01234567',
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -26,12 +24,10 @@ describe('UserAddressService', () => {
   const createAddressDto = {
     street: 'Rua Nova',
     number: '456',
-    complement: null,
     neighborhood: 'Jardim',
     city: 'São Paulo',
     state: 'SP',
-    zipCode: '01234567',
-    country: 'Brasil',
+    postalCode: '01234567',
   }
 
   beforeEach(async () => {
@@ -49,6 +45,10 @@ describe('UserAddressService', () => {
               update: jest.fn(),
               updateMany: jest.fn(),
               delete: jest.fn(),
+            },
+            user: {
+              findUnique: jest.fn(),
+              update: jest.fn(),
             },
             $transaction: jest.fn(),
           },
@@ -70,18 +70,21 @@ describe('UserAddressService', () => {
       jest.spyOn(prismaService.userAddress, 'create').mockResolvedValue({
         ...mockAddress,
         ...createAddressDto,
-        isDefault: true,
       } as any)
+      jest.spyOn(prismaService.user, 'update').mockResolvedValue({} as any)
 
       const result = await service.create('user-123', createAddressDto)
 
-      expect(result.isDefault).toBe(true)
+      expect(result).toEqual(expect.objectContaining(createAddressDto))
       expect(prismaService.userAddress.create).toHaveBeenCalledWith({
         data: {
           ...createAddressDto,
           userId: 'user-123',
-          isDefault: true,
         },
+      })
+      expect(prismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+        data: { defaultAddress: 'address-123' },
       })
     })
 
@@ -90,39 +93,41 @@ describe('UserAddressService', () => {
       jest.spyOn(prismaService.userAddress, 'create').mockResolvedValue({
         ...mockAddress,
         ...createAddressDto,
-        isDefault: false,
       } as any)
 
       const result = await service.create('user-123', createAddressDto)
 
-      expect(result.isDefault).toBe(false)
+      expect(result).toEqual(expect.objectContaining(createAddressDto))
       expect(prismaService.userAddress.create).toHaveBeenCalledWith({
         data: {
           ...createAddressDto,
           userId: 'user-123',
-          isDefault: false,
         },
       })
+      expect(prismaService.user.update).not.toHaveBeenCalled()
     })
   })
 
   describe('findAll', () => {
     it('deve retornar lista de endereços ordenados por padrão primeiro', async () => {
       const addresses = [
-        { ...mockAddress, isDefault: false },
-        { ...mockAddress, id: 'address-456', isDefault: true },
+        { ...mockAddress },
+        { ...mockAddress, id: 'address-456' },
       ]
+      jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue({
+        defaultAddress: 'address-456',
+      } as any)
       jest.spyOn(prismaService.userAddress, 'findMany').mockResolvedValue(addresses as any)
 
       const result = await service.findAll('user-123')
 
       expect(result).toHaveLength(2)
+      expect(result[0].id).toBe('address-456')
       expect(prismaService.userAddress.findMany).toHaveBeenCalledWith({
         where: { userId: 'user-123' },
-        orderBy: [
-          { isDefault: 'desc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: {
+          createdAt: 'desc',
+        },
       })
     })
   })
@@ -183,17 +188,12 @@ describe('UserAddressService', () => {
 
   describe('remove', () => {
     it('deve remover endereço e definir próximo como padrão se removido era padrão', async () => {
-      const defaultAddress = { ...mockAddress, isDefault: true }
-      const nextAddress = { ...mockAddress, id: 'address-456', isDefault: false }
-
-      jest.spyOn(prismaService.userAddress, 'findFirst')
-        .mockResolvedValueOnce(defaultAddress as any)
-        .mockResolvedValueOnce(nextAddress as any)
-      jest.spyOn(prismaService.userAddress, 'delete').mockResolvedValue({} as any)
-      jest.spyOn(prismaService.userAddress, 'update').mockResolvedValue({
-        ...nextAddress,
-        isDefault: true,
+      jest.spyOn(prismaService.userAddress, 'findFirst').mockResolvedValue(mockAddress as any)
+      jest.spyOn(prismaService.user, 'findUnique').mockResolvedValue({
+        defaultAddress: 'address-123',
       } as any)
+      jest.spyOn(prismaService.userAddress, 'delete').mockResolvedValue({} as any)
+      jest.spyOn(prismaService.user, 'update').mockResolvedValue({} as any)
 
       const result = await service.remove('address-123', 'user-123')
 
@@ -201,9 +201,9 @@ describe('UserAddressService', () => {
       expect(prismaService.userAddress.delete).toHaveBeenCalledWith({
         where: { id: 'address-123' },
       })
-      expect(prismaService.userAddress.update).toHaveBeenCalledWith({
-        where: { id: 'address-456' },
-        data: { isDefault: true },
+      expect(prismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+        data: { defaultAddress: null },
       })
     })
 
@@ -229,19 +229,15 @@ describe('UserAddressService', () => {
   describe('setDefault', () => {
     it('deve definir endereço como padrão e remover padrão dos outros', async () => {
       jest.spyOn(prismaService.userAddress, 'findFirst').mockResolvedValue(mockAddress as any)
-      jest.spyOn(prismaService, '$transaction').mockImplementation(async (callback: any) => {
-        return callback({
-          userAddress: {
-            updateMany: jest.fn().mockResolvedValue({}),
-            update: jest.fn().mockResolvedValue({ ...mockAddress, isDefault: true }),
-          },
-        })
-      })
+      jest.spyOn(prismaService.user, 'update').mockResolvedValue({} as any)
 
       const result = await service.setDefault('address-123', 'user-123')
 
       expect(result.message).toBe('Endereço padrão atualizado com sucesso')
-      expect(prismaService.$transaction).toHaveBeenCalled()
+      expect(prismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-123' },
+        data: { defaultAddress: 'address-123' },
+      })
     })
 
     it('deve lançar exceção quando endereço não encontrado', async () => {

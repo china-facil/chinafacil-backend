@@ -114,10 +114,11 @@ describe('UsersService', () => {
 
       const result = await service.findAll({ page: 1, limit: 10 })
 
-      expect(result.data).toHaveLength(1)
-      expect(result.meta.total).toBe(1)
-      expect(result.meta.page).toBe(1)
-      expect(result.meta.limit).toBe(10)
+      expect(result.status).toBe('success')
+      expect(result.data.data).toHaveLength(1)
+      expect(result.data.total).toBe(1)
+      expect(result.data.current_page).toBe(1)
+      expect(result.data.per_page).toBe(10)
     })
 
     it('deve filtrar por search', async () => {
@@ -163,6 +164,7 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser)
       expect(prismaService.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-123' },
+        select: expect.any(Object),
       })
     })
 
@@ -222,13 +224,12 @@ describe('UsersService', () => {
 
   describe('findLeads', () => {
     it('deve retornar apenas usuários com role USER', async () => {
-      const leads = [{ ...mockUser, role: UserRole.USER }]
+      const leads = [{ ...mockUser, role: UserRole.user }]
       jest.spyOn(prismaService.user, 'findMany').mockResolvedValue(leads as any)
-      jest.spyOn(prismaService.user, 'count').mockResolvedValue(1)
 
-      const result = await service.findLeads({ page: 1, limit: 10 })
+      const result = await service.findLeads()
 
-      expect(result.data).toHaveLength(1)
+      expect(result).toHaveLength(1)
       expect(prismaService.user.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({

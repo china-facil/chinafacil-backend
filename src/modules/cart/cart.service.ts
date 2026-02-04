@@ -12,6 +12,58 @@ export class CartService {
     private readonly cartPdfService: CartPdfService,
   ) {}
 
+  private normalizeCartItems(items: unknown): any[] {
+    if (!items) return []
+
+    const parsed: unknown = (() => {
+      if (typeof items !== 'string') return items
+      try {
+        return JSON.parse(items)
+      } catch {
+        return []
+      }
+    })()
+
+    if (!Array.isArray(parsed)) return []
+
+    const isArrayItem = (value: any) => {
+      if (!Array.isArray(value)) return false
+      const maybeId = (value as any)?.id ?? (value as any)?.productId
+      return maybeId !== undefined && maybeId !== null
+    }
+
+    const flatten = (root: any[]): any[] => {
+      const out: any[] = []
+      const stack: any[] = [...root]
+      while (stack.length) {
+        const value = stack.shift()
+        if (Array.isArray(value) && !isArrayItem(value)) {
+          stack.unshift(...value)
+          continue
+        }
+        out.push(value)
+      }
+      return out
+    }
+
+    return flatten(parsed)
+      .map((value) => {
+        if (!value || typeof value !== 'object') return null
+        if (isArrayItem(value)) {
+          const entries = Object.entries(value as any).filter(([k]) => !/^\d+$/.test(k))
+          return Object.fromEntries(entries)
+        }
+        return value
+      })
+      .filter((value) => value && typeof value === 'object' && !Array.isArray(value))
+      .map((item) => ({ ...(item as any) }))
+  }
+
+  private getCartItemKey(item: any): string {
+    const key = item?.id ?? item?.productId
+    return key === null || key === undefined ? '' : String(key)
+  }
+
   async create(userId: string, createCartDto: CreateCartDto) {
     const existingCart = await this.prisma.cart.findFirst({
       where: { userId },
@@ -20,7 +72,6 @@ export class CartService {
     if (existingCart) {
       return this.update(existingCart.id, createCartDto)
     }
-
     const cart = await this.prisma.cart.create({
       data: {
         userId,
@@ -229,12 +280,15 @@ export class CartService {
 
     // Cria mapa dos itens do backend
     for (const item of backendItems) {
-      backendMap.set(item.id, item)
+      const key = this.getCartItemKey(item)
+      if (!key) continue
+      backendMap.set(key, item)
     }
 
     // Processa itens locais
     for (const localItem of localItems) {
-      const productId = localItem.id
+      const productId = this.getCartItemKey(localItem)
+      if (!productId) continue
 
       if (backendMap.has(productId)) {
         // Item existe no backend - estratégia depende do tipo de sync
@@ -344,13 +398,14 @@ export class CartService {
   }
 
   async sync(userId: string, syncCartDto: SyncCartDto) {
-    const localCart = syncCartDto.local_cart || []
-    const syncType = syncCartDto.sync_type || 'update'
-
-    this.logger.debug(`Sincronizando carrinho para usuário ${userId}`, {
-      localCartCount: localCart.length,
-      syncType,
-    })
+    const localCart = this.normalizeCartItems(syncCartDto.local_cart)
+    const rawSyncType = typeof syncCartDto.sync_type === 'string' ? syncCartDto.sync_type : 'update'
+    const normalizedSyncType = rawSyncType.trim().toLowerCase()
+    const syncType = (['initial', 'update', 'delete'] as const).includes(
+      normalizedSyncType as any,
+    )
+      ? normalizedSyncType
+      : 'update'
 
     // Buscar carrinho no backend (sem solicitation_id)
     const backendCart = await this.prisma.cart.findFirst({
@@ -377,7 +432,7 @@ export class CartService {
           data: {
             id: newCart.id,
             user_id: newCart.userId,
-            items: newCart.items,
+            items: this.normalizeCartItems(newCart.items),
           },
           message: 'Carrinho sincronizado com sucesso',
         }
@@ -397,15 +452,7 @@ export class CartService {
     }
 
     // Há carrinho no backend
-    const backendItems = Array.isArray(backendCart.items)
-      ? backendCart.items
-      : []
-
-    this.logger.debug('Mesclando carrinho existente', {
-      backendItemsCount: backendItems.length,
-      localCartCount: localCart.length,
-      syncType,
-    })
+    const backendItems = this.normalizeCartItems(backendCart.items)
 
     if (localCart.length === 0) {
       // Carrinho local vazio
@@ -430,7 +477,6 @@ export class CartService {
         }
       } else {
         // Mantém carrinho do backend
-        this.logger.debug('Mantendo carrinho do backend (initial/update)')
         return {
           status: 'success',
           data: {
@@ -446,10 +492,6 @@ export class CartService {
     // Mesclar itens
     const mergedItems = this.mergeCartItems(localCart, backendItems, syncType)
 
-    this.logger.debug('Itens mesclados', {
-      mergedItemsCount: mergedItems.length,
-    })
-
     const updatedCart = await this.prisma.cart.update({
       where: { id: backendCart.id },
       data: {
@@ -462,7 +504,7 @@ export class CartService {
       data: {
         id: updatedCart.id,
         user_id: updatedCart.userId,
-        items: Array.isArray(updatedCart.items) ? updatedCart.items : [],
+        items: this.normalizeCartItems(updatedCart.items),
       },
       message: 'Carrinho sincronizado com sucesso',
     }
