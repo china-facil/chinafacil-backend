@@ -34,6 +34,7 @@ import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
 import { LogsModule } from './common/logs/logs.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
+import { AdminLogsModule } from './modules/admin-logs/admin-logs.module';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
     CliModule,
     LogsModule,
     FeatureFlagsModule,
+    AdminLogsModule,
   ],
   providers: [
     {

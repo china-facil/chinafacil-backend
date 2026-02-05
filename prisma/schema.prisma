@@ -124,6 +124,7 @@ model User {
   leads                    UserSellerLead[] @relation("Lead")
   taxCalculations          TaxCalculation[]
   conciergeInteractions    ConciergeInteraction[]
+  adminLogs                AdminLog[]
 
   @@index([sellerId])
   @@map("users")
@@ -545,6 +546,28 @@ model Seller {
   users User[] @relation("SellerClients")
 
   @@map("sellers")
+}
+
+enum AdminActionType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model AdminLog {
+  id        String          @id @default(uuid())
+  adminId   String          @map("admin_id")
+  action    AdminActionType
+  resource  String
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([resource])
+  @@index([action])
+  @@map("admin_logs")
 }
 
 
