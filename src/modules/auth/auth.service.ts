@@ -377,10 +377,16 @@ export class AuthService {
       )
     }
 
-    return {
+    const response: any = {
       message:
         'Se o email existir, um link de recuperação será enviado em breve',
     }
+
+    if (process.env.NODE_ENV === 'test') {
+      response.resetToken = resetToken
+    }
+
+    return response
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {

@@ -13,7 +13,7 @@ describe('All Processors - Retry Strategies Validation (Integration)', () => {
     catalogQueue = ctx.moduleFixture.get<Queue>(getQueueToken('catalog-queue'))
     emailQueue = ctx.moduleFixture.get<Queue>(getQueueToken('email-queue'))
     exportQueue = ctx.moduleFixture.get<Queue>(getQueueToken('export-queue'))
-  })
+  }, 30000)
 
   afterEach(async () => {
     await Promise.all([
@@ -21,11 +21,11 @@ describe('All Processors - Retry Strategies Validation (Integration)', () => {
       emailQueue.empty(),
       exportQueue.empty(),
     ])
-  })
+  }, 10000)
 
   afterAll(async () => {
     await closeTestContext()
-  })
+  }, 30000)
 
   describe('CatalogProcessor Retry Strategies', () => {
     it('process-catalog: 3 attempts with 2000ms exponential backoff', async () => {

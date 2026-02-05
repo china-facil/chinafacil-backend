@@ -43,13 +43,14 @@ describe('Solicitation Tracking API (Integration)', () => {
     it('should get solicitation status history successfully', async () => {
       const res = await ctx.authReq.get(`/api/trecking/solicitation/${solicitationId}`)
       expect(res.status).toBe(200)
-      expect(Array.isArray(res.body)).toBe(true)
+      expect(res.body).toHaveProperty('data')
+      expect(Array.isArray(res.body.data)).toBe(true)
       
-      if (res.body.length > 0) {
-        expect(res.body[0]).toHaveProperty('complete_status')
-        expect(res.body[0]).toHaveProperty('step')
-        expect(res.body[0]).toHaveProperty('status')
-        expect(res.body[0]).toHaveProperty('status_text')
+      if (res.body.data.length > 0) {
+        expect(res.body.data[0]).toHaveProperty('complete_status')
+        expect(res.body.data[0]).toHaveProperty('step')
+        expect(res.body.data[0]).toHaveProperty('status')
+        expect(res.body.data[0]).toHaveProperty('status_text')
       }
     })
 
@@ -66,9 +67,10 @@ describe('Solicitation Tracking API (Integration)', () => {
       })
       
       expect(res.status).toBe(201)
-      expect(Array.isArray(res.body)).toBe(true)
-      expect(res.body[0]).toHaveProperty('complete_status')
-      expect(res.body[0].complete_status).toBe('step1:analyzing_costs_logistics')
+      expect(res.body).toHaveProperty('data')
+      expect(Array.isArray(res.body.data)).toBe(true)
+      expect(res.body.data[0]).toHaveProperty('complete_status')
+      expect(res.body.data[0].complete_status).toBe('step1:analyzing_costs_logistics')
     })
 
     it('should add status with deadline successfully', async () => {
@@ -81,7 +83,9 @@ describe('Solicitation Tracking API (Integration)', () => {
       })
       
       expect(res.status).toBe(201)
-      expect(res.body[0].end_date).toBeDefined()
+      expect(res.body).toHaveProperty('data')
+      expect(Array.isArray(res.body.data)).toBe(true)
+      expect(res.body.data[0].end_date).toBeDefined()
     })
 
     it('should return 400 when trying to go back to previous step', async () => {
@@ -127,11 +131,14 @@ describe('Solicitation Tracking API (Integration)', () => {
       for (const status of statuses) {
         const res = await ctx.authReq.post(`/api/trecking/solicitation/${newSolId}`).send({ status })
         expect(res.status).toBe(201)
-        expect(res.body[0].complete_status).toBe(status)
+        expect(res.body).toHaveProperty('data')
+        expect(Array.isArray(res.body.data)).toBe(true)
+        expect(res.body.data[0].complete_status).toBe(status)
       }
 
       const historyRes = await ctx.authReq.get(`/api/trecking/solicitation/${newSolId}`)
-      expect(historyRes.body.length).toBeGreaterThanOrEqual(statuses.length + 1)
+      expect(historyRes.body).toHaveProperty('data')
+      expect(historyRes.body.data.length).toBeGreaterThanOrEqual(statuses.length + 1)
     })
   })
 })
