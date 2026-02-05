@@ -488,6 +488,19 @@ export class ProductsService {
     const providerValue = provider === 'alibaba' ? 'alibaba' : '1688'
     const currency = product.currency || (provider === 'alibaba' ? 'USD' : 'CNY')
 
+    const salesVolume90Days = product.sale_quantity_90days ?? product.salesVolume90Days ?? product.salesQuantity ?? null
+    const categoryId = product.category_id ?? product.categoryId ?? null
+    const quantityPrices = product.quantity_prices ?? product.quantityRanges ?? null
+    const hasQuantityPrices = Array.isArray(quantityPrices) && quantityPrices.length > 0
+    
+    const videoUrl = product.video_url ?? product.videoUrl ?? null
+    const videos = videoUrl ? [videoUrl] : (product.videos && product.videos.length > 0 ? product.videos : null)
+    
+    const shippingInfo = product.delivery_info ?? product.shippingInfo ?? null
+    const supplierLocation = product.supplier?.location
+    const deliveryLocation = product.delivery_info?.location
+    const locationValue = (supplierLocation && typeof supplierLocation === 'string' && supplierLocation.trim()) || (deliveryLocation && typeof deliveryLocation === 'string' && deliveryLocation.trim()) || null
+
     return {
       userId,
       itemId,
@@ -497,26 +510,60 @@ export class ProductsService {
       price: product.price ? Number(product.price) : null,
       currency,
       minimumOrderQuantity: product.minimumOrder || product.firstLotQuantity || null,
-      quantityPrices: product.quantityRanges && product.quantityRanges.length > 0 ? product.quantityRanges : null,
-      salesVolume: product.salesQuantity || null,
-      salesVolume90Days: product.salesVolume90Days || product.salesQuantity || null,
-      categoryId: product.categoryId || null,
+      quantityPrices: hasQuantityPrices ? quantityPrices : null,
+      salesVolume: product.salesQuantity !== undefined && product.salesQuantity !== null ? Number(product.salesQuantity) : null,
+      salesVolume90Days: salesVolume90Days !== null ? Number(salesVolume90Days) : null,
+      categoryId: categoryId ? String(categoryId) : null,
       vendorId: product.supplier?.id || null,
       vendorName: product.supplier?.name || null,
       vendorInfo: product.supplier || null,
       mainImage: product.imageUrl || null,
       images: product.images && product.images.length > 0 ? product.images : null,
-      videos: product.videos && product.videos.length > 0 ? product.videos : null,
-      variations: product.skuProps && product.skuProps.length > 0 ? product.skuProps : null,
+      videos,
+      variations: product.sku_props && product.sku_props.length > 0 ? product.sku_props : (product.skuProps && product.skuProps.length > 0 ? product.skuProps : null),
       skus: product.skus && product.skus.length > 0 ? product.skus : null,
-      specifications: product.specifications && product.specifications.length > 0 ? product.specifications : null,
+      specifications: this.normalizeSpecificationsForFavorite(product.specifications, product.product_props),
       stock: product.stock || null,
-      isAvailable: product.isSoldOut !== undefined ? !product.isSoldOut : true,
+      isAvailable: product.is_sold_out !== undefined ? !product.is_sold_out : (product.isSoldOut !== undefined ? !product.isSoldOut : true),
       provider: providerValue,
-      shippingInfo: product.shippingInfo || null,
-      location: product.supplier?.location ? { location: product.supplier.location } : null,
+      shippingInfo,
+      location: locationValue ? { location: locationValue } : null,
       promotions: product.promotions || null,
     }
+  }
+
+  private normalizeSpecificationsForFavorite(specifications: any, productProps: any): any[] | null {
+    if (specifications && Array.isArray(specifications) && specifications.length > 0) {
+      return specifications
+    }
+
+    if (productProps && Array.isArray(productProps) && productProps.length > 0) {
+      const normalized = productProps.map((prop: any) => {
+        if (typeof prop === 'object' && prop !== null) {
+          const keys = Object.keys(prop)
+          if (keys.length > 0) {
+            return {
+              name: keys[0],
+              value: prop[keys[0]],
+            }
+          }
+        }
+        if (prop.name && prop.value) {
+          return prop
+        }
+        if (prop.prop_name && prop.prop_value) {
+          return {
+            name: prop.prop_name,
+            value: prop.prop_value,
+          }
+        }
+        return null
+      }).filter(Boolean)
+
+      return normalized.length > 0 ? normalized : null
+    }
+
+    return null
   }
 
   async removeFromFavorites(userId: string, productId: string) {
