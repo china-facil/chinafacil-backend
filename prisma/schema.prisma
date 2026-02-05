@@ -71,6 +71,11 @@ enum ConciergeInteractionType {
   product_search
 }
 
+enum SellerStatus {
+  active
+  inactive
+}
+
 // enum ExportStatus {
 //   PENDING
 //   PROCESSING
@@ -102,21 +107,25 @@ model User {
   companyData     Json?        @map("company_data")
   emailVerifiedAt DateTime?    @map("email_verified_at")
   defaultAddress  String?      @map("default_address")
+  sellerId        String?      @map("seller_id")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  solicitations     Solicitation[]
-  solicitationItems SolicitationItem[]
-  solicitationTracks SolicitationTrack[]
-  addresses         UserAddress[]
-  favorites         FavoriteProduct[]
-  clientUsers       ClientUser[]
-  subscription      Subscription?
-  sellerLeads       UserSellerLead[] @relation("Seller")
-  leads             UserSellerLead[] @relation("Lead")
-  taxCalculations   TaxCalculation[]
-  conciergeInteractions ConciergeInteraction[]
+  seller                  Seller?                  @relation("SellerClients", fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerProfile           Seller?                  @relation("SellerProfile")
+  solicitations            Solicitation[]
+  solicitationItems        SolicitationItem[]
+  solicitationTracks       SolicitationTrack[]
+  addresses                UserAddress[]
+  favorites                FavoriteProduct[]
+  clientUsers              ClientUser[]
+  subscription             Subscription?
+  sellerLeads              UserSellerLead[] @relation("Seller")
+  leads                    UserSellerLead[] @relation("Lead")
+  taxCalculations          TaxCalculation[]
+  conciergeInteractions    ConciergeInteraction[]
 
+  @@index([sellerId])
   @@map("users")
 }
 
@@ -521,6 +530,21 @@ model ConciergeInteraction {
   @@index([userId, createdAt])
   @@index([type])
   @@map("concierge_interactions")
+}
+
+model Seller {
+  id        String       @id @default(uuid())
+  userId    String       @unique @map("user_id")
+  name      String
+  email     String       @unique
+  status    SellerStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user  User   @relation("SellerProfile", fields: [userId], references: [id], onDelete: Cascade)
+  users User[] @relation("SellerClients")
+
+  @@map("sellers")
 }
 
 

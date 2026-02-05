@@ -10,6 +10,7 @@ import {
   CreateUserDto,
   FilterUserDto,
   UpdatePhoneDto,
+  UpdateSellerDto,
   UpdateUserDto,
 } from './dto'
 
@@ -129,6 +130,7 @@ export class UsersService {
           monthlyBilling: true,
           cnpj: true,
           emailVerifiedAt: true,
+          sellerId: true,
           createdAt: true,
           updatedAt: true,
           subscription: {
@@ -344,6 +346,48 @@ export class UsersService {
     return updatedUser
   }
 
+  async updateSeller(id: string, updateSellerDto: UpdateSellerDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+    })
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado')
+    }
+
+    if (updateSellerDto.sellerId !== null && updateSellerDto.sellerId !== undefined) {
+      const seller = await this.prisma.seller.findUnique({
+        where: { id: updateSellerDto.sellerId },
+      })
+
+      if (!seller) {
+        throw new BadRequestException('Vendedor não encontrado')
+      }
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id },
+      data: {
+        sellerId: updateSellerDto.sellerId === null ? null : updateSellerDto.sellerId,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        sellerId: true,
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    })
+
+    return updatedUser
+  }
+
   async updateAvatar(id: string, avatarUrl: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -387,6 +431,18 @@ export class UsersService {
         clientUsers: {
           include: {
             client: true,
+          },
+        },
+        sellerProfile: {
+          select: {
+            id: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
       },
@@ -439,6 +495,8 @@ export class UsersService {
         favorites: favoritesIds,
         employees: user.employees || null,
         monthly_billing: user.monthlyBilling || null,
+        isSeller: !!user.sellerProfile,
+        seller: user.seller || null,
       },
     }
   }

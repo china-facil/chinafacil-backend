@@ -231,6 +231,16 @@ export class AuthService {
       throw new BadRequestException('Email já cadastrado')
     }
 
+    if (registerDto.sellerId) {
+      const seller = await this.prisma.seller.findUnique({
+        where: { id: registerDto.sellerId },
+      })
+
+      if (!seller) {
+        throw new BadRequestException('Vendedor não encontrado')
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(registerDto.password, 10)
 
     const employees = registerDto.companyData?.employees || registerDto.companyData?.employees_count || null
@@ -246,6 +256,7 @@ export class AuthService {
         companyData: registerDto.companyData,
         employees: employees ? String(employees) : null,
         monthlyBilling: monthlyBilling ? String(monthlyBilling) : null,
+        sellerId: registerDto.sellerId || null,
         role: UserRole.lead,
         status: UserStatus.active,
       },
@@ -475,6 +486,18 @@ export class AuthService {
             client: true,
           },
         },
+        sellerProfile: {
+          select: {
+            id: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     })
 
@@ -482,6 +505,10 @@ export class AuthService {
       throw new UnauthorizedException('Usuário não encontrado')
     }
 
-    return user
+    return {
+      ...user,
+      isSeller: !!user.sellerProfile,
+      sellerProfile: undefined,
+    }
   }
 }

@@ -55,5 +55,13 @@ export class RegisterDto {
   })
   @IsOptional()
   companyData?: any
+
+  @ApiPropertyOptional({
+    example: 'seller-uuid',
+    description: 'ID do vendedor que atendeu o cliente',
+  })
+  @IsOptional()
+  @IsString()
+  sellerId?: string
 }
 

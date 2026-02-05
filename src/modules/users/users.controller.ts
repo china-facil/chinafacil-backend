@@ -32,6 +32,7 @@ import {
   CreateUserDto,
   FilterUserDto,
   UpdatePhoneDto,
+  UpdateSellerDto,
   UpdateUserDto,
 } from './dto'
 import { UsersService } from './users.service'
@@ -61,12 +62,17 @@ export class UsersController {
     description: 'Dados do usuário',
     schema: {
       example: {
-        id: 'user-uuid',
-        email: 'usuario@example.com',
-        name: 'João Silva',
-        phone: '11999999999',
-        role: 'user',
-        createdAt: '2024-01-01T00:00:00.000Z',
+        status: 'success',
+        data: {
+          id: 'user-uuid',
+          email: 'usuario@example.com',
+          name: 'João Silva',
+          phone: '11999999999',
+          role: 'user',
+          isSeller: false,
+          seller: null,
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
       },
     },
   })
@@ -164,6 +170,21 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
   async validatePhone(@Param('id') id: string) {
     return this.usersService.validatePhone(id)
+  }
+
+  @Patch('users/:id/seller')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Atualizar vendedor vinculado ao usuário' })
+  @ApiResponse({ status: 200, description: 'Vendedor atualizado com sucesso' })
+  @ApiResponse({ status: 400, description: 'Vendedor não encontrado' })
+  @ApiResponse({ status: 401, description: 'Não autenticado' })
+  @ApiResponse({ status: 403, description: 'Sem permissão' })
+  @ApiResponse({ status: 404, description: 'Usuário não encontrado' })
+  async updateSeller(
+    @Param('id') id: string,
+    @Body() updateSellerDto: UpdateSellerDto,
+  ) {
+    return this.usersService.updateSeller(id, updateSellerDto)
   }
 
   @Post('users/:id/avatar')

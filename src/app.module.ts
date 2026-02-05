@@ -16,6 +16,7 @@ import { ProxyModule } from './modules/proxy/proxy.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
 import { ClientsModule } from './modules/clients/clients.module';
+import { SellersModule } from './modules/sellers/sellers.module';
 import { SolicitationsModule } from './modules/solicitations/solicitations.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
@@ -89,6 +90,7 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
     AuthModule,
     UsersModule,
     ClientsModule,
+    SellersModule,
     PlansModule,
     SettingsModule,
     SolicitationsModule,
