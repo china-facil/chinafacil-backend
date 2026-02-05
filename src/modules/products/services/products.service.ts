@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, Logger, BadRequestException, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common'
 import { CACHE_MANAGER } from '@nestjs/cache-manager'
 import { Cache } from 'cache-manager'
-import { Inject } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { HttpService } from '@nestjs/axios'
 import { firstValueFrom } from 'rxjs'
