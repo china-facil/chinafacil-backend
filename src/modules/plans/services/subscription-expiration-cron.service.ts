@@ -30,4 +30,27 @@ export class SubscriptionExpirationCronService {
       )
     }
   }
+
+  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  async handleExpiringSubscriptions() {
+    this.logger.log('Iniciando verificação de assinaturas próximas de expirar...')
+
+    try {
+      const result = await this.subscriptionsService.notifyExpiringSubscriptions()
+
+      if (result.processedCount === 0) {
+        this.logger.log('Nenhuma assinatura próxima de expirar encontrada.')
+        return
+      }
+
+      this.logger.log(
+        `Processamento concluído: ${result.processedCount} notificações de expiração criadas com sucesso, ${result.errorCount} erros.`,
+      )
+    } catch (error: any) {
+      this.logger.error(
+        `Erro ao processar assinaturas próximas de expirar: ${error.message}`,
+        error.stack,
+      )
+    }
+  }
 }
