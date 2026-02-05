@@ -107,7 +107,32 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obter dados do usuário autenticado' })
-  @ApiResponse({ status: 200, description: 'Dados do usuário' })
+  @ApiResponse({
+    status: 200,
+    description: 'Dados do usuário',
+    schema: {
+      example: {
+        id: 'user-uuid',
+        name: 'João Silva',
+        email: 'joao@example.com',
+        phone: '11999999999',
+        avatar: null,
+        role: 'user',
+        status: 'active',
+        phoneVerified: false,
+        employees: null,
+        monthlyBilling: null,
+        cnpj: null,
+        companyData: null,
+        emailVerifiedAt: null,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        updatedAt: '2024-01-01T00:00:00.000Z',
+        isSeller: false,
+        seller: null,
+        subscription: null,
+      },
+    },
+  })
   @ApiResponse({ status: 401, description: 'Não autenticado' })
   async me(@CurrentUser() user: any) {
     return this.authService.me(user.id)

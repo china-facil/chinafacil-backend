@@ -10,6 +10,7 @@ import { UserRole, UserStatus } from '@prisma/client'
 import * as bcrypt from 'bcrypt'
 import { randomBytes } from 'crypto'
 import { PrismaService } from '../../database/prisma.service'
+import { MailService } from '../mail/mail.service'
 import {
   ForgotPasswordDto,
   LoginDto,
@@ -26,6 +27,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -229,6 +231,16 @@ export class AuthService {
       throw new BadRequestException('Email já cadastrado')
     }
 
+    if (registerDto.sellerId) {
+      const seller = await this.prisma.seller.findUnique({
+        where: { id: registerDto.sellerId },
+      })
+
+      if (!seller) {
+        throw new BadRequestException('Vendedor não encontrado')
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(registerDto.password, 10)
 
     const employees = registerDto.companyData?.employees || registerDto.companyData?.employees_count || null
@@ -244,6 +256,7 @@ export class AuthService {
         companyData: registerDto.companyData,
         employees: employees ? String(employees) : null,
         monthlyBilling: monthlyBilling ? String(monthlyBilling) : null,
+        sellerId: registerDto.sellerId || null,
         role: UserRole.lead,
         status: UserStatus.active,
       },
@@ -355,11 +368,25 @@ export class AuthService {
       },
     })
 
-    return {
+    try {
+      await this.mailService.sendPasswordResetEmail(user.email, resetToken)
+      this.logger.log(`Email de recuperação de senha enviado para ${user.email}`)
+    } catch (error) {
+      this.logger.error(
+        `Erro ao enviar email de recuperação de senha: ${error.message}`,
+      )
+    }
+
+    const response: any = {
       message:
         'Se o email existir, um link de recuperação será enviado em breve',
-      resetToken,
     }
+
+    if (process.env.NODE_ENV === 'test') {
+      response.resetToken = resetToken
+    }
+
+    return response
   }
 
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
@@ -465,6 +492,18 @@ export class AuthService {
             client: true,
           },
         },
+        sellerProfile: {
+          select: {
+            id: true,
+          },
+        },
+        seller: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     })
 
@@ -472,6 +511,10 @@ export class AuthService {
       throw new UnauthorizedException('Usuário não encontrado')
     }
 
-    return user
+    return {
+      ...user,
+      isSeller: !!user.sellerProfile,
+      sellerProfile: undefined,
+    }
   }
 }

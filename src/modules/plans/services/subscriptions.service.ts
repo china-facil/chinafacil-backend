@@ -75,6 +75,7 @@ export class SubscriptionsService {
             id: true,
             name: true,
             email: true,
+            sellerId: true,
           },
         },
         client: true,
@@ -137,6 +138,7 @@ export class SubscriptionsService {
               name: true,
               email: true,
               phone: true,
+              sellerId: true,
             },
           },
           client: true,
@@ -175,6 +177,7 @@ export class SubscriptionsService {
             name: true,
             email: true,
             phone: true,
+            sellerId: true,
           },
         },
         client: true,
@@ -255,6 +258,7 @@ export class SubscriptionsService {
             id: true,
             name: true,
             email: true,
+            sellerId: true,
           },
         },
         client: true,
@@ -348,6 +352,7 @@ export class SubscriptionsService {
             id: true,
             name: true,
             email: true,
+            sellerId: true,
           },
         },
         client: true,
@@ -405,6 +410,7 @@ export class SubscriptionsService {
             id: true,
             name: true,
             email: true,
+            sellerId: true,
           },
         },
         client: true,
@@ -494,6 +500,113 @@ export class SubscriptionsService {
       } catch (error: any) {
         errorCount++
         throw error
+      }
+    }
+
+    return {
+      processedCount,
+      errorCount,
+    }
+  }
+
+  async notifyExpiringSubscriptions(): Promise<{
+    processedCount: number
+    errorCount: number
+  }> {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const daysToCheck = [7, 3, 1]
+    let processedCount = 0
+    let errorCount = 0
+
+    for (const daysUntilExpiration of daysToCheck) {
+      const targetDate = new Date(today)
+      targetDate.setDate(today.getDate() + daysUntilExpiration)
+      targetDate.setHours(23, 59, 59, 999)
+
+      const startOfDay = new Date(targetDate)
+      startOfDay.setHours(0, 0, 0, 0)
+
+      const expiringSubscriptions = await this.prisma.subscription.findMany({
+        where: {
+          status: SubscriptionStatus.active,
+          currentPeriodEnd: {
+            gte: startOfDay,
+            lte: targetDate,
+          },
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+          client: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+
+      for (const subscription of expiringSubscriptions) {
+        try {
+          const todayStart = new Date(today)
+          todayStart.setHours(0, 0, 0, 0)
+
+          const allNotificationsToday = await this.prisma.notification.findMany({
+            where: {
+              type: 'WARNING',
+              notifiableType: 'App\\Models\\User',
+              notifiableId: subscription.user.id,
+              createdAt: {
+                gte: todayStart,
+              },
+            },
+          })
+
+          const hasNotificationForThisPeriod = allNotificationsToday.some(
+            (notification) => {
+              try {
+                const notificationData = JSON.parse(notification.data)
+                return (
+                  notificationData.subscriptionId === subscription.id &&
+                  notificationData.daysUntilExpiration === daysUntilExpiration
+                )
+              } catch {
+                return false
+              }
+            },
+          )
+
+          if (hasNotificationForThisPeriod) {
+            continue
+          }
+
+          await this.prisma.notification.create({
+            data: {
+              type: 'WARNING',
+              notifiableType: 'App\\Models\\User',
+              notifiableId: subscription.user.id,
+              data: JSON.stringify({
+                message: `Sua assinatura do plano ${subscription.client?.name || 'N/A'} expira em ${daysUntilExpiration} ${daysUntilExpiration === 1 ? 'dia' : 'dias'}. Entre em contato para renovar.`,
+                subscriptionId: subscription.id,
+                planName: subscription.client?.name || 'N/A',
+                expiresAt: subscription.currentPeriodEnd?.toISOString(),
+                daysUntilExpiration,
+              }),
+            },
+          })
+
+          processedCount++
+        } catch (error: any) {
+          errorCount++
+        }
       }
     }
 

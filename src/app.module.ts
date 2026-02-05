@@ -16,6 +16,7 @@ import { ProxyModule } from './modules/proxy/proxy.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
 import { ClientsModule } from './modules/clients/clients.module';
+import { SellersModule } from './modules/sellers/sellers.module';
 import { SolicitationsModule } from './modules/solicitations/solicitations.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
@@ -33,6 +34,7 @@ import { BullBoardModule } from './modules/bull-board/bull-board.module';
 import { CliModule } from './cli/cli.module';
 import { LogsModule } from './common/logs/logs.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
+import { AdminLogsModule } from './modules/admin-logs/admin-logs.module';
 
 @Module({
   imports: [
@@ -89,6 +91,7 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
     AuthModule,
     UsersModule,
     ClientsModule,
+    SellersModule,
     PlansModule,
     SettingsModule,
     SolicitationsModule,
@@ -110,6 +113,7 @@ import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module
     CliModule,
     LogsModule,
     FeatureFlagsModule,
+    AdminLogsModule,
   ],
   providers: [
     {

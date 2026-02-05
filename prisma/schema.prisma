@@ -66,6 +66,16 @@ enum NotificationType {
   SUCCESS
 }
 
+enum ConciergeInteractionType {
+  company_question
+  product_search
+}
+
+enum SellerStatus {
+  active
+  inactive
+}
+
 // enum ExportStatus {
 //   PENDING
 //   PROCESSING
@@ -97,20 +107,26 @@ model User {
   companyData     Json?        @map("company_data")
   emailVerifiedAt DateTime?    @map("email_verified_at")
   defaultAddress  String?      @map("default_address")
+  sellerId        String?      @map("seller_id")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  solicitations     Solicitation[]
-  solicitationItems SolicitationItem[]
-  solicitationTracks SolicitationTrack[]
-  addresses         UserAddress[]
-  favorites         FavoriteProduct[]
-  clientUsers       ClientUser[]
-  subscription      Subscription?
-  sellerLeads       UserSellerLead[] @relation("Seller")
-  leads             UserSellerLead[] @relation("Lead")
-  taxCalculations   TaxCalculation[]
+  seller                  Seller?                  @relation("SellerClients", fields: [sellerId], references: [id], onDelete: SetNull)
+  sellerProfile           Seller?                  @relation("SellerProfile")
+  solicitations            Solicitation[]
+  solicitationItems        SolicitationItem[]
+  solicitationTracks       SolicitationTrack[]
+  addresses                UserAddress[]
+  favorites                FavoriteProduct[]
+  clientUsers              ClientUser[]
+  subscription             Subscription?
+  sellerLeads              UserSellerLead[] @relation("Seller")
+  leads                    UserSellerLead[] @relation("Lead")
+  taxCalculations          TaxCalculation[]
+  conciergeInteractions    ConciergeInteraction[]
+  adminLogs                AdminLog[]
 
+  @@index([sellerId])
   @@map("users")
 }
 
@@ -497,6 +513,61 @@ model FlagsHomepageCarousel {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("flags_homepage_carousel")
+}
+
+model ConciergeInteraction {
+  id        String                     @id @default(uuid())
+  userId    String                     @map("user_id")
+  question  String                     @db.Text
+  answer    String                     @db.Text
+  products  Json?                      @db.Json
+  type      ConciergeInteractionType
+  createdAt DateTime                   @default(now()) @map("created_at")
+  updatedAt DateTime                   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("concierge_interactions")
+}
+
+model Seller {
+  id        String       @id @default(uuid())
+  userId    String       @unique @map("user_id")
+  name      String
+  email     String       @unique
+  status    SellerStatus @default(active)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user  User   @relation("SellerProfile", fields: [userId], references: [id], onDelete: Cascade)
+  users User[] @relation("SellerClients")
+
+  @@map("sellers")
+}
+
+enum AdminActionType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+model AdminLog {
+  id        String          @id @default(uuid())
+  adminId   String          @map("admin_id")
+  action    AdminActionType
+  resource  String
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  admin User @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([resource])
+  @@index([action])
+  @@map("admin_logs")
 }
 
 

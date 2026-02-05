@@ -36,7 +36,7 @@ export class SolicitationsController {
   constructor(private readonly solicitationsService: SolicitationsService) {}
 
   @Post()
-  @Roles('admin', 'user', 'lead', 'sourcer')
+  @Roles('admin', 'seller', 'user', 'lead', 'sourcer', 'client')
   @ApiOperation({ summary: 'Criar nova solicitação' })
   @ApiResponse({
     status: 201,
@@ -58,7 +58,7 @@ export class SolicitationsController {
   }
 
   @Get()
-  @Roles('admin', 'seller', 'user', 'lead', 'sourcer')
+  @Roles('admin', 'seller', 'user', 'lead', 'sourcer', 'client')
   @ApiOperation({ summary: 'Listar solicitações com filtros' })
   @ApiResponse({ status: 200, description: 'Lista de solicitações' })
   async findAll(
